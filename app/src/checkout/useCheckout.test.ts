@@ -12,6 +12,7 @@ const draftBase: ProjectDraft = {
     status: 'draft',
     isShared: false,
     expectedMembers: null,
+    hasPassword: false,
     layout: { pages: [] },
     version: 1,
     updatedAt: '2026-11-11T12:00:00.000Z',

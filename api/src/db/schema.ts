@@ -123,6 +123,8 @@ export const projects = pgTable(
     layout: jsonb('layout'),
     isShared: boolean('is_shared').notNull().default(false),
     expectedMembers: integer('expected_members'),
+    // scrypt-хеш пароля входа в общий альбом (соль:хеш); null — вход по одному приглашению.
+    joinPasswordHash: text('join_password_hash'),
     version: integer('version').notNull().default(1),
     createdAt: createdAt(),
     updatedAt: ts('updated_at').notNull().defaultNow(),

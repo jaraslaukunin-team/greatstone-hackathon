@@ -1,11 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq, gt } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import type { AlbumProgressDTO, InviteDTO, ProjectDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
+import { verifyPassword } from '../../auth/password.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import type { Db } from '../../db/client.js';
-import { projectInvites, projectMembers, projectPhotos, projects } from '../../db/schema.js';
+import { auditLog, projectInvites, projectMembers, projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import { assertProjectAccess, toProjectDTO } from '../projects/service.js';
 
@@ -25,12 +26,61 @@ export async function createInvite(app: FastifyInstance, user: AuthUser, project
   return { token, url: `picpac://invite/${token}`, expiresAt: expiresAt.toISOString() };
 }
 
+const PASSWORD_WINDOW_MS = 10 * 60 * 1000;
+const PASSWORD_ATTEMPTS = 5;
+
+// Уже вступивший участник пароль не вводит. Неверные попытки считаются по журналу в окне 10 минут.
+async function checkJoinPassword(
+  app: FastifyInstance,
+  user: AuthUser,
+  inviteId: string,
+  project: typeof projects.$inferSelect,
+  password: string | undefined,
+): Promise<void> {
+  if (!project.joinPasswordHash) return;
+  const [member] = await app.db
+    .select({ id: projectMembers.id })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, project.id), eq(projectMembers.userId, user.id)));
+  if (member) return;
+  const now = app.clock.now();
+  const [{ n }] = (await app.db
+    .select({ n: count() })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.action, 'invite.password_failed'),
+        eq(auditLog.objectId, inviteId),
+        eq(auditLog.userId, user.id),
+        gt(auditLog.at, new Date(now.getTime() - PASSWORD_WINDOW_MS)),
+      ),
+    )) as [{ n: number }];
+  if (n >= PASSWORD_ATTEMPTS) {
+    throw new AppError(429, 'TOO_MANY_ATTEMPTS', 'Слишком много неверных паролей. Попробуйте через 10 минут');
+  }
+  if (password === undefined) {
+    throw new AppError(401, 'PASSWORD_REQUIRED', 'Для вступления в этот альбом нужен пароль от организатора');
+  }
+  if (!(await verifyPassword(password, project.joinPasswordHash))) {
+    await audit(app.db, {
+      userId: user.id,
+      action: 'invite.password_failed',
+      objectType: 'invite',
+      objectId: inviteId,
+      result: 'denied',
+      at: now,
+    });
+    throw new AppError(401, 'PASSWORD_INVALID', 'Неверный пароль');
+  }
+}
+
 // Повторное принятие и принятие владельцем безопасны: строка членства не дублируется.
 export async function acceptInvite(
   app: FastifyInstance,
   user: AuthUser,
   token: string,
   childName?: string,
+  password?: string,
 ): Promise<ProjectDTO> {
   const [invite] = await app.db.select().from(projectInvites).where(eq(projectInvites.token, hashToken(token)));
   if (!invite) throw new AppError(404, 'INVITE_UNKNOWN', 'Приглашение не найдено. Попросите организатора прислать новое');
@@ -41,6 +91,7 @@ export async function acceptInvite(
   if (!project) throw new AppError(404, 'INVITE_UNKNOWN', 'Приглашение не найдено. Попросите организатора прислать новое');
   if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Альбом уже заказан');
   if (project.ownerId !== user.id) {
+    await checkJoinPassword(app, user, invite.id, project, password);
     const [joined] = await app.db
       .insert(projectMembers)
       .values({ projectId: project.id, userId: user.id, role: 'contributor', childName: childName ?? null })

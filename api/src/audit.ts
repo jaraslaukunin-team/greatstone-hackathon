@@ -7,6 +7,8 @@ export type AuditEvent = {
   objectType: string;
   objectId: string | null;
   result: 'ok' | 'denied' | 'error';
+  /** Время события; по умолчанию его ставит база. Нужно там, где окно считают по часам приложения. */
+  at?: Date;
 };
 
 // Время записи ставит база (колонка at), журнал только дополняется.
@@ -17,5 +19,6 @@ export async function audit(db: Db, e: AuditEvent): Promise<void> {
     objectType: e.objectType,
     objectId: e.objectId,
     result: e.result,
+    ...(e.at ? { at: e.at } : {}),
   });
 }

@@ -42,7 +42,7 @@ const sampleProject = (layout: Layout): ProjectDTO => ({
   ownerId: '00000000-0000-4000-8000-000000000201',
   status: 'draft',
   isShared: false,
-  expectedMembers: null,
+  expectedMembers: null, hasPassword: false,
   layout,
   version: 1,
   updatedAt: '2026-11-11T12:00:00.000Z',

@@ -15,7 +15,7 @@ export function registerAlbumRoutes(app: FastifyInstance): void {
 
   app.post('/invites/accept', auth, async (req) => {
     const body = parse(acceptInviteRequestSchema, req.body);
-    return acceptInvite(req.server, req.user!, body.token, body.childName);
+    return acceptInvite(req.server, req.user!, body.token, body.childName, body.password);
   });
 
   app.get('/projects/:id/progress', auth, async (req) => {

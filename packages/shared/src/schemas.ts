@@ -94,6 +94,7 @@ export const projectSchema = z.object({
   status: z.enum(['draft', 'ordered']),
   isShared: z.boolean(),
   expectedMembers: z.number().int().nonnegative().nullable(),
+  hasPassword: z.boolean(),
   layout: layoutSchema,
   version: z.number().int(),
   updatedAt: iso,
@@ -163,6 +164,8 @@ export const inviteSchema = z.object({ token: z.string(), url: z.string(), expir
 export const acceptInviteRequestSchema = z.object({
   token: z.string().min(10).max(200),
   childName: z.string().trim().min(1).max(100).optional(),
+  // Пароль сравнивается как есть, без обрезки пробелов.
+  password: z.string().max(200).optional(),
 });
 export const albumMemberSchema = z.object({
   userId: z.string(),
