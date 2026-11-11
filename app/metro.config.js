@@ -3,25 +3,29 @@ const path = require('path');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '..');
-const sharedRoot = path.resolve(workspaceRoot, 'packages/shared/src');
+const sharedPackageRoot = path.resolve(workspaceRoot, 'packages/shared');
 
+/** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [workspaceRoot];
+// Monorepo: watch app + shared (весь корень иногда ломает SHA-1 на Windows)
+config.watchFolders = [projectRoot, sharedPackageRoot, path.resolve(workspaceRoot, 'node_modules')];
+
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 config.resolver.disableHierarchicalLookup = true;
 config.resolver.extraNodeModules = {
-  '@picpac/shared': sharedRoot,
+  ...(config.resolver.extraNodeModules ?? {}),
+  '@picpac/shared': sharedPackageRoot,
 };
 
 const defaultResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === '@picpac/shared' || moduleName === '@picpac/shared/') {
     return {
-      filePath: path.join(sharedRoot, 'index.ts'),
+      filePath: path.join(sharedPackageRoot, 'src', 'index.ts'),
       type: 'sourceFile',
     };
   }
