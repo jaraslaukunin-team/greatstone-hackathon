@@ -127,6 +127,33 @@ describe('провайдер aiai.by', () => {
     expect((f.calls[1]!.init.body as FormData).get('size')).toBeNull();
   });
 
+  it('режим images: если модель не принимает size (400), запрос повторяется без него', async () => {
+    const calls: FormData[] = [];
+    const impl = (async (_url: string, init: RequestInit) => {
+      const form = init.body as FormData;
+      calls.push(form);
+      if (form.get('size')) return new Response('{"error":"bad size"}', { status: 400 });
+      return new Response(JSON.stringify({ data: [{ b64_json: RESULT.toString('base64') }] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const provider = new AiaiProvider({ ...base, aiaiEditMode: 'images' }, impl);
+    const out = await provider.edit({ ...input(), size: '1536x1024' });
+    expect(out.image.equals(RESULT)).toBe(true);
+    expect(calls).toHaveLength(2);
+    expect(calls[0]!.get('size')).toBe('1536x1024');
+    expect(calls[1]!.get('size')).toBeNull();
+  });
+
+  it('режим images: ошибка сервера 500 с size не повторяется без size', async () => {
+    let n = 0;
+    const impl = (async () => {
+      n++;
+      return new Response('', { status: 500 });
+    }) as unknown as typeof fetch;
+    const provider = new AiaiProvider({ ...base, aiaiEditMode: 'images' }, impl);
+    await expect(provider.edit({ ...input(), size: '1536x1024' })).rejects.toThrow(/500/);
+    expect(n).toBe(1);
+  });
+
   it('режим chat: JSON с картинкой как data URL, ответ разбирается из message.images', async () => {
     const dataUrl = `data:image/png;base64,${RESULT.toString('base64')}`;
     const f = fakeFetch(
