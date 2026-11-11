@@ -172,11 +172,47 @@ export const albumProgressSchema = z.object({
   members: z.array(albumMemberSchema),
 });
 
+export const aiEditKindSchema = z.enum(['edit', 'upscale']);
+
+export const aiEditRequestSchema = z.object({
+  // Не uuid проверяет сервис и отвечает 404: чужой и битый id не отличаются.
+  projectId: z.string(),
+  photoId: z.string(),
+  prompt: z.string().trim().min(1).max(500),
+  kind: aiEditKindSchema.optional().default('edit'),
+});
+
 export const aiJobSchema = z.object({
   id: z.string(),
   status: z.enum(['pending', 'done', 'failed']),
+  kind: aiEditKindSchema.optional(),
   reason: z.string().optional(),
   resultPhoto: photoSchema.optional(),
+});
+
+/** Множители относительно нейтрали (1 = без изменений). */
+export const aiAdjustRequestSchema = z.object({
+  // Не uuid проверяет сервис и отвечает 404: чужой и битый id не отличаются.
+  projectId: z.string(),
+  photoId: z.string(),
+  brightness: z.number().min(0.5).max(1.5).optional(),
+  contrast: z.number().min(0.5).max(1.5).optional(),
+  saturation: z.number().min(0).max(2).optional(),
+  sharpen: z.number().min(0).max(5).optional(),
+});
+
+export const aiChatRoleSchema = z.enum(['user', 'assistant']);
+export const aiChatMessageSchema = z.object({
+  role: aiChatRoleSchema,
+  content: z.string().trim().min(1).max(4000),
+});
+export const aiChatRequestSchema = z.object({
+  messages: z.array(aiChatMessageSchema).min(1).max(40),
+  orderId: z.string().uuid().optional(),
+});
+export const aiChatResponseSchema = z.object({
+  reply: z.string(),
+  messages: z.array(aiChatMessageSchema),
 });
 
 export const apiErrorBodySchema = z.object({

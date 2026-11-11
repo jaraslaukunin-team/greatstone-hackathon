@@ -1,5 +1,5 @@
-import type { AiJobDTO, CatalogDTO, PhotoDTO, ProjectDTO } from '@picpac/shared';
-import { router } from 'expo-router';
+import type { CatalogDTO, PhotoDTO, ProjectDTO } from '@picpac/shared';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
@@ -24,13 +24,17 @@ async function ensureAiProject(client: ApiClient): Promise<ProjectDTO> {
 }
 
 export default function AiEditScreen() {
+  // Из вкладки «Ассистент» экран открывают сразу с готовым фото: тогда выбирать его не нужно.
+  const params = useLocalSearchParams<{ photoId?: string; projectId?: string; photoUrl?: string }>();
   const client = useApiClient();
   const [prompt, setPrompt] = useState('Тёплая ретро-плёнка');
-  const [photo, setPhoto] = useState<PhotoDTO | null>(null);
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<{ id: string; url: string } | null>(
+    params.photoId && params.photoUrl ? { id: params.photoId, url: params.photoUrl } : null,
+  );
+  const [projectId, setProjectId] = useState<string | null>(params.projectId ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inFlight = useRef<Promise<AiJobDTO> | null>(null);
+  const inFlight = useRef<Promise<{ jobId: string }> | null>(null);
 
   async function choosePhoto() {
     setError(null);
@@ -42,7 +46,7 @@ export default function AiEditScreen() {
       const project = await ensureAiProject(client);
       const uploaded = await client.upload<PhotoDTO>(`/projects/${project.id}/photos`, { uri: first.uri });
       setProjectId(project.id);
-      setPhoto(uploaded);
+      setPhoto({ id: uploaded.id, url: uploaded.url });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось добавить фото');
     } finally {
@@ -55,8 +59,8 @@ export default function AiEditScreen() {
     setError(null);
     setBusy(true);
     try {
-      const job = await startAiEdit(client, { projectId, photoId: photo.id, prompt }, inFlight);
-      router.push({ pathname: '/ai/result', params: { jobId: job.id, original: client.resolveUrl(photo.url) } });
+      const { jobId } = await startAiEdit(client, { projectId, photoId: photo.id, prompt, kind: 'edit' }, inFlight);
+      router.push({ pathname: '/ai/result', params: { jobId, sourceUrl: photo.url } });
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось запустить AI');
     } finally {
@@ -82,6 +86,7 @@ export default function AiEditScreen() {
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button title="Обработать" disabled={!photo || busy || prompt.trim().length === 0} onPress={() => void submit()} />
+      <Button title="Открыть ассистента" variant="text" onPress={() => router.push('/(tabs)/assistant')} />
     </ScrollView>
   );
 }

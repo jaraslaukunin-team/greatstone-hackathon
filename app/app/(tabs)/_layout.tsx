@@ -15,6 +15,7 @@ function TabLabel({ label, icon, focused }: { label: string; icon: IconName; foc
 const items = [
   { name: 'index', title: 'Главная', icon: 'home' },
   { name: 'designs', title: 'Мои', icon: 'folder' },
+  { name: 'assistant', title: 'AI', icon: 'star' },
   { name: 'cart', title: 'Корзина', icon: 'cart' },
   { name: 'orders', title: 'Заказы', icon: 'doc' },
   { name: 'profile', title: 'Профиль', icon: 'user' },

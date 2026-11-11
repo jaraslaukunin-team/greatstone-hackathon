@@ -1,5 +1,5 @@
+import type { ApiClient } from '../api/client';
 import { startAiEdit } from './useAiJob';
-import type { AiJobDTO } from '@picpac/shared';
 
 describe('startAiEdit', () => {
   it('повторный вызов не создаёт две задачи', async () => {
@@ -11,18 +11,21 @@ describe('startAiEdit', () => {
     const client = {
       get: jest.fn(),
       put: jest.fn(),
+      patch: jest.fn(),
       delete: jest.fn(),
       post,
-      patch: jest.fn(),
-      upload: jest.fn(),
-      resolveUrl: (p: string) => p,
+    } as unknown as ApiClient;
+    const inFlight = { current: null as Promise<{ jobId: string }> | null };
+    const body = {
+      projectId: '00000000-0000-4000-8000-000000000101',
+      photoId: '00000000-0000-4000-8000-000000000201',
+      prompt: 'retro',
     };
-    const inFlight = { current: null as Promise<AiJobDTO> | null };
-    const p1 = startAiEdit(client, { projectId: 'proj', photoId: 'p', prompt: 'retro' }, inFlight);
-    const p2 = startAiEdit(client, { projectId: 'proj', photoId: 'p', prompt: 'retro' }, inFlight);
+    const p1 = startAiEdit(client, body, inFlight);
+    const p2 = startAiEdit(client, body, inFlight);
     expect(post).toHaveBeenCalledTimes(1);
     resolve({ jobId: '00000000-0000-4000-8000-000000000501' });
-    await expect(p1).resolves.toMatchObject({ id: '00000000-0000-4000-8000-000000000501', status: 'pending' });
-    await expect(p2).resolves.toMatchObject({ id: '00000000-0000-4000-8000-000000000501', status: 'pending' });
+    await expect(p1).resolves.toMatchObject({ jobId: '00000000-0000-4000-8000-000000000501' });
+    await expect(p2).resolves.toMatchObject({ jobId: '00000000-0000-4000-8000-000000000501' });
   });
 });

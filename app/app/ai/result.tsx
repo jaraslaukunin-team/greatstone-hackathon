@@ -13,34 +13,37 @@ const STATUS: Record<string, string> = {
 };
 
 export default function AiResultScreen() {
-  const { jobId, original } = useLocalSearchParams<{ jobId: string; original?: string }>();
+  const { jobId, sourceUrl } = useLocalSearchParams<{ jobId: string; sourceUrl?: string }>();
   const client = useApiClient();
   const job = useAiJob(client, jobId ?? null);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Результат</Text>
+      <Text style={styles.title}>До и После</Text>
       <Text style={styles.sub}>{STATUS[job.status] ?? job.status}</Text>
       {job.reason ? <Text style={styles.error}>{job.reason}</Text> : null}
+      <View style={styles.row}>
+        {sourceUrl ? (
+          <View style={styles.half}>
+            <Text style={styles.caption}>До</Text>
+            <Image source={{ uri: client.resolveUrl(String(sourceUrl)) }} style={styles.img} resizeMode="cover" />
+          </View>
+        ) : null}
+        {job.result?.url ? (
+          <View style={styles.half}>
+            <Text style={styles.caption}>После</Text>
+            <Image source={{ uri: client.resolveUrl(job.result.url) }} style={styles.img} resizeMode="cover" />
+          </View>
+        ) : null}
+      </View>
       {job.status === 'pending' ? (
         <Button title="Отменить" variant="secondary" onPress={() => job.cancel()} />
       ) : null}
-      {job.status === 'done' && job.result ? (
+      {job.status === 'done' ? (
         <>
-          <View style={styles.pair}>
-            {original ? (
-              <View style={styles.half}>
-                <Text style={styles.caption}>До</Text>
-                <Image source={{ uri: original }} style={styles.image} resizeMode="cover" />
-              </View>
-            ) : null}
-            <View style={styles.half}>
-              <Text style={styles.caption}>После</Text>
-              <Image source={{ uri: client.resolveUrl(job.result.url) }} style={styles.image} resizeMode="cover" />
-            </View>
-          </View>
           <Button title="Напечатать" onPress={() => router.push('/catalog/prints')} />
           <Button title="Обработать ещё раз" variant="secondary" onPress={() => router.replace('/ai/edit')} />
+          <Button title="К ассистенту" variant="text" onPress={() => router.push('/(tabs)/assistant')} />
         </>
       ) : null}
     </ScrollView>
@@ -53,8 +56,8 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
   error: { ...typography.caption, color: lightColors.danger },
-  pair: { flexDirection: 'row', gap: space[2] },
+  row: { flexDirection: 'row', gap: space[2] },
   half: { flex: 1, gap: space[1] },
   caption: { ...typography.bodyStrong, color: lightColors.text },
-  image: { width: '100%', aspectRatio: 1, borderRadius: radius.card, backgroundColor: lightColors.border },
+  img: { width: '100%', aspectRatio: 1, borderRadius: radius.card, backgroundColor: lightColors.border },
 });

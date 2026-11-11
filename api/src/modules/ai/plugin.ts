@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Config } from '../../config.js';
 import { AiaiProvider } from './aiaiProvider.js';
+import { createChatProvider, type ChatProvider } from './chatProvider.js';
 import type { ImageEditProvider } from './provider.js';
 import { StubProvider } from './stubProvider.js';
 
@@ -8,6 +9,7 @@ export const AI_TIMEOUT_MS = 90_000;
 
 export type AiRuntime = {
   provider: ImageEditProvider;
+  chat: ChatProvider;
   timeoutMs: number;
   inflight: Set<Promise<void>>;
   controllers: Set<AbortController>;
@@ -32,6 +34,7 @@ export function registerAi(app: FastifyInstance): void {
   const controllers = new Set<AbortController>();
   const ai: AiRuntime = {
     provider: createProvider(app.config),
+    chat: createChatProvider(app.config),
     timeoutMs: AI_TIMEOUT_MS,
     inflight,
     controllers,

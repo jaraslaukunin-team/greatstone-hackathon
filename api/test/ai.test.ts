@@ -7,9 +7,10 @@ import { and, eq } from 'drizzle-orm';
 import { aiJobSchema, photoSchema } from '@picpac/shared';
 import { auditLog, consents, aiJobs, productVariants, projectMembers, projectPhotos, projects } from '../src/db/schema.js';
 import { AiaiProvider } from '../src/modules/ai/aiaiProvider.js';
+import { AiaiChatProvider, StubChatProvider } from '../src/modules/ai/chatProvider.js';
 import { BLOCKED_TERMS, isPromptAllowed } from '../src/modules/ai/promptFilter.js';
+import { wrapEditPrompt } from '../src/modules/ai/promptWrap.js';
 import { StubProvider } from '../src/modules/ai/stubProvider.js';
-import type { ImageEditProvider } from '../src/modules/ai/provider.js';
 import { seed, testApp } from './helpers.js';
 
 type Session = { token: string; id: string };
@@ -32,6 +33,52 @@ describe('фильтр запросов', () => {
     for (const p of ['сделай меня в роллс-ройсе', 'add a sunset behind me', 'в стиле ретро']) {
       expect(isPromptAllowed(p)).toBe(true);
     }
+  });
+});
+
+describe('обёртка prompt', () => {
+  it('edit сохраняет инструкцию про лицо, upscale — про детализацию', () => {
+    const edit = wrapEditPrompt('я в лимузине', 'edit');
+    expect(edit).toMatch(/лицо/i);
+    expect(edit).toContain('я в лимузине');
+    const up = wrapEditPrompt('сделай чётче', 'upscale');
+    expect(up).toMatch(/детализац|резк/i);
+    expect(up).toContain('сделай чётче');
+  });
+});
+
+describe('чат-провайдер aiai', () => {
+  it('шлёт model AIAI_CHAT_MODEL на /chat/completions', async () => {
+    const calls: { url: string; body: string }[] = [];
+    const fetchImpl = (async (url: string, init?: RequestInit) => {
+      calls.push({ url: String(url), body: String(init?.body) });
+      return new Response(JSON.stringify({ choices: [{ message: { content: 'Ответ ассистента' } }] }), {
+        status: 200,
+      });
+    }) as unknown as typeof fetch;
+    const provider = new AiaiChatProvider(
+      { aiaiBaseUrl: 'https://ai.test/v1', aiaiApiKey: 'secret', aiaiChatModel: 'gpt-4o-mini' },
+      fetchImpl,
+    );
+    const reply = await provider.complete({
+      system: 'sys',
+      messages: [{ role: 'user', content: 'Привет' }],
+      signal: new AbortController().signal,
+    });
+    expect(reply).toBe('Ответ ассистента');
+    expect(calls[0]!.url).toBe('https://ai.test/v1/chat/completions');
+    expect(JSON.parse(calls[0]!.body).model).toBe('gpt-4o-mini');
+  });
+
+  it('stub отвечает по ключевым словам', async () => {
+    const stub = new StubChatProvider();
+    const signal = new AbortController().signal;
+    const r = await stub.complete({
+      system: '',
+      messages: [{ role: 'user', content: 'Где мой заказ?' }],
+      signal,
+    });
+    expect(r).toMatch(/заказ/i);
   });
 });
 
@@ -321,5 +368,43 @@ describe('AI-редактор', () => {
     expect((await call(alice, 'GET', '/ai/jobs/not-a-uuid')).statusCode).toBe(404);
     expect((await call(null, 'GET', `/ai/jobs/${jobId}`)).statusCode).toBe(401);
     expect((await call(null, 'POST', '/ai/consent')).statusCode).toBe(401);
+  });
+
+  it('kind upscale сохраняет обёрнутый prompt в задаче', async () => {
+    await consent(alice);
+    const res = await edit(alice, { kind: 'upscale', prompt: 'увеличь качество' });
+    expect(res.statusCode).toBe(202);
+    const { jobId } = res.json() as { jobId: string };
+    await app.ai.idle();
+    const [row] = await db.select().from(aiJobs).where(eq(aiJobs.id, jobId));
+    expect(row!.prompt).toMatch(/детализац|резк/i);
+    expect(row!.prompt).toContain('увеличь качество');
+  });
+
+  it('POST /ai/adjust без LLM создаёт новое фото source ai', async () => {
+    const res = await call(alice, 'POST', '/ai/adjust', {
+      projectId,
+      photoId,
+      brightness: 1.2,
+      contrast: 1.1,
+      sharpen: 1,
+    });
+    expect(res.statusCode).toBe(200);
+    const photo = photoSchema.parse(res.json());
+    expect(photo.source).toBe('ai');
+    expect(photo.width).toBeGreaterThan(0);
+    expect(await photosOf()).toHaveLength(2);
+    expect((await call(alice, 'POST', '/ai/adjust', { projectId, photoId })).statusCode).toBe(422);
+  });
+
+  it('POST /ai/chat со stub отвечает по-русски и добавляет сообщение ассистента', async () => {
+    app.ai.chat = new StubChatProvider();
+    const res = await call(alice, 'POST', '/ai/chat', {
+      messages: [{ role: 'user', content: 'Какие услуги в каталоге?' }],
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { reply: string; messages: { role: string; content: string }[] };
+    expect(body.reply).toMatch(/каталог|фотокниг|печат/i);
+    expect(body.messages.at(-1)).toMatchObject({ role: 'assistant' });
   });
 });
