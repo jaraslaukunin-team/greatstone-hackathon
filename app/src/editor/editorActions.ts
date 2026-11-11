@@ -1,0 +1,60 @@
+import type { Cell, Layout, Page } from '@picpac/shared';
+
+export type CellRef = { pageIndex: number; cellIndex: number };
+
+function cloneLayout(layout: Layout): Layout {
+  return JSON.parse(JSON.stringify(layout)) as Layout;
+}
+
+export function swapCells(layout: Layout, a: CellRef, b: CellRef): Layout {
+  const next = cloneLayout(layout);
+  const cellA = next.pages[a.pageIndex]?.cells[a.cellIndex];
+  const cellB = next.pages[b.pageIndex]?.cells[b.cellIndex];
+  if (!cellA || !cellB) return next;
+  const photoA = cellA.photoId;
+  cellA.photoId = cellB.photoId;
+  cellB.photoId = photoA;
+  return next;
+}
+
+export function moveSpread(layout: Layout, from: number, to: number): Layout {
+  const next = cloneLayout(layout);
+  if (from < 0 || to < 0 || from >= next.pages.length || to >= next.pages.length) return next;
+  const [page] = next.pages.splice(from, 1);
+  if (!page) return next;
+  next.pages.splice(to, 0, page);
+  return next;
+}
+
+export function setCrop(layout: Layout, ref: CellRef, crop: Cell['crop']): Layout {
+  const next = cloneLayout(layout);
+  const cell = next.pages[ref.pageIndex]?.cells[ref.cellIndex];
+  if (!cell) return next;
+  cell.crop = {
+    ...crop,
+    scale: Math.max(1, crop.scale),
+  };
+  return next;
+}
+
+export function applyTemplate(layout: Layout, pageIndex: number, template: Page['template']): Layout {
+  const next = cloneLayout(layout);
+  const page = next.pages[pageIndex];
+  if (!page) return next;
+  const keep = page.cells.map((c) => c.photoId);
+  const count = template === 'one' || template === 'spread-one' ? 1 : template === 'two' ? 2 : 4;
+  page.template = template;
+  page.cells = Array.from({ length: count }, (_, i) => ({
+    photoId: keep[i] ?? null,
+    crop: { x: 0, y: 0, scale: 1, rotation: 0 as const },
+  }));
+  return next;
+}
+
+export function replacePhoto(layout: Layout, ref: CellRef, photoId: string): Layout {
+  const next = cloneLayout(layout);
+  const cell = next.pages[ref.pageIndex]?.cells[ref.cellIndex];
+  if (!cell) return next;
+  cell.photoId = photoId;
+  return next;
+}
