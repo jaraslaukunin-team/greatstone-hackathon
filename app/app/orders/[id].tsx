@@ -1,4 +1,5 @@
 import { formatByn } from '@picpac/shared';
+import { statusLabel } from '../../src/orders/statusLabel';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
@@ -21,12 +22,12 @@ export default function OrderDetailsScreen() {
       <Text style={styles.title}>{order?.number ?? 'Заказ'}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Card>
-        <Text style={styles.cardTitle}>Статус: {order?.status ?? '…'}</Text>
+        <Text style={styles.cardTitle}>Статус: {statusLabel(order?.status)}</Text>
         <Text style={styles.cardSub}>{order ? formatByn(order.totalKop) : ''}</Text>
       </Card>
       {(order?.history ?? []).map((item, index) => (
         <Text key={`${item.status}-${index}`} style={styles.history}>
-          {item.status} · {new Date(item.at).toLocaleString('ru-RU')}
+          {statusLabel(item.status)} · {new Date(item.at).toLocaleString('ru-RU')}
         </Text>
       ))}
       {order?.status === 'accepted' ? (

@@ -19,6 +19,8 @@
 	handle @page {
 		root * /srv/web
 		try_files {path} /index.html
+		# Страницу не кэшируем: после обновления пользователи сразу получают новую сборку (скрипты в _expo с хэшами в именах).
+		header Cache-Control "no-cache"
 		file_server
 	}
 

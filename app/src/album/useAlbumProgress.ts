@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ApiClient } from '../api/client';
 
 export type AlbumProgress = {
-  expected: number;
+  expected: number | null;
   members: Array<{ userId: string; childName: string | null; photosCount: number }>;
 };
 
@@ -18,7 +18,7 @@ export function useAlbumProgress(client: ApiClient, albumId: string | null) {
     let cancelled = false;
     const load = async () => {
       try {
-        const next = await client.get<AlbumProgress>(`/albums/${albumId}/progress`);
+        const next = await client.get<AlbumProgress>(`/projects/${albumId}/progress`);
         if (!cancelled) {
           setProgress(next);
           setError(null);

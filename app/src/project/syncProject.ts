@@ -7,13 +7,13 @@ type Deps = {
   layout: Layout;
   version: number;
   onLocalOnly: () => void;
-  onSaved: (project: ProjectDTO) => void;
+  onSaved: (saved: { version: number }) => void;
   onConflict: (server: ProjectDTO, localLayout: Layout) => Promise<void>;
 };
 
 export async function syncProject(deps: Deps): Promise<void> {
   try {
-    const updated = await deps.client.put<ProjectDTO>(`/projects/${deps.projectId}`, {
+    const updated = await deps.client.put<{ version: number }>(`/projects/${deps.projectId}`, {
       layout: deps.layout,
       version: deps.version,
     });

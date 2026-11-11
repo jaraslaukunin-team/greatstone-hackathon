@@ -30,6 +30,10 @@ export type ApiClient = {
   put<T>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T>;
   patch<T>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T>;
   delete<T>(path: string, headers?: Record<string, string>): Promise<T>;
+  /** Загружает файл с устройства как multipart в поле file. */
+  upload<T>(path: string, file: { uri: string; name?: string; type?: string }): Promise<T>;
+  /** Делает из относительной ссылки API (например, /files/...) полный адрес. */
+  resolveUrl(path: string): string;
 };
 
 type ErrorBody = {
@@ -62,8 +66,11 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       nextHeaders.Authorization = `Bearer ${token}`;
     }
 
-    let payload: string | undefined;
-    if (body !== undefined) {
+    let payload: string | FormData | undefined;
+    if (body instanceof FormData) {
+      // Content-Type с границей multipart выставит сам fetch.
+      payload = body;
+    } else if (body !== undefined) {
       nextHeaders['Content-Type'] = 'application/json';
       payload = JSON.stringify(body);
     }
@@ -101,7 +108,28 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     return data as T;
   }
 
+  async function upload<T>(path: string, file: { uri: string; name?: string; type?: string }): Promise<T> {
+    const name = file.name ?? 'photo.jpg';
+    const type = file.type ?? 'image/jpeg';
+    const form = new FormData();
+    if (typeof document !== 'undefined') {
+      // В браузере файл читается по blob:/data: адресу.
+      let blob: Blob;
+      try {
+        blob = await (await fetchImpl(file.uri)).blob();
+      } catch {
+        throw new NetworkError('Не удалось прочитать выбранное фото');
+      }
+      form.append('file', blob, name);
+    } else {
+      form.append('file', { uri: file.uri, name, type } as unknown as Blob);
+    }
+    return request<T>('POST', path, form);
+  }
+
   return {
+    upload,
+    resolveUrl: (path: string) => (/^https?:/i.test(path) ? path : `${opts.baseUrl}${path}`),
     get: <T>(path: string) => request<T>('GET', path),
     post: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>
       request<T>('POST', path, body, headers),

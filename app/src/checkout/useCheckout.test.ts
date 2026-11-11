@@ -25,12 +25,20 @@ describe('checkout', () => {
     const draft = { ...draftBase, idempotencyKey: null as string | null };
     const key1 = ensureIdempotencyKey(draft, (k) => {
       draft.idempotencyKey = k;
-    }, () => 'fixed-key');
+    }, () => '11111111-1111-4111-8111-111111111111');
     const key2 = ensureIdempotencyKey(draft, (k) => {
       draft.idempotencyKey = k;
-    }, () => 'other');
-    expect(key1).toBe('fixed-key');
-    expect(key2).toBe('fixed-key');
+    }, () => '22222222-2222-4222-8222-222222222222');
+    expect(key1).toBe('11111111-1111-4111-8111-111111111111');
+    expect(key2).toBe('11111111-1111-4111-8111-111111111111');
+  });
+
+  it('ключ не в формате uuid (от старой версии) заменяется новым', () => {
+    const draft = { ...draftBase, idempotencyKey: 'idem-123-abc' as string | null };
+    const key = ensureIdempotencyKey(draft, (k) => {
+      draft.idempotencyKey = k;
+    });
+    expect(key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 
   it('submit при NetworkError оставляет ключ', async () => {

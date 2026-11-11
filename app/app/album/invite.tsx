@@ -18,7 +18,7 @@ export default function InviteScreen() {
       return;
     }
     void client
-      .post('/albums/accept', { token })
+      .post('/invites/accept', { token })
       .then(() => {
         setStatus('Вы в альбоме');
         router.replace('/(tabs)/designs');

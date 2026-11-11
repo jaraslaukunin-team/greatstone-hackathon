@@ -2,18 +2,19 @@ import type { PhotoDTO } from '@picpac/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import { pickPhotos } from '../../../src/photos/pickPhotos';
 import { UploadQueue } from '../../../src/photos/UploadQueue';
 import { Button } from '../../../src/ui/Button';
-import { lightColors, space, typography } from '../../../src/theme/theme';
+import { lightColors, radius, space, typography } from '../../../src/theme/theme';
 
 export default function PhotosScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const client = useApiClient();
-  const [done, setDone] = useState(0);
-  const [total, setTotal] = useState(0);
+  const [photos, setPhotos] = useState<PhotoDTO[]>([]);
+  const [pending, setPending] = useState(0);
+  const [failed, setFailed] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const queue = useMemo(
@@ -21,19 +22,29 @@ export default function PhotosScreen() {
       new UploadQueue({
         storage: AsyncStorage,
         isOnline: () => true,
-        upload: async (task) =>
-          client.post<PhotoDTO>(`/projects/${task.projectId}/photos`, {
-            localId: task.localId,
-            uri: task.uri,
-          }),
+        upload: async (task) => {
+          const photo = await client.upload<PhotoDTO>(`/projects/${task.projectId}/photos`, { uri: task.uri });
+          setPhotos((list) => (list.some((p) => p.id === photo.id) ? list : [...list, photo]));
+          return photo;
+        },
       }),
     [client],
   );
 
   useEffect(() => {
+    // Фото, загруженные раньше, показываем сразу: можно вернуться на этот экран и добавить ещё.
+    void client
+      .get<PhotoDTO[]>(`/projects/${id}/photos`)
+      .then((list) =>
+        setPhotos((current) => [...list, ...current.filter((c) => !list.some((p) => p.id === c.id))]),
+      )
+      .catch(() => undefined);
+  }, [client, id]);
+
+  useEffect(() => {
     const off = queue.onChange((state) => {
-      setTotal(state.items.length);
-      setDone(state.items.filter((i) => i.status === 'done').length);
+      setPending(state.items.filter((i) => i.status === 'queued' || i.status === 'uploading').length);
+      setFailed(state.items.filter((i) => i.status === 'error').length);
       setError(state.items.find((i) => i.status === 'error')?.error ?? null);
     });
     void queue.hydrate();
@@ -43,8 +54,8 @@ export default function PhotosScreen() {
   async function onPick() {
     setError(null);
     try {
-      const photos = await pickPhotos();
-      for (const photo of photos) {
+      const picked = await pickPhotos();
+      for (const photo of picked) {
         queue.enqueue({ localId: photo.localId, projectId: String(id), uri: photo.uri });
       }
       await queue.resume();
@@ -54,28 +65,40 @@ export default function PhotosScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Выберите фото</Text>
-      <Text style={styles.sub}>Для 20 страниц подойдут 30–60 фото</Text>
+      <Text style={styles.sub}>Лучше всего получаются книги из 30–60 фото</Text>
       <Text style={styles.progress}>
-        Загружено {done} из {total || '—'}
+        В книге: {photos.length}
+        {pending > 0 ? ` · загружается ещё ${pending}` : ''}
+        {failed > 0 ? ` · не удалось загрузить ${failed}` : ''}
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {photos.length > 0 ? (
+        <View style={styles.grid}>
+          {photos.map((p) => (
+            <Image key={p.id} source={{ uri: client.resolveUrl(p.url) }} style={styles.thumb} />
+          ))}
+        </View>
+      ) : null}
       <Button title="Выбрать из галереи" onPress={() => void onPick()} />
       <Button
-        title={`Готово · ${done} фото`}
+        title={`Готово · ${photos.length} фото`}
         variant="secondary"
-        disabled={done === 0}
+        disabled={photos.length === 0 || pending > 0}
         onPress={() => router.push(`/project/${id}/overview`)}
       />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
-  title: { ...typography.h1, color: lightColors.text, marginTop: space[5] },
+  screen: { flex: 1, backgroundColor: lightColors.bg },
+  content: { padding: space[4], gap: space[3] },
+  title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
   progress: { ...typography.bodyStrong, color: lightColors.text },
   error: { ...typography.caption, color: lightColors.danger },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  thumb: { width: 76, height: 76, borderRadius: radius.photo, backgroundColor: lightColors.border },
 });

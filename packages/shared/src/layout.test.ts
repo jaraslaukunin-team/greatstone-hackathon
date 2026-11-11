@@ -20,6 +20,16 @@ describe('autoLayout', () => {
     expect(ids(autoLayout(photos, { pagesMin: 1, pagesMax: 10 }))).toEqual(['d', 'n1', 'n2']);
   });
 
+  it('не склеивает пары, пока фото едва хватает на минимум страниц', () => {
+    const photos = Array.from({ length: 24 }, (_, i) =>
+      landscape(`l${i}`, `2026-01-01T10:${String(i).padStart(2, '0')}:00Z`),
+    );
+    const layout = autoLayout(photos, { pagesMin: 20, pagesMax: 60 });
+    expect(layout.pages.length).toBe(20);
+    expect(layout.pages.every((p) => p.cells.every((c) => c.photoId !== null))).toBe(true);
+    expect(ids(layout).length).toBe(24);
+  });
+
   it('pads to pagesMin with empty cells', () => {
     const photos = [portrait('a', null), portrait('b', null), portrait('c', null)];
     const layout = autoLayout(photos, { pagesMin: 10, pagesMax: 60 });

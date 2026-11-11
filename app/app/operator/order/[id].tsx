@@ -1,4 +1,5 @@
 import type { OrderDTO, OrderStatus } from '@picpac/shared';
+import { statusLabel } from '../../../src/orders/statusLabel';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -34,7 +35,7 @@ export default function OperatorOrderScreen() {
     if (!status) return;
     setError(null);
     try {
-      const updated = await client.patch<OrderDTO>(`/operator/orders/${id}/status`, { status });
+      const updated = await client.post<OrderDTO>(`/operator/orders/${id}/status`, { status });
       setOrder(updated);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось сменить статус');
@@ -44,7 +45,7 @@ export default function OperatorOrderScreen() {
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>{order?.number ?? 'Заказ'}</Text>
-      <Text style={styles.sub}>Статус: {order?.status ?? '…'}</Text>
+      <Text style={styles.sub}>Статус: {statusLabel(order?.status)}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button title="Следующий статус" onPress={() => void advance()} />
     </View>

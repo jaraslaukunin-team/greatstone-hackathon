@@ -13,7 +13,7 @@ export default function AlbumScreen() {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   async function share() {
-    const invite = await client.post<{ token: string; url: string }>(`/albums/${id}/invite`);
+    const invite = await client.post<{ token: string; url: string }>(`/projects/${id}/invites`);
     setInviteUrl(invite.url);
     await Share.share({ message: invite.url });
   }
@@ -22,7 +22,7 @@ export default function AlbumScreen() {
     <View style={styles.screen}>
       <Text style={styles.title}>Сбор фотографий</Text>
       <Text style={styles.sub}>
-        {progress ? `${progress.members.length} из ${progress.expected} добавили` : '…'}
+        {progress ? `${progress.members.length} из ${progress.expected ?? '?'} добавили` : '…'}
       </Text>
       <Button title="Поделиться ссылкой" onPress={() => void share()} />
       {inviteUrl ? <Text style={styles.link}>{inviteUrl}</Text> : null}

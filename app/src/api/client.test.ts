@@ -59,4 +59,20 @@ describe('createApiClient', () => {
 
     await expect(client.get('/health')).rejects.toBeInstanceOf(NetworkError);
   });
+
+  it('upload шлёт multipart без JSON-заголовка и дополняет относительные адреса', async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      calls.push({ url: String(input), init });
+      return new Response(JSON.stringify({ id: 'p1' }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    };
+    const client = createApiClient({ baseUrl: 'http://localhost:3000', getToken: () => 't', fetchImpl });
+
+    await client.upload('/projects/x/photos', { uri: 'file:///a.jpg' });
+
+    expect(calls[0]?.init?.body).toBeInstanceOf(FormData);
+    expect(calls[0]?.init?.headers).not.toHaveProperty('Content-Type');
+    expect(client.resolveUrl('/files/1?sig=2')).toBe('http://localhost:3000/files/1?sig=2');
+    expect(client.resolveUrl('https://cdn.example/a.jpg')).toBe('https://cdn.example/a.jpg');
+  });
 });

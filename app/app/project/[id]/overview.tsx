@@ -1,9 +1,9 @@
-import type { PhotoDTO, ProjectDTO } from '@picpac/shared';
+import type { CatalogDTO, PhotoDTO, ProjectDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
-import { autoLayoutLocal } from '../../../src/editor/autoLayoutLocal';
+import { autoLayoutLocal, unplacedPhotos } from '../../../src/editor/autoLayoutLocal';
 import { useProjectStore } from '../../../src/project/projectStore';
 import { syncProject } from '../../../src/project/syncProject';
 import { Button } from '../../../src/ui/Button';
@@ -22,7 +22,16 @@ export default function OverviewScreen() {
     (async () => {
       const project = await client.get<ProjectDTO>(`/projects/${id}`);
       const photos = await client.get<PhotoDTO[]>(`/projects/${id}/photos`);
-      const layout = autoLayoutLocal(photos, { pagesMin: 20, pagesMax: 60 });
+      const catalog = await client.get<CatalogDTO>('/catalog').catch(() => null);
+      const variant = catalog?.products.flatMap((p) => p.variants).find((v) => v.id === project.variantId);
+      // Правки пользователя не затираем: прежний макет (локальный или с сервера) остаётся, пока в нём разложены все фото.
+      const stored = useProjectStore.getState().draft;
+      const previous = stored?.project.id === project.id ? stored.layout : project.layout;
+      const keep =
+        previous.pages.some((pg) => pg.cells.some((c) => c.photoId)) && unplacedPhotos(previous, photos).length === 0;
+      const layout = keep
+        ? previous
+        : autoLayoutLocal(photos, { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 60 });
       if (cancelled) return;
       setDraft({ ...project, layout });
       setLayout(layout);
@@ -34,8 +43,9 @@ export default function OverviewScreen() {
         layout,
         version: project.version,
         onLocalOnly: () => setSyncState('local-only'),
-        onSaved: (p) => {
-          setDraft(p);
+        onSaved: ({ version }) => {
+          // Сервер на сохранение отвечает только новой версией; макет остаётся локальным.
+          setDraft({ ...project, layout, version });
           setSyncState('saved');
         },
         onConflict: async (server, localLayout) => {
@@ -53,7 +63,7 @@ export default function OverviewScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Обзор книги</Text>
       <Text style={styles.sub}>{message}</Text>
-      {(draft?.layout.pages ?? []).slice(0, 8).map((page, index) => (
+      {(draft?.layout?.pages ?? []).slice(0, 8).map((page, index) => (
         <Card key={index}>
           <Text style={styles.cardTitle}>
             Разворот {index + 1} · {page.template}
