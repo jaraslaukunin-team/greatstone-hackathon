@@ -206,7 +206,7 @@ export default function AssistantScreen() {
           ) : (
             <>
               {selected?.url ? (
-                <Image source={{ uri: client.resolveUrl(selected.url) }} style={styles.preview} resizeMode="cover" />
+                <Image source={{ uri: client.resolveUrl(selected.url) }} style={styles.preview} resizeMode="contain" />
               ) : (
                 <Text style={styles.sub}>Загрузите фото в проект, затем вернитесь сюда.</Text>
               )}

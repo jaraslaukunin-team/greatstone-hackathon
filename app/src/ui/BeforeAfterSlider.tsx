@@ -79,7 +79,7 @@ export function BeforeAfterSlider({ beforeUri, afterUri, aspect }: Props) {
 
 const styles = StyleSheet.create({
   box: { width: '100%', borderRadius: radius.card, overflow: 'hidden', backgroundColor: lightColors.border },
-  clip: { position: 'absolute', top: 0, bottom: 0, left: 0, overflow: 'hidden' },
+  clip: { position: 'absolute', top: 0, bottom: 0, left: 0, overflow: 'hidden', backgroundColor: lightColors.border },
   before: { position: 'absolute', top: 0, bottom: 0, left: 0 },
   handle: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   knob: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: lightColors.text },

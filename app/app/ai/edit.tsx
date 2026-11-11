@@ -72,7 +72,7 @@ export default function AiEditScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>AI-редактор</Text>
-      {photo ? <Image source={{ uri: client.resolveUrl(photo.url) }} style={styles.preview} resizeMode="cover" /> : null}
+      {photo ? <Image source={{ uri: client.resolveUrl(photo.url) }} style={styles.preview} resizeMode="contain" /> : null}
       <Button
         title={photo ? 'Выбрать другое фото' : 'Выбрать фото'}
         variant={photo ? 'secondary' : 'primary'}
