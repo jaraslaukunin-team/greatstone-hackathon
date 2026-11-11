@@ -23,6 +23,7 @@ export function useAssistantChat(client: ApiClient) {
       const nextMessages: AiChatMessage[] = [...messages, { role: 'user', content }];
       setMessages(nextMessages);
       try {
+        await client.post('/ai/consent', { consent: true });
         const res = await client.post<AiChatResponse>('/ai/chat', {
           messages: nextMessages.filter((m) => m.role === 'user' || m.role === 'assistant'),
           orderId,

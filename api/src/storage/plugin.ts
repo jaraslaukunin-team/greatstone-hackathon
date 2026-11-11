@@ -9,5 +9,5 @@ declare module 'fastify' {
 }
 
 export function registerStorage(app: FastifyInstance): void {
-  app.decorate('storage', new DiskStorage(app.config.uploadDir));
+  app.decorate('storage', new DiskStorage(app.config.uploadDir, app.config.fileEncryptionKey));
 }

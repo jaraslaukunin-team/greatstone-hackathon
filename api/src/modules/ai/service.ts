@@ -9,6 +9,7 @@ import { AppError } from '../../errors.js';
 import { readImageMeta, sniffMime } from '../photos/imageMeta.js';
 import { storageKey, toPhotoDTO } from '../photos/service.js';
 import { assertProjectAccess, viewerRole } from '../projects/service.js';
+import { prepareAiEgress } from './egress.js';
 import { isPromptAllowed } from './promptFilter.js';
 import { wrapEditPrompt } from './promptWrap.js';
 import { sizeFor } from './sizeFor.js';
@@ -135,14 +136,28 @@ async function runJob(app: FastifyInstance, jobId: string): Promise<void> {
     if (!photo) return fail({ reason: 'Исходное фото уже удалено' });
 
     const source = await app.storage.get(photo.storagePath);
-    const mime = sniffMime(source);
-    if (!mime) return fail({ reason: 'Исходное фото не открывается' });
+    if (!sniffMime(source)) return fail({ reason: 'Исходное фото не открывается' });
+
+    let egress;
+    try {
+      egress = await prepareAiEgress(source);
+    } catch (e) {
+      app.log.error(e, 'не удалось подготовить фото к отправке в AI');
+      return fail({ reason: 'Не удалось подготовить фото к обработке' });
+    }
+    await audit(db, {
+      userId: job.userId,
+      action: 'ai.egress',
+      objectType: 'photo',
+      objectId: `${photo.id}:${egress.sha256}`,
+      result: 'ok',
+    });
 
     let output: { image: Buffer; mime: string };
     try {
       output = await app.ai.provider.edit({
-        image: source,
-        mime,
+        image: egress.image,
+        mime: egress.mime,
         prompt: job.prompt,
         size: job.size ?? undefined,
         signal: controller.signal,

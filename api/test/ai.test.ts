@@ -9,6 +9,7 @@ import { auditLog, consents, aiJobs, productVariants, projectMembers, projectPho
 import { AiaiProvider } from '../src/modules/ai/aiaiProvider.js';
 import { AiaiChatProvider, StubChatProvider } from '../src/modules/ai/chatProvider.js';
 import { BLOCKED_TERMS, isPromptAllowed } from '../src/modules/ai/promptFilter.js';
+import { prepareAiEgress } from '../src/modules/ai/egress.js';
 import { wrapEditPrompt } from '../src/modules/ai/promptWrap.js';
 import { sizeFor } from '../src/modules/ai/sizeFor.js';
 import { StubProvider } from '../src/modules/ai/stubProvider.js';
@@ -45,6 +46,18 @@ describe('обёртка prompt', () => {
     const up = wrapEditPrompt('сделай чётче', 'upscale');
     expect(up).toMatch(/детализац|резк/i);
     expect(up).toContain('сделай чётче');
+  });
+});
+
+describe('prepareAiEgress', () => {
+  it('снимает метаданные через re-encode, ставит jpeg и считает sha256 исходника', async () => {
+    const { createHash } = await import('node:crypto');
+    const expected = createHash('sha256').update(SOURCE).digest('hex');
+    const out = await prepareAiEgress(SOURCE);
+    expect(out.mime).toBe('image/jpeg');
+    expect(out.sha256).toBe(expected);
+    expect(out.image.equals(SOURCE)).toBe(false);
+    expect(out.image.length).toBeGreaterThan(100);
   });
 });
 
@@ -310,6 +323,12 @@ describe('AI-редактор', () => {
     expect(row).toMatchObject({ provider: 'stub', status: 'done', projectId });
     const logged = await db.select().from(auditLog).where(and(eq(auditLog.userId, alice.id), eq(auditLog.action, 'ai.edit')));
     expect(logged).toHaveLength(1);
+    const egress = await db
+      .select()
+      .from(auditLog)
+      .where(and(eq(auditLog.userId, alice.id), eq(auditLog.action, 'ai.egress')));
+    expect(egress.length).toBeGreaterThanOrEqual(1);
+    expect(egress[0]!.objectId).toMatch(new RegExp(`^${photoId}:[a-f0-9]{64}$`));
   });
 
   it('сбой провайдера: job failed с причиной по-русски без деталей, фото не добавлено, лимит не уменьшается', async () => {
@@ -475,8 +494,18 @@ describe('AI-редактор', () => {
     expect((await call(alice, 'POST', '/ai/adjust', { projectId, photoId })).statusCode).toBe(422);
   });
 
-  it('POST /ai/chat со stub отвечает по-русски и добавляет сообщение ассистента', async () => {
+  it('POST /ai/chat без согласия 403', async () => {
     app.ai.chat = new StubChatProvider();
+    const res = await call(alice, 'POST', '/ai/chat', {
+      messages: [{ role: 'user', content: 'Привет' }],
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.code).toBe('AI_CONSENT_REQUIRED');
+  });
+
+  it('POST /ai/chat со stub отвечает по-русски и пишет egress-отпечаток', async () => {
+    app.ai.chat = new StubChatProvider();
+    await consent(alice);
     const res = await call(alice, 'POST', '/ai/chat', {
       messages: [{ role: 'user', content: 'Какие услуги в каталоге?' }],
     });
@@ -484,6 +513,16 @@ describe('AI-редактор', () => {
     const body = res.json() as { reply: string; messages: { role: string; content: string }[] };
     expect(body.reply).toMatch(/каталог|фотокниг|печат/i);
     expect(body.messages.at(-1)).toMatchObject({ role: 'assistant' });
+    expect((await db.select().from(auditLog).where(eq(auditLog.action, 'ai.egress'))).length).toBeGreaterThan(0);
+  });
+
+  it('POST /ai/chat с запрещённой темой 422 PROMPT_REJECTED', async () => {
+    await consent(alice);
+    const res = await call(alice, 'POST', '/ai/chat', {
+      messages: [{ role: 'user', content: 'расскажи про порно' }],
+    });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error.code).toBe('PROMPT_REJECTED');
   });
 });
 
