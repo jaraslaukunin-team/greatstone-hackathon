@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { ApiRequestError, NetworkError } from '../../src/api/client';
+import { useAddressStore } from '../../src/checkout/addressStore';
 import { createCheckoutController } from '../../src/checkout/useCheckout';
+import { billablePages } from '../../src/project/billablePages';
 import { useProjectStore } from '../../src/project/projectStore';
 import { Button } from '../../src/ui/Button';
 import { lightColors, space, typography } from '../../src/theme/theme';
@@ -14,6 +16,7 @@ export default function ConfirmScreen() {
   const { delivery, payment } = useLocalSearchParams<{ delivery: DeliveryMethodId; payment: string }>();
   const client = useApiClient();
   const { draft, setIdempotencyKey, clear } = useProjectStore();
+  const address = useAddressStore((s) => s.address);
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,9 +28,10 @@ export default function ConfirmScreen() {
       draft,
       setIdempotencyKey,
       delivery: delivery ?? 'belpost',
-      pages: Math.max(20, draft.layout.pages.length),
+      pages: billablePages(draft.layout),
+      address: address ?? undefined,
     });
-  }, [client, draft, delivery, setIdempotencyKey]);
+  }, [client, draft, delivery, address, setIdempotencyKey]);
 
   useEffect(() => {
     if (!controller) return;
@@ -41,6 +45,7 @@ export default function ConfirmScreen() {
     try {
       const order = await controller.submit();
       clear();
+      useAddressStore.getState().setAddress(null);
       router.replace({ pathname: '/checkout/result', params: { orderId: order.id, payment } });
     } catch (e) {
       if (e instanceof ApiRequestError && e.code === 'PRICE_CHANGED') {

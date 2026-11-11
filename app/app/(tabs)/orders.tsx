@@ -1,4 +1,5 @@
 import type { OrderDTO } from '@picpac/shared';
+import { statusLabel } from '../../src/orders/statusLabel';
 import { formatByn } from '@picpac/shared';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -46,7 +47,7 @@ export default function OrdersScreen() {
           <Card chevron>
             <Text style={styles.cardTitle}>{order.number}</Text>
             <Text style={styles.cardSub}>
-              {order.status} · {formatByn(order.totalKop)}
+              {statusLabel(order.status)} · {formatByn(order.totalKop)}
             </Text>
           </Card>
         </Link>

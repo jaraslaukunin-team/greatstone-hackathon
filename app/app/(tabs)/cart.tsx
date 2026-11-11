@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { ensureIdempotencyKey } from '../../src/checkout/idempotency';
+import { billablePages } from '../../src/project/billablePages';
 import { useProjectStore } from '../../src/project/projectStore';
 import { Button } from '../../src/ui/Button';
 import { Card } from '../../src/ui/Card';
@@ -21,7 +22,7 @@ export default function CartScreen() {
     void client
       .post<QuoteResponse>('/price-quote', {
         variantId: draft.project.variantId,
-        pages: Math.max(20, draft.layout.pages.length),
+        pages: billablePages(draft.layout),
         quantity: 1,
         delivery: 'belpost',
       })
@@ -47,7 +48,7 @@ export default function CartScreen() {
       <Text style={styles.title}>Корзина</Text>
       <Card>
         <Text style={styles.cardTitle}>{draft.project.title}</Text>
-        <Text style={styles.cardSub}>{draft.layout.pages.length} страниц</Text>
+        <Text style={styles.cardSub}>{billablePages(draft.layout)} {draft.layout.pages.some((p) => p.copies) ? 'отпечатков' : 'страниц'}</Text>
         <Text style={styles.price}>{quote ? formatByn(quote.totalKop) : '…'}</Text>
       </Card>
       <Text style={styles.hint}>Тестовый режим · деньги не списываются</Text>

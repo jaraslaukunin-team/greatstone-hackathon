@@ -1,4 +1,5 @@
 import type { OrderDTO } from '@picpac/shared';
+import { statusLabel } from '../../src/orders/statusLabel';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
@@ -11,7 +12,7 @@ export default function OperatorQueueScreen() {
   const [orders, setOrders] = useState<OrderDTO[]>([]);
 
   useEffect(() => {
-    void client.get<OrderDTO[]>('/orders').then(setOrders).catch(() => setOrders([]));
+    void client.get<OrderDTO[]>('/operator/orders').then(setOrders).catch(() => setOrders([]));
   }, [client]);
 
   return (
@@ -21,7 +22,7 @@ export default function OperatorQueueScreen() {
         <Link key={order.id} href={`/operator/order/${order.id}`} asChild>
           <Card>
             <Text style={styles.cardTitle}>{order.number}</Text>
-            <Text style={styles.cardSub}>{order.status}</Text>
+            <Text style={styles.cardSub}>{statusLabel(order.status)}</Text>
           </Card>
         </Link>
       ))}

@@ -22,11 +22,19 @@ export function autoLayout(photos: PhotoMeta[], variant: { pagesMin: number; pag
   while (i < sorted.length && pages.length < variant.pagesMax) {
     const remaining = sorted.length - i;
     const pagesLeft = variant.pagesMax - pages.length;
+    // Сколько страниц ещё нужно добрать до минимума: пока фото лишь немного больше, склеивать их не нужно,
+    // иначе книга останется с пустыми страницами, хотя фото хватает на каждую отдельную.
+    const pagesNeeded = Math.max(0, variant.pagesMin - pages.length);
     const current = sorted[i]!;
     if (remaining >= 4 && remaining > pagesLeft) {
       pages.push({ template: 'four', cells: sorted.slice(i, i + 4).map(cellFor) });
       i += 4;
-    } else if (isLandscape(current) && i + 1 < sorted.length && isLandscape(sorted[i + 1]!)) {
+    } else if (
+      isLandscape(current) &&
+      i + 1 < sorted.length &&
+      isLandscape(sorted[i + 1]!) &&
+      remaining - 2 >= pagesNeeded - 1
+    ) {
       pages.push({ template: 'two', cells: [cellFor(current), cellFor(sorted[i + 1]!)] });
       i += 2;
     } else {

@@ -1,15 +1,25 @@
+import type { PhotoDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useApiClient } from '../../../../src/api/hooks';
 import { applyTemplate, replacePhoto, setCrop, swapCells } from '../../../../src/editor/editorActions';
 import { useProjectStore } from '../../../../src/project/projectStore';
 import { Button } from '../../../../src/ui/Button';
-import { lightColors, space, typography } from '../../../../src/theme/theme';
+import { lightColors, radius, space, typography } from '../../../../src/theme/theme';
 
 export default function SpreadEditorScreen() {
   const { id, index } = useLocalSearchParams<{ id: string; index: string }>();
   const pageIndex = Number(index ?? 0);
   const { draft, setLayout } = useProjectStore();
   const page = draft?.layout.pages[pageIndex];
+  const client = useApiClient();
+  const [photos, setPhotos] = useState<PhotoDTO[]>([]);
+  const [cellIndex, setCellIndex] = useState(0);
+
+  useEffect(() => {
+    void client.get<PhotoDTO[]>(`/projects/${id}/photos`).then(setPhotos).catch(() => undefined);
+  }, [client, id]);
 
   if (!draft || !page) {
     return (
@@ -23,9 +33,9 @@ export default function SpreadEditorScreen() {
     <View style={styles.screen}>
       <Text style={styles.title}>Редактор разворота {pageIndex + 1}</Text>
       <Text style={styles.sub}>Шаблон: {page.template}</Text>
-      {page.cells.map((cell, cellIndex) => (
-        <Text key={cellIndex} style={styles.cell}>
-          Ячейка {cellIndex + 1}: {cell.photoId ?? 'пусто'} · scale {cell.crop.scale}
+      {page.cells.map((cell, index) => (
+        <Text key={index} style={styles.cell}>
+          Ячейка {index + 1}: {cell.photoId ? 'фото выбрано' : 'пусто'} · масштаб {cell.crop.scale.toFixed(1)}
         </Text>
       ))}
       <Button
@@ -58,15 +68,36 @@ export default function SpreadEditorScreen() {
           )
         }
       />
-      <Button
-        title="Заменить фото-заглушкой"
-        variant="secondary"
-        onPress={() =>
-          setLayout(
-            replacePhoto(draft.layout, { pageIndex, cellIndex: 0 }, '00000000-0000-4000-8000-000000000999'),
-          )
-        }
-      />
+      <Text style={styles.sub}>
+        Заменить фото{page.cells.length > 1 ? ` в ячейке ${cellIndex + 1}` : ''}:
+      </Text>
+      {page.cells.length > 1 ? (
+        <View style={styles.chips}>
+          {page.cells.map((_, i) => (
+            <Button
+              key={i}
+              title={`Ячейка ${i + 1}`}
+              variant={i === cellIndex ? 'primary' : 'secondary'}
+              onPress={() => setCellIndex(i)}
+            />
+          ))}
+        </View>
+      ) : null}
+      <ScrollView horizontal contentContainerStyle={styles.strip}>
+        {photos.map((p) => (
+          <Pressable
+            key={p.id}
+            accessibilityRole="button"
+            accessibilityLabel="Поставить это фото"
+            onPress={() => setLayout(replacePhoto(draft.layout, { pageIndex, cellIndex }, p.id))}
+          >
+            <Image
+              source={{ uri: client.resolveUrl(p.url) }}
+              style={[styles.stripThumb, page.cells[cellIndex]?.photoId === p.id && styles.stripThumbActive]}
+            />
+          </Pressable>
+        ))}
+      </ScrollView>
       <Button title="К обзору" onPress={() => router.push(`/project/${id}/overview`)} />
     </View>
   );
@@ -77,4 +108,8 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text, marginTop: space[5] },
   sub: { ...typography.body, color: lightColors.textSecondary },
   cell: { ...typography.caption, color: lightColors.text },
+  chips: { flexDirection: 'row', gap: space[2] },
+  strip: { gap: space[2] },
+  stripThumb: { width: 64, height: 64, borderRadius: radius.photo, backgroundColor: lightColors.border },
+  stripThumbActive: { borderWidth: 2, borderColor: lightColors.accent },
 });
