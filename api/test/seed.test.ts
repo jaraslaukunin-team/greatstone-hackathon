@@ -108,4 +108,31 @@ describe('seedDatabase', () => {
     await seedDatabase(db);
     expect(await counts()).toEqual(first);
   });
+
+  it('повторный вызов исправляет устаревший каталог: цены, страницы, описания и срок промокода', async () => {
+    await seedDatabase(db);
+    // Так выглядит база, засеянная старой версией сида: печать с pages_min 10 и нулевой базой.
+    await db.update(s.productVariants).set({ pagesMin: 10, basePrice: 0 }).where(eq(s.productVariants.format, '10×15 глянцевая'));
+    await db.update(s.products).set({ description: '', leadTimeDays: 99 }).where(eq(s.products.title, 'Печать 10×15'));
+    await db.update(s.promoCodes).set({ discountPercent: 1 }).where(eq(s.promoCodes.code, 'HELLO10'));
+
+    await seedDatabase(db);
+
+    const [variant] = await db.select().from(s.productVariants).where(eq(s.productVariants.format, '10×15 глянцевая'));
+    expect(variant).toMatchObject({ pagesMin: 1, basePrice: 61, pricePerPage: 61 });
+    const [product] = await db.select().from(s.products).where(eq(s.products.title, 'Печать 10×15'));
+    expect(product!.leadTimeDays).toBe(2);
+    expect(product!.description.length).toBeGreaterThan(0);
+    const [promo] = await db.select().from(s.promoCodes).where(eq(s.promoCodes.code, 'HELLO10'));
+    expect(promo!.discountPercent).toBe(10);
+  });
+
+  it('повторный вызов не затирает данные пользователей: статус заказа остаётся, каким его изменили', async () => {
+    await seedDatabase(db);
+    const [order] = await db.select().from(s.orders).where(eq(s.orders.status, 'accepted')).limit(1);
+    await db.update(s.orders).set({ status: 'completed' }).where(eq(s.orders.id, order!.id));
+    await seedDatabase(db);
+    const [after] = await db.select().from(s.orders).where(eq(s.orders.id, order!.id));
+    expect(after!.status).toBe('completed');
+  });
 });
