@@ -1,15 +1,17 @@
-{
-  "name": "picpac",
-  "private": true,
-  "workspaces": [
-    "packages/*",
-    "api",
-    "app"
-  ],
-  "engines": {
-    "node": ">=20"
-  },
-  "scripts": {
-    "test": "npm run test --workspaces --if-present"
-  }
+﻿{
+    "name":  "picpac",
+    "private":  true,
+    "workspaces":  [
+                       "packages/*",
+                       "api",
+                       "app",
+                       "tools/*"
+                   ],
+    "engines":  {
+                    "node":  "\u003e=20"
+                },
+    "scripts":  {
+                    "test":  "npm run test --workspaces --if-present",
+                    "mock-api":  "npm run start -w @picpac/mock-api"
+                }
 }
