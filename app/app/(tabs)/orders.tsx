@@ -7,6 +7,7 @@ import { useApiClient } from '../../src/api/hooks';
 import { Card } from '../../src/ui/Card';
 import { StateBanner } from '../../src/ui/StateBanner';
 import { lightColors, space, typography } from '../../src/theme/theme';
+import { EmptyState } from '../../src/ui/EmptyState';
 
 export default function OrdersScreen() {
   const client = useApiClient();
@@ -37,10 +38,12 @@ export default function OrdersScreen() {
       {error ? (
         <StateBanner title={error} actionLabel="Повторить" onAction={() => void load()} tone="danger" />
       ) : null}
-      {!loading && orders.length === 0 ? <Text style={styles.sub}>Пока нет заказов</Text> : null}
+      {!loading && !error && orders.length === 0 ? (
+        <EmptyState icon="doc" title="Пока нет заказов" message="Оформленные заказы и их статусы появятся здесь" />
+      ) : null}
       {orders.map((order) => (
         <Link key={order.id} href={`/orders/${order.id}`} asChild>
-          <Card>
+          <Card chevron>
             <Text style={styles.cardTitle}>{order.number}</Text>
             <Text style={styles.cardSub}>
               {order.status} · {formatByn(order.totalKop)}
@@ -56,7 +59,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg },
   content: { padding: space[4], gap: space[3], paddingTop: space[7] },
   title: { ...typography.h1, color: lightColors.text },
-  sub: { ...typography.body, color: lightColors.textMuted },
+  sub: { ...typography.body, color: lightColors.textSecondary },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
-  cardSub: { ...typography.caption, color: lightColors.textMuted, marginTop: 4 },
+  cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
 });

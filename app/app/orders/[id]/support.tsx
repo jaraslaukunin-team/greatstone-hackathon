@@ -1,10 +1,11 @@
 import type { InteractionDTO } from '@picpac/shared';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import { Button } from '../../../src/ui/Button';
-import { lightColors, radius, space, typography } from '../../../src/theme/theme';
+import { Input } from '../../../src/ui/Input';
+import { lightColors, space, typography } from '../../../src/theme/theme';
 
 export default function SupportScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -37,12 +38,11 @@ export default function SupportScreen() {
           {message.body}
         </Text>
       ))}
-      <TextInput
-        style={styles.input}
+      <Input
+       
         value={text}
         onChangeText={setText}
         placeholder="Опишите проблему"
-        placeholderTextColor={lightColors.textMuted}
       />
       <Button title="Отправить" onPress={() => void send()} disabled={!text.trim()} />
     </View>
@@ -53,12 +53,4 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
   msg: { ...typography.body, color: lightColors.text },
-  input: {
-    backgroundColor: lightColors.surfaceMuted,
-    borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: lightColors.border,
-    padding: space[3],
-    color: lightColors.text,
-  },
 });

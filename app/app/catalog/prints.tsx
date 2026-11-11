@@ -27,7 +27,7 @@ export default function PrintsScreen() {
         const variant = product.variants[0];
         return (
           <Link key={product.id} href={{ pathname: '/print/format', params: { productId: product.id } }} asChild>
-            <Card>
+            <Card chevron>
               <Text style={styles.cardTitle}>{product.title}</Text>
               {variant ? <Text style={styles.price}>от {formatByn(variant.basePriceKop)}</Text> : null}
             </Card>

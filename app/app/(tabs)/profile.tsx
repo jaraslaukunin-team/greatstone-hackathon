@@ -31,11 +31,11 @@ export default function ProfileScreen() {
       <Text style={styles.meta}>Роль: {user?.role ?? '—'}</Text>
 
       {user?.role === 'operator' ? (
-        <Button title="Очередь оператора" onPress={() => router.push('/operator/queue')} />
+        <Button title="Очередь оператора" icon="doc" onPress={() => router.push('/operator/queue')} />
       ) : null}
 
-      <Button title="Мои данные" variant="secondary" onPress={() => router.push('/profile/data')} />
-      <Button title="Поддержка" variant="secondary" onPress={() => router.push('/profile/support')} />
+      <Button title="Мои данные" icon="lock" variant="secondary" onPress={() => router.push('/profile/data')} />
+      <Button title="Поддержка" icon="info" variant="secondary" onPress={() => router.push('/profile/support')} />
 
       <View style={styles.row}>
         <Text style={styles.label}>Имитация сбоя сети</Text>
@@ -48,7 +48,7 @@ export default function ProfileScreen() {
         />
       </View>
 
-      <Button title="Удалить мои данные" variant="secondary" onPress={() => void deleteData()} />
+      <Button title="Удалить мои данные" icon="trash" variant="secondary" onPress={() => void deleteData()} />
       <Button
         title="Выйти"
         variant="text"
@@ -65,8 +65,8 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], paddingTop: space[7], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
-  sub: { ...typography.body, color: lightColors.textMuted },
-  meta: { ...typography.caption, color: lightColors.textMuted },
+  sub: { ...typography.body, color: lightColors.textSecondary },
+  meta: { ...typography.caption, color: lightColors.textSecondary },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
   label: { ...typography.body, color: lightColors.text },
   error: { ...typography.caption, color: lightColors.danger },
