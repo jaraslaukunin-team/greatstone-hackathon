@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, or } from 'drizzle-orm';
 import type { Layout, ProjectDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
+import { hashPassword } from '../../auth/password.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import type { Db } from '../../db/client.js';
 import { orders, projectMembers, projectPhotos, projects } from '../../db/schema.js';
@@ -22,6 +23,7 @@ export const toProjectDTO = (p: ProjectRow): ProjectDTO => ({
   status: p.status,
   isShared: p.isShared,
   expectedMembers: p.expectedMembers,
+  hasPassword: p.joinPasswordHash !== null,
   layout: (p.layout as Layout | null) ?? { pages: [] },
   version: p.version,
   updatedAt: p.updatedAt.toISOString(),
@@ -84,9 +86,12 @@ export async function viewerRole(db: Db, user: AuthUser, project: ProjectRow): P
 export async function createProject(
   db: Db,
   user: AuthUser,
-  input: { variantId: string; title: string; isShared?: boolean; expectedMembers?: number },
+  input: { variantId: string; title: string; isShared?: boolean; expectedMembers?: number; joinPassword?: string },
 ): Promise<ProjectDTO> {
   await loadVariant(db, input.variantId);
+  if (input.joinPassword !== undefined && !input.isShared) {
+    throw new AppError(400, 'PASSWORD_NOT_ALLOWED', 'Пароль можно задать только общему выпускному альбому');
+  }
   const [row] = await db
     .insert(projects)
     .values({
@@ -95,6 +100,7 @@ export async function createProject(
       title: input.title,
       isShared: input.isShared ?? false,
       expectedMembers: input.expectedMembers ?? null,
+      joinPasswordHash: input.joinPassword === undefined ? null : await hashPassword(input.joinPassword),
     })
     .returning();
   await audit(db, { userId: user.id, action: 'project.create', objectType: 'project', objectId: row!.id, result: 'ok' });
@@ -150,4 +156,22 @@ export async function deleteProject(db: Db, storage: Storage, user: AuthUser, pr
   // Файлы удаляем после фиксации строк: сбой диска не должен вернуть удалённый проект.
   await Promise.allSettled(files.map((f) => storage.remove(f.path)));
   await audit(db, { userId: user.id, action: 'project.delete', objectType: 'project', objectId: projectId, result: 'ok' });
+}
+
+// Пароль входа в общий альбом меняет и снимает только организатор (null снимает).
+export async function setJoinPassword(db: Db, user: AuthUser, projectId: string, password: string | null): Promise<void> {
+  const project = await assertProjectAccess(db, user, projectId, 'organizer');
+  if (!project.isShared) throw new AppError(409, 'PROJECT_NOT_SHARED', 'Пароль есть только у общего выпускного альбома');
+  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Альбом уже заказан');
+  await db
+    .update(projects)
+    .set({ joinPasswordHash: password === null ? null : await hashPassword(password), updatedAt: new Date() })
+    .where(eq(projects.id, projectId));
+  await audit(db, {
+    userId: user.id,
+    action: password === null ? 'album.password_removed' : 'album.password_changed',
+    objectType: 'project',
+    objectId: projectId,
+    result: 'ok',
+  });
 }

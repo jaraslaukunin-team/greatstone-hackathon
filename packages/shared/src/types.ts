@@ -84,6 +84,8 @@ export type ProjectDTO = {
   status: 'draft' | 'ordered';
   isShared: boolean;
   expectedMembers: number | null;
+  /** Нужен ли пароль, чтобы вступить в общий альбом. Сам пароль и его хеш наружу не отдаются. */
+  hasPassword: boolean;
   layout: Layout;
   version: number;
   updatedAt: string;

@@ -50,7 +50,7 @@ describe('совместный альбом', () => {
     };
     return { token: j.token, id: j.user.id };
   };
-  const call = (s: Session | null, method: 'GET' | 'POST' | 'DELETE', url: string, payload?: unknown) =>
+  const call = (s: Session | null, method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: unknown) =>
     app.inject({
       method,
       url,
@@ -225,5 +225,110 @@ describe('совместный альбом', () => {
     expect((await call(carol, 'GET', `/projects/${projectId}/progress`)).statusCode).toBe(404);
     expect((await call(carol, 'GET', `/projects/${projectId}/photos`)).statusCode).toBe(404);
     expect((await call(null, 'GET', `/projects/${projectId}/progress`)).statusCode).toBe(401);
+  });
+
+  describe('пароль альбома', () => {
+    let pid: string;
+    const create = async (extra: Record<string, unknown> = {}) => {
+      const variantId = (await db.select().from(productVariants).where(eq(productVariants.format, 'Выпускной 20×20')))[0]!.id;
+      return call(alice, 'POST', '/projects', { variantId, title: '11 А', isShared: true, expectedMembers: 20, ...extra });
+    };
+    const tokenOf = async () => inviteSchema.parse((await call(alice, 'POST', `/projects/${pid}/invites`)).json()).token;
+    const join = (s: Session, token: string, password?: string) =>
+      call(s, 'POST', '/invites/accept', { token, ...(password === undefined ? {} : { password }) });
+    const failures = () =>
+      db.select().from(auditLog).where(and(eq(auditLog.action, 'invite.password_failed'), eq(auditLog.userId, bob.id)));
+
+    beforeEach(async () => {
+      pid = ((await create({ joinPassword: 'secret-1' })).json() as { id: string }).id;
+    });
+
+    it('создание с паролем: hasPassword true, хеш не отдаётся, в базе не пароль, а scrypt-хеш с солью', async () => {
+      const dto = projectSchema.parse((await call(alice, 'GET', `/projects/${pid}`)).json());
+      expect(dto.hasPassword).toBe(true);
+      expect(JSON.stringify(dto)).not.toMatch(/secret-1|hash/i);
+      const row = (await db.select().from(projects).where(eq(projects.id, pid)))[0]!;
+      expect(row.joinPasswordHash).toMatch(/^[0-9a-f]+:[0-9a-f]+$/);
+      expect(row.joinPasswordHash).not.toContain('secret-1');
+      const open = projectSchema.parse((await call(alice, 'GET', `/projects/${projectId}`)).json());
+      expect(open.hasPassword).toBe(false);
+    });
+
+    it('слишком короткий и слишком длинный пароль: 400; пароль для не общего проекта: 400', async () => {
+      expect((await create({ joinPassword: 'abc' })).statusCode).toBe(400);
+      expect((await create({ joinPassword: 'x'.repeat(65) })).statusCode).toBe(400);
+      expect((await create({ joinPassword: 'secret-1', isShared: false })).statusCode).toBe(400);
+    });
+
+    it('вход: без пароля 401 PASSWORD_REQUIRED, неверный 401 PASSWORD_INVALID, верный 200 с ролью contributor', async () => {
+      const token = await tokenOf();
+      const none = await join(bob, token);
+      expect(none.statusCode).toBe(401);
+      expect(none.json().error.code).toBe('PASSWORD_REQUIRED');
+      const wrong = await join(bob, token, 'wrong-pass');
+      expect(wrong.statusCode).toBe(401);
+      expect(wrong.json().error.code).toBe('PASSWORD_INVALID');
+      expect((await members()).length).toBe(0);
+      expect((await join(bob, token, 'secret-1')).statusCode).toBe(200);
+      const m = await db.select().from(projectMembers).where(eq(projectMembers.projectId, pid));
+      expect(m.map((x) => x.userId)).toEqual([bob.id]);
+    });
+
+    it('пароль сравнивается как есть: пробелы по краям значимы', async () => {
+      await call(alice, 'PUT', `/projects/${pid}/password`, { password: ' abcd ' });
+      const token = await tokenOf();
+      expect((await join(bob, token, 'abcd')).json().error.code).toBe('PASSWORD_INVALID');
+      expect((await join(bob, token, ' abcd ')).statusCode).toBe(200);
+    });
+
+    it('пять неверных попыток подряд: шестая 429 даже с верным паролем; другой пользователь не затронут', async () => {
+      const token = await tokenOf();
+      for (let i = 0; i < 5; i++) expect((await join(bob, token, `bad-${i}-pass`)).statusCode).toBe(401);
+      expect(await failures()).toHaveLength(5);
+      const blocked = await join(bob, token, 'secret-1');
+      expect(blocked.statusCode).toBe(429);
+      expect(blocked.json().error.code).toBe('TOO_MANY_ATTEMPTS');
+      expect((await join(carol, token, 'secret-1')).statusCode).toBe(200);
+    });
+
+    it('через 10 минут блокировка снимается', async () => {
+      const token = await tokenOf();
+      for (let i = 0; i < 5; i++) await join(bob, token, `bad-${i}-pass`);
+      expect((await join(bob, token, 'secret-1')).statusCode).toBe(429);
+      app.clock.now = () => new Date(NOW.getTime() + 11 * 60 * 1000);
+      expect((await join(bob, token, 'secret-1')).statusCode).toBe(200);
+    });
+
+    it('организатор и уже вступивший участник пароль не вводят', async () => {
+      const token = await tokenOf();
+      expect((await join(alice, token)).statusCode).toBe(200);
+      expect((await join(bob, token, 'secret-1')).statusCode).toBe(200);
+      expect((await join(bob, token)).statusCode).toBe(200);
+    });
+
+    it('смена пароля: организатор 204, старый перестаёт подходить; участник и посторонний 404; null снимает пароль', async () => {
+      const token = await tokenOf();
+      expect((await join(bob, token, 'secret-1')).statusCode).toBe(200);
+      const put = (s: Session, password: string | null) =>
+        app.inject({ method: 'PUT', url: `/projects/${pid}/password`, payload: { password }, headers: { authorization: `Bearer ${s.token}` } });
+      expect((await put(bob, 'hacked-pass')).statusCode).toBe(404);
+      expect((await put(carol, 'hacked-pass')).statusCode).toBe(404);
+      expect((await put(alice, 'new-pass-2')).statusCode).toBe(204);
+      expect((await join(carol, token, 'secret-1')).json().error.code).toBe('PASSWORD_INVALID');
+      expect((await join(carol, token, 'new-pass-2')).statusCode).toBe(200);
+      expect((await put(alice, null)).statusCode).toBe(204);
+      const dave = await guest();
+      expect((await join(dave, token)).statusCode).toBe(200);
+      expect(projectSchema.parse((await call(alice, 'GET', `/projects/${pid}`)).json()).hasPassword).toBe(false);
+      expect((await put(alice, 'abc')).statusCode).toBe(400);
+    });
+
+    it('в журнал пишутся неудачи и смена пароля, но не сам пароль', async () => {
+      const token = await tokenOf();
+      await join(bob, token, 'super-wrong-password');
+      const rows = await db.select().from(auditLog);
+      expect(JSON.stringify(rows)).not.toMatch(/super-wrong-password|secret-1/);
+      expect(rows.some((r) => r.action === 'invite.password_failed')).toBe(true);
+    });
   });
 });

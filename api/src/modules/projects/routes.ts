@@ -10,6 +10,7 @@ import {
   deleteProject,
   listProjects,
   saveLayout,
+  setJoinPassword,
   toProjectDTO,
 } from './service.js';
 
@@ -18,7 +19,9 @@ const createSchema = z.object({
   title: z.string().trim().min(1).max(200),
   isShared: z.boolean().optional(),
   expectedMembers: z.number().int().min(0).optional(),
+  joinPassword: z.string().min(4).max(64).optional(),
 });
+const passwordSchema = z.object({ password: z.string().min(4).max(64).nullable() });
 const saveSchema = z.object({ layout: z.unknown(), version: z.number().int().positive() });
 
 export function registerProjectRoutes(app: FastifyInstance): void {
@@ -43,6 +46,13 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     const layout = layoutSchema.safeParse(body.layout);
     if (!layout.success) throw new AppError(422, 'LAYOUT_INVALID', 'Макет заполнен неверно');
     return saveLayout(req.server.db, req.user!, id, layout.data, body.version);
+  });
+
+  app.put('/projects/:id/password', auth, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const body = parse(passwordSchema, req.body);
+    await setJoinPassword(req.server.db, req.user!, id, body.password);
+    return reply.code(204).send();
   });
 
   app.delete('/projects/:id', auth, async (req, reply) => {
