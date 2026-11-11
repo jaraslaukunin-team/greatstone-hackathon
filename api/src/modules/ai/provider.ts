@@ -6,6 +6,8 @@ export interface ImageEditProvider {
     image: Buffer;
     mime: 'image/jpeg' | 'image/png';
     prompt: string;
+    /** Размер результата вида 1536x1024; без него модель решает сама. */
+    size?: string;
     signal: AbortSignal;
   }): Promise<{ image: Buffer; mime: string }>;
 }

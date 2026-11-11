@@ -273,6 +273,7 @@ export const aiJobs = pgTable(
       .references(() => projects.id, { onDelete: 'cascade' }),
     sourcePhoto: text('source_photo').notNull(),
     prompt: text('prompt').notNull(),
+    size: text('size'),
     resultPath: text('result_path'),
     resultPhotoId: uuid('result_photo_id').references(() => projectPhotos.id, { onDelete: 'set null' }),
     reason: text('reason'),

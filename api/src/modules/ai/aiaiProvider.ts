@@ -41,10 +41,11 @@ export class AiaiProvider implements ImageEditProvider {
     return res.json();
   }
 
-  private async viaImages({ image, mime, prompt, signal }: Input) {
+  private async viaImages({ image, mime, prompt, size, signal }: Input) {
     const form = new FormData();
     form.set('model', this.cfg.aiaiModel);
     form.set('prompt', prompt);
+    if (size) form.set('size', size);
     form.set('image', new Blob([new Uint8Array(image)], { type: mime }), mime === 'image/png' ? 'image.png' : 'image.jpg');
     const json = (await this.post('/images/edits', { body: form }, signal)) as { data?: { b64_json?: string }[] };
     const b64 = json.data?.[0]?.b64_json;

@@ -10,6 +10,7 @@ import { AiaiProvider } from '../src/modules/ai/aiaiProvider.js';
 import { AiaiChatProvider, StubChatProvider } from '../src/modules/ai/chatProvider.js';
 import { BLOCKED_TERMS, isPromptAllowed } from '../src/modules/ai/promptFilter.js';
 import { wrapEditPrompt } from '../src/modules/ai/promptWrap.js';
+import { sizeFor } from '../src/modules/ai/sizeFor.js';
 import { StubProvider } from '../src/modules/ai/stubProvider.js';
 import { seed, testApp } from './helpers.js';
 
@@ -114,6 +115,16 @@ describe('провайдер aiai.by', () => {
     expect(form.get('prompt')).toBe('сделай ярче');
     expect((form.get('image') as File).type).toBe('image/jpeg');
     expect(Buffer.from(await (form.get('image') as File).arrayBuffer()).equals(SOURCE)).toBe(true);
+  });
+
+  it('режим images: size передаётся, только если задан', async () => {
+    const ok = () => new Response(JSON.stringify({ data: [{ b64_json: RESULT.toString('base64') }] }), { status: 200 });
+    const f = fakeFetch(ok);
+    const provider = new AiaiProvider({ ...base, aiaiEditMode: 'images' }, f.impl);
+    await provider.edit({ ...input(), size: '1536x1024' });
+    await provider.edit(input());
+    expect((f.calls[0]!.init.body as FormData).get('size')).toBe('1536x1024');
+    expect((f.calls[1]!.init.body as FormData).get('size')).toBeNull();
   });
 
   it('режим chat: JSON с картинкой как data URL, ответ разбирается из message.images', async () => {
@@ -370,6 +381,29 @@ describe('AI-редактор', () => {
     expect((await call(null, 'POST', '/ai/consent')).statusCode).toBe(401);
   });
 
+  it('aspect задаёт размер результата: хранится в задаче и уходит провайдеру; чужой aspect — 400', async () => {
+    await consent(alice);
+    const sizes: (string | undefined)[] = [];
+    const stub = new StubProvider();
+    app.ai.provider = {
+      name: 'stub',
+      edit: async (input) => {
+        sizes.push(input.size);
+        return stub.edit();
+      },
+    };
+    const res = await edit(alice, { aspect: '5:7' });
+    expect(res.statusCode).toBe(202);
+    await app.ai.idle();
+    const { jobId } = res.json() as { jobId: string };
+    expect((await db.select().from(aiJobs).where(eq(aiJobs.id, jobId)))[0]!.size).toBe('1024x1536');
+    const plain = (await edit(alice)).json() as { jobId: string };
+    await app.ai.idle();
+    expect((await db.select().from(aiJobs).where(eq(aiJobs.id, plain.jobId)))[0]!.size).toBe('1536x1024');
+    expect(sizes).toEqual(['1024x1536', '1536x1024']);
+    expect((await edit(alice, { aspect: '2:1' })).statusCode).toBe(400);
+  });
+
   it('kind upscale сохраняет обёрнутый prompt в задаче', async () => {
     await consent(alice);
     const res = await edit(alice, { kind: 'upscale', prompt: 'увеличь качество' });
@@ -406,5 +440,15 @@ describe('AI-редактор', () => {
     const body = res.json() as { reply: string; messages: { role: string; content: string }[] };
     expect(body.reply).toMatch(/каталог|фотокниг|печат/i);
     expect(body.messages.at(-1)).toMatchObject({ role: 'assistant' });
+  });
+});
+
+describe('sizeFor', () => {
+  it('выбирает ближайший размер модели к пропорции', () => {
+    expect(sizeFor('16:9', { width: 1000, height: 1000 })).toBe('1536x1024');
+    expect(sizeFor('1:1', { width: 3000, height: 1000 })).toBe('1024x1024');
+    expect(sizeFor('5:7', { width: 1000, height: 1000 })).toBe('1024x1536');
+    expect(sizeFor('original', { width: 900, height: 1600 })).toBe('1024x1536');
+    expect(sizeFor('original', { width: 2400, height: 1600 })).toBe('1536x1024');
   });
 });
