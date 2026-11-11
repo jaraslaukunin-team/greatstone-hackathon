@@ -13,6 +13,7 @@ import { MAX_PHOTO_BYTES } from './modules/catalog/service.js';
 import { registerOperatorRoutes } from './modules/operator/routes.js';
 import { registerOrderRoutes } from './modules/orders/routes.js';
 import { registerPhotoRoutes } from './modules/photos/routes.js';
+import { registerPrivacyRoutes } from './modules/privacy/routes.js';
 import { registerProjectRoutes } from './modules/projects/routes.js';
 import { registerQuoteRoutes } from './modules/quote/routes.js';
 import { registerSupportRoutes } from './modules/support/routes.js';
@@ -50,6 +51,7 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerSupportRoutes(app);
   registerAlbumRoutes(app);
   registerAiRoutes(app);
+  registerPrivacyRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
 }
