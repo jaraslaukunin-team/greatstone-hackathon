@@ -91,4 +91,22 @@ describe('UploadQueue', () => {
     await second.resume();
     expect(upload).toHaveBeenCalledTimes(1);
   });
+
+  it('после перезапуска отбрасывает записи с blob:-адресами: страница их больше не откроет', async () => {
+    const storage = memoryStore();
+    const upload = jest.fn(async () => ({ id: 'p1' }));
+    const first = new UploadQueue({ upload, storage, isOnline: () => false, delay: async () => undefined });
+    first.enqueue({ localId: 'dead', projectId: 'proj', uri: 'blob:https://site/abc' });
+    first.enqueue({ localId: 'alive', projectId: 'proj', uri: 'file://a.jpg' });
+    await new Promise((r) => setTimeout(r, 0));
+
+    const second = new UploadQueue({ upload, storage, isOnline: () => true, delay: async () => undefined });
+    await second.hydrate();
+    const seen: string[] = [];
+    second.onChange((state) => seen.push(...state.items.map((i) => i.localId)));
+    expect(seen.at(-1)).toBe('alive');
+    expect(seen).not.toContain('dead');
+    await second.resume();
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
 });

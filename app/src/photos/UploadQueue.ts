@@ -50,7 +50,9 @@ export class UploadQueue {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as QueueItem[];
-      this.items = parsed.filter((item) => item.status !== 'done');
+      // blob:-адрес живёт только до перезагрузки страницы: такая запись уже не откроется и висела бы вечно.
+      this.items = parsed.filter((item) => item.status !== 'done' && !item.uri.startsWith('blob:'));
+      if (this.items.length !== parsed.length) void this.persist();
       this.emit();
     } catch {
       // ignore corrupt storage
