@@ -4,19 +4,12 @@ import type { Config } from '../src/config.js';
 import { closeDb, createDb, type Db } from '../src/db/client.js';
 
 // Тестовые константы, не настоящие секреты.
-export const testConfig: Config = {
+export const testOverrides: Partial<Config> = {
   databaseUrl:
     process.env.DATABASE_URL_TEST ?? 'postgres://picpac:picpac@localhost:5433/picpac_test',
   jwtSecret: 'test-jwt-secret',
   fileUrlSecret: 'test-file-url-secret',
   uploadDir: './uploads-test',
-  demoMode: false,
-  aiProvider: 'stub',
-  aiaiBaseUrl: 'https://api.aiai.by/v1',
-  aiaiApiKey: '',
-  aiaiModel: '',
-  aiaiEditMode: 'images',
-  port: 0,
 };
 
 export async function testApp(): Promise<{
@@ -24,8 +17,8 @@ export async function testApp(): Promise<{
   db: Db;
   reset(): Promise<void>;
 }> {
-  const app = await buildApp(testConfig, { logger: false });
-  const db = createDb(testConfig.databaseUrl);
+  const app = await buildApp(testOverrides);
+  const db = createDb(app.config.databaseUrl);
   app.addHook('onClose', async () => {
     await closeDb(db);
   });

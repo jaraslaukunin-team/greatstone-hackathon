@@ -34,7 +34,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     jwtSecret: required(env, 'JWT_SECRET'),
     fileUrlSecret: required(env, 'FILE_URL_SECRET'),
     uploadDir: env.UPLOAD_DIR || './uploads',
-    demoMode: env.DEMO_MODE === 'true',
+    demoMode: ['true', '1', 'yes'].includes((env.DEMO_MODE ?? '').toLowerCase()),
     aiProvider: env.AI_PROVIDER || 'stub',
     aiaiBaseUrl: env.AIAI_BASE_URL || 'https://api.aiai.by/v1',
     aiaiApiKey: env.AIAI_API_KEY ?? '',

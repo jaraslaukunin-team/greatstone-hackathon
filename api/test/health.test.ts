@@ -42,6 +42,16 @@ describe('loadConfig', () => {
     });
   });
 
+  it('DEMO_MODE понимает true, 1, yes без учёта регистра', () => {
+    const base = { DATABASE_URL: 'd', JWT_SECRET: 'j', FILE_URL_SECRET: 'f' };
+    for (const v of ['true', '1', 'YES', 'True']) {
+      expect(loadConfig({ ...base, DEMO_MODE: v }).demoMode).toBe(true);
+    }
+    for (const v of ['false', '0', '']) {
+      expect(loadConfig({ ...base, DEMO_MODE: v }).demoMode).toBe(false);
+    }
+  });
+
   it('отклоняет недопустимый AIAI_EDIT_MODE', () => {
     expect(() =>
       loadConfig({ DATABASE_URL: 'd', JWT_SECRET: 'j', FILE_URL_SECRET: 'f', AIAI_EDIT_MODE: 'bad' }),
