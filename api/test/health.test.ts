@@ -67,4 +67,12 @@ describe('loadConfig', () => {
       loadConfig({ DATABASE_URL: 'd', JWT_SECRET: 'j', FILE_URL_SECRET: 'f', AIAI_EDIT_MODE: 'bad' }),
     ).toThrow(/AIAI_EDIT_MODE/);
   });
+
+  it('при AI_PROVIDER=aiai требует https AIAI_BASE_URL', () => {
+    const base = { DATABASE_URL: 'd', JWT_SECRET: 'j', FILE_URL_SECRET: 'f', AI_PROVIDER: 'aiai' };
+    expect(() => loadConfig({ ...base, AIAI_BASE_URL: 'http://insecure.local/v1' })).toThrow(/https/);
+    expect(loadConfig({ ...base, AIAI_BASE_URL: 'https://api.aiai.by/v1' }).aiaiBaseUrl).toBe(
+      'https://api.aiai.by/v1',
+    );
+  });
 });
