@@ -68,6 +68,19 @@ export async function assertProjectAccess(
   return refuse();
 }
 
+export type ViewerRole = 'owner' | 'organizer' | 'contributor' | 'operator';
+
+// Кем пользователь приходится проекту (владелец неявный организатор альбома).
+export async function viewerRole(db: Db, user: AuthUser, project: ProjectRow): Promise<ViewerRole | null> {
+  if (project.ownerId === user.id) return 'owner';
+  const [member] = await db
+    .select({ role: projectMembers.role })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, project.id), eq(projectMembers.userId, user.id)));
+  if (member) return member.role;
+  return user.role === 'operator' ? 'operator' : null;
+}
+
 export async function createProject(
   db: Db,
   user: AuthUser,

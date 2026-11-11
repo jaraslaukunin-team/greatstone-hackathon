@@ -5,6 +5,7 @@ import { registerAuth } from './auth/plugin.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerErrorHandling } from './errors.js';
 import { registerStorage } from './storage/plugin.js';
+import { registerAlbumRoutes } from './modules/albums/routes.js';
 import { registerCatalogRoutes } from './modules/catalog/routes.js';
 import { MAX_PHOTO_BYTES } from './modules/catalog/service.js';
 import { registerOperatorRoutes } from './modules/operator/routes.js';
@@ -44,6 +45,7 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerOrderRoutes(app);
   registerOperatorRoutes(app);
   registerSupportRoutes(app);
+  registerAlbumRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
 }

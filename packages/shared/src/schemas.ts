@@ -156,12 +156,20 @@ export const interactionSchema = z.object({
   createdAt: iso,
   messages: z.array(interactionMessageSchema),
 });
-export const albumProgressSchema = z.object({
-  projectId: z.string(),
-  expectedMembers: z.number().int().nonnegative(),
-  joinedMembers: z.number().int().nonnegative(),
+export const inviteSchema = z.object({ token: z.string(), url: z.string(), expiresAt: iso });
+export const acceptInviteRequestSchema = z.object({
+  token: z.string().min(10).max(200),
+  childName: z.string().trim().min(1).max(100).optional(),
+});
+export const albumMemberSchema = z.object({
+  userId: z.string(),
+  childName: z.string().nullable(),
+  role: z.enum(['organizer', 'contributor']),
   photosCount: z.number().int().nonnegative(),
-  approvedMembers: z.number().int().nonnegative(),
+});
+export const albumProgressSchema = z.object({
+  expected: z.number().int().nonnegative().nullable(),
+  members: z.array(albumMemberSchema),
 });
 
 export const aiJobSchema = z.object({
