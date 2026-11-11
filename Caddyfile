@@ -1,6 +1,28 @@
-# HTTPS для API. API_DOMAIN: домен или <ip-сервера>.nip.io, тогда сертификат Caddy получает сам.
+# HTTPS для API и веб-версии приложения. API_DOMAIN: домен или <ip-сервера>.nip.io, тогда сертификат Caddy получает сам.
 # Без API_DOMAIN используется localhost (самоподписанный сертификат, для проверки на своей машине).
+# Веб-версия лежит в ./web (сборка: npm run web:build -w app). Браузерные переходы по страницам отдают сайт,
+# все остальные запросы (fetch, файлы, программы) идут в API на том же домене, поэтому CORS не нужен.
 {$API_DOMAIN:localhost} {
 	encode zstd gzip
-	reverse_proxy api:3000
+
+	@assets path /_expo/* /assets/* /favicon.ico
+	handle @assets {
+		root * /srv/web
+		file_server
+	}
+
+	@page {
+		method GET HEAD
+		header Accept *text/html*
+		not path /health
+	}
+	handle @page {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+
+	handle {
+		reverse_proxy api:3000
+	}
 }
