@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { count } from 'drizzle-orm';
+import { count, sql } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 import { closeDb, createDb, type Db } from './client.js';
 import * as s from './schema.js';
@@ -34,6 +34,8 @@ type VariantSeed = [format: string, pagesMin: number, pagesMax: number, base: nu
 type ProductSeed = { kind: 'photobook' | 'prints' | 'graduation'; title: string; description: string; lead: number; variants: VariantSeed[] };
 
 // Цены в копейках, выдуманные, но правдоподобные.
+// Каталог и промокоды при повторном запуске обновляются (чтобы старая база получила исправления),
+// пользователи, проекты, заказы и обращения существующие строки не меняют.
 const PRODUCTS: ProductSeed[] = [
   { kind: 'photobook', title: 'Фотокнига Lite', description: 'Твёрдая обложка и гибкие журнальные страницы. Подходит, когда фото много.', lead: 5, variants: [
     ['Lite 15×15', 20, 40, 7000, 100, 15],
@@ -99,14 +101,20 @@ export async function seedDatabase(db: Db): Promise<SeedSummary> {
     await db
       .insert(s.products)
       .values({ id: productId, kind: p.kind, title: p.title, description: p.description, leadTimeDays: p.lead })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: s.products.id,
+        set: { kind: p.kind, title: p.title, description: p.description, leadTimeDays: p.lead },
+      });
     for (const [format, pagesMin, pagesMax, basePrice, pricePerPage, pageWidthCm] of p.variants) {
       const id = uid(NS.variant, ++variantNo);
       variantIds.set(format, id);
       await db
         .insert(s.productVariants)
         .values({ id, productId, format, pagesMin, pagesMax, basePrice, pricePerPage, pageWidthCm, minDpi: 150 })
-        .onConflictDoNothing();
+        .onConflictDoUpdate({
+          target: s.productVariants.id,
+          set: { productId, format, pagesMin, pagesMax, basePrice, pricePerPage, pageWidthCm, minDpi: 150 },
+        });
     }
   }
 
@@ -117,7 +125,14 @@ export async function seedDatabase(db: Db): Promise<SeedSummary> {
       { id: uid(NS.promo, 2), code: 'SCHOOL15', discountPercent: 15, validUntil: new Date('2030-12-31T23:59:59Z') },
       { id: uid(NS.promo, 3), code: 'OLD20', discountPercent: 20, validUntil: new Date('2025-01-01T00:00:00Z') },
     ])
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: s.promoCodes.id,
+      set: {
+        code: sql`excluded.code`,
+        discountPercent: sql`excluded.discount_percent`,
+        validUntil: sql`excluded.valid_until`,
+      },
+    });
 
   let historyNo = 0;
   for (const [i, o] of ORDERS.entries()) {
