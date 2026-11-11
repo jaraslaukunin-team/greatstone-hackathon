@@ -4,13 +4,18 @@ import { requireAuth } from '../../auth/plugin.js';
 import { parse } from '../../validation.js';
 import { applyAdjust } from './adjust.js';
 import { chatAssist } from './chat.js';
-import { acceptConsent, getJob, requestEdit } from './service.js';
+import { acceptConsent, getJob, requestEdit, revokeConsent } from './service.js';
 
 export function registerAiRoutes(app: FastifyInstance): void {
   const auth = { preHandler: requireAuth };
 
   app.post('/ai/consent', auth, async (req, reply) => {
     await acceptConsent(req.server, req.user!);
+    return reply.code(204).send();
+  });
+
+  app.delete('/ai/consent', auth, async (req, reply) => {
+    await revokeConsent(req.server, req.user!);
     return reply.code(204).send();
   });
 

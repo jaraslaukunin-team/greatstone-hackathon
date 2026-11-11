@@ -17,6 +17,7 @@ import {
   projectPhotos,
   projects,
 } from '../src/db/schema.js';
+import { dataSummarySchema } from '@picpac/shared';
 import { seed, testApp } from './helpers.js';
 
 type Session = { token: string; id: string };
@@ -85,6 +86,28 @@ describe('удаление данных пользователя', () => {
     alice = await guest();
     bob = await guest();
     variantId = (await db.select().from(productVariants).where(eq(productVariants.format, 'Classic 20×20')))[0]!.id;
+  });
+
+  const summary = (s: Session | null) =>
+    app.inject({ method: 'GET', url: '/me/data-summary', headers: s ? { authorization: `Bearer ${s.token}` } : {} });
+
+  it('сводка данных: число проектов, фото и заказов, дата согласия на AI; без токена 401', async () => {
+    expect((await summary(null)).statusCode).toBe(401);
+    const empty = dataSummarySchema.parse((await summary(alice)).json());
+    expect(empty).toEqual({ projects: 0, photos: 0, orders: 0, aiConsentAt: null });
+
+    const projectId = await makeProject(alice);
+    await addPhoto(alice, projectId, 0);
+    await addPhoto(alice, projectId, 1);
+    await makeProject(bob);
+    await db.insert(consents).values({ userId: alice.id, kind: 'ai_processing' });
+    const res = dataSummarySchema.parse((await summary(alice)).json());
+    expect(res.projects).toBe(1);
+    expect(res.photos).toBe(2);
+    expect(res.orders).toBe(0);
+    expect(res.aiConsentAt).toMatch(/Z$/);
+    // чужие данные в сводку не попадают
+    expect(dataSummarySchema.parse((await summary(bob)).json())).toMatchObject({ projects: 1, photos: 0, aiConsentAt: null });
   });
 
   // Alice: проект из 3 фото, AI-задача и согласие, обращение, заказ; плюс участие в проектах Боба.

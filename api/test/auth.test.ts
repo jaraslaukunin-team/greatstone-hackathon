@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
-import { auditLog, consents, profiles } from '../src/db/schema.js';
+import { auditLog, authCodes, consents, profiles } from '../src/db/schema.js';
 import type { Db } from '../src/db/client.js';
-import { deny, requireAuth, requireRole } from '../src/auth/plugin.js';
+import { deny, hashCode, requireAuth, requireRole } from '../src/auth/plugin.js';
 import { seed, testApp } from './helpers.js';
 
 describe('вход, роли и журнал', () => {
@@ -195,5 +195,105 @@ describe('вход вне демо-режима', () => {
     } finally {
       await app.close();
     }
+  });
+});
+
+describe('лимиты входа', () => {
+  const NOW = new Date('2026-11-11T12:00:00Z');
+  let app: FastifyInstance;
+  let db: Db;
+  let reset: () => Promise<void>;
+
+  const requestCode = (contact: string) =>
+    app.inject({ method: 'POST', url: '/auth/request-code', payload: { contact } });
+  const verify = (contact: string, code: string) =>
+    app.inject({ method: 'POST', url: '/auth/verify-code', payload: { contact, code } });
+  const wrong = async (contact: string, n: number) => {
+    for (let i = 0; i < n; i++) expect((await verify(contact, `11111${i}`)).statusCode).toBe(401);
+  };
+
+  describe('демо-режим', () => {
+    beforeAll(async () => {
+      ({ app, db, reset } = await testApp());
+      await app.ready();
+    });
+    afterAll(async () => {
+      await app.close();
+    });
+    beforeEach(async () => {
+      await reset();
+      await seed(db);
+      app.clock.now = () => NOW;
+    });
+
+    it('5 неверных кодов подряд: шестой неверный 429 TOO_MANY_ATTEMPTS, демо-код 000000 всё равно проходит', async () => {
+      await requestCode('anna@test.local');
+      await wrong('anna@test.local', 5);
+      const blocked = await verify('anna@test.local', '999999');
+      expect(blocked.statusCode).toBe(429);
+      expect(blocked.json().error.code).toBe('TOO_MANY_ATTEMPTS');
+      expect((await verify('anna@test.local', '000000')).statusCode).toBe(200);
+    });
+
+    it('лимит у каждого контакта свой; через 10 минут блокировка снимается', async () => {
+      await requestCode('anna@test.local');
+      await wrong('anna@test.local', 5);
+      expect((await verify('anna@test.local', '999999')).statusCode).toBe(429);
+      expect((await verify('boris@test.local', '999999')).statusCode).toBe(401);
+      app.clock.now = () => new Date(NOW.getTime() + 11 * 60 * 1000);
+      expect((await verify('anna@test.local', '999999')).statusCode).toBe(401);
+    });
+
+    it('запрос кода: 3 за 10 минут на контакт, четвёртый 429', async () => {
+      for (let i = 0; i < 3; i++) expect((await requestCode('anna@test.local')).statusCode).toBe(204);
+      const res = await requestCode('anna@test.local');
+      expect(res.statusCode).toBe(429);
+      expect(res.json().error.code).toBe('TOO_MANY_ATTEMPTS');
+      expect((await requestCode('boris@test.local')).statusCode).toBe(204);
+      app.clock.now = () => new Date(NOW.getTime() + 11 * 60 * 1000);
+      expect((await requestCode('anna@test.local')).statusCode).toBe(204);
+    });
+
+    it('в журнал контакт открытым текстом не попадает', async () => {
+      await requestCode('secret-person@test.local');
+      await wrong('secret-person@test.local', 2);
+      const rows = await db.select().from(auditLog);
+      expect(rows.some((r) => r.action === 'auth.code_failed')).toBe(true);
+      expect(JSON.stringify(rows)).not.toContain('secret-person');
+    });
+  });
+
+  describe('боевой режим', () => {
+    beforeAll(async () => {
+      ({ app, db, reset } = await testApp({ demoMode: false }));
+      await app.ready();
+    });
+    afterAll(async () => {
+      await app.close();
+    });
+    beforeEach(async () => {
+      await reset();
+      await seed(db);
+      app.clock.now = () => NOW;
+    });
+
+    it('после 5 неверных кодов блокируется и верный код, пока не пройдёт окно', async () => {
+      const contact = 'real@test.local';
+      await db.insert(authCodes).values({
+        contact,
+        codeHash: hashCode(app, contact, '123456'),
+        expiresAt: new Date(NOW.getTime() + 15 * 60 * 1000),
+      });
+      await wrong(contact, 5);
+      const blocked = await verify(contact, '123456');
+      expect(blocked.statusCode).toBe(429);
+      app.clock.now = () => new Date(NOW.getTime() + 11 * 60 * 1000);
+      expect((await verify(contact, '123456')).statusCode).toBe(200);
+    });
+
+    it('демо-код 000000 без демо-режима не принимается', async () => {
+      await requestCode('real@test.local');
+      expect((await verify('real@test.local', '000000')).statusCode).toBe(401);
+    });
   });
 });

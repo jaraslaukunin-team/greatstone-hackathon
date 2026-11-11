@@ -235,3 +235,10 @@ export const auditEntrySchema = z.object({
   objectId: z.string().nullable(),
   result: z.enum(['ok', 'denied', 'error']),
 });
+
+export const dataSummarySchema = z.object({
+  projects: z.number().int().nonnegative(),
+  photos: z.number().int().nonnegative(),
+  orders: z.number().int().nonnegative(),
+  aiConsentAt: iso.nullable(),
+});
