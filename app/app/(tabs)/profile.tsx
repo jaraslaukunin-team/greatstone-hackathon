@@ -30,10 +30,6 @@ export default function ProfileScreen() {
       <Text style={styles.sub}>{user?.displayName ?? 'Гость'}</Text>
       <Text style={styles.meta}>Роль: {user?.role ?? '—'}</Text>
 
-      {user?.role === 'operator' ? (
-        <Button title="Очередь оператора" icon="doc" onPress={() => router.push('/operator/queue')} />
-      ) : null}
-
       <Button title="Мои данные" icon="lock" variant="secondary" onPress={() => router.push('/profile/data')} />
       <Button title="Поддержка" icon="info" variant="secondary" onPress={() => router.push('/profile/support')} />
 

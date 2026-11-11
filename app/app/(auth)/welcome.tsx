@@ -4,10 +4,12 @@ import { Button } from '../../src/ui/Button';
 import { PrintStack } from '../../src/ui/PrintStack';
 import { Wordmark } from '../../src/ui/Wordmark';
 import { useAuth } from '../../src/auth/AuthProvider';
+import { useRoleMode } from '../../src/auth/roleStore';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function WelcomeScreen() {
   const { loginAsGuest } = useAuth();
+  const setMode = useRoleMode((s) => s.setMode);
 
   return (
     <View style={styles.screen}>
@@ -20,10 +22,13 @@ export default function WelcomeScreen() {
         <Text style={styles.sub}>Выберите фото — мы разложим их сами.</Text>
       </View>
       <View style={styles.actions}>
-        <Link href="/(auth)/login" asChild>
+        <Link href="/(auth)/role" asChild>
           <Button title="Дальше" />
         </Link>
-        <Button title="Продолжить как гость" variant="text" onPress={() => void loginAsGuest()} />
+        <Button title="Продолжить как гость" variant="text" onPress={() => {
+            setMode('customer');
+            void loginAsGuest();
+          }} />
       </View>
     </View>
   );
