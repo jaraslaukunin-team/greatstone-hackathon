@@ -558,13 +558,14 @@ async function buildApp() {
     if (!session.user.aiConsent) {
       throw error(403, 'AI_CONSENT_REQUIRED', 'Нужно согласие на передачу фото');
     }
-    const body = req.body as { prompt?: string; photoId?: string };
+    const body = req.body as { prompt?: string; photoId?: string; projectId?: string; kind?: string };
     if (body.prompt && /запрещ/i.test(body.prompt)) {
       throw error(422, 'PROMPT_REJECTED', 'Запрос отклонён');
     }
     const job = {
       id: newId(),
       status: 'pending' as const,
+      kind: body.kind === 'upscale' ? ('upscale' as const) : ('edit' as const),
     };
     state.aiJobs.set(job.id, job);
     setTimeout(() => {
@@ -573,6 +574,7 @@ async function buildApp() {
       state.aiJobs.set(job.id, {
         id: job.id,
         status: 'done',
+        kind: job.kind,
         resultPhoto: {
           id: newId(),
           width: 1600,
@@ -584,7 +586,61 @@ async function buildApp() {
         },
       });
     }, 300);
-    return job;
+    return { jobId: job.id };
+  });
+
+  app.post('/ai/adjust', async (req) => {
+    const session = auth(req);
+    const body = req.body as {
+      projectId?: string;
+      photoId?: string;
+      brightness?: number;
+      contrast?: number;
+      saturation?: number;
+      sharpen?: number;
+    };
+    const has =
+      body.brightness !== undefined ||
+      body.contrast !== undefined ||
+      body.saturation !== undefined ||
+      (body.sharpen !== undefined && body.sharpen > 0);
+    if (!has) throw error(422, 'NO_ADJUSTMENTS', 'Укажите хотя бы один параметр изменения');
+    const photo = {
+      id: newId(),
+      width: 1600,
+      height: 1200,
+      takenAt: null as string | null,
+      url: 'https://mock.local/adjusted.jpg',
+      uploadedBy: session.user.id,
+      source: 'ai' as const,
+    };
+    if (body.projectId) {
+      state.photos.set(photo.id, { ...photo, projectId: body.projectId, uploadedBy: session.user.id });
+    }
+    return photo;
+  });
+
+  app.post('/ai/chat', async (req) => {
+    auth(req);
+    const body = req.body as { messages?: { role: string; content: string }[]; orderId?: string };
+    const messages = body.messages ?? [];
+    const last = messages.filter((m) => m.role === 'user').at(-1)?.content.toLowerCase() ?? '';
+    let reply =
+      'Я консультант picPac. Спросите про статус заказа, доставку или что выбрать в каталоге.';
+    if (/заказ|статус|где/.test(last)) {
+      reply = body.orderId
+        ? `Смотрю заказ ${body.orderId.slice(0, 8)}…: статус можно уточнить во вкладке «Заказы».`
+        : 'Откройте вкладку «Заказы» или выберите номер заказа в чате.';
+    } else if (/каталог|цен|книг|печат|пакет|услуг/.test(last)) {
+      reply =
+        'В каталоге есть фотокниги, печать фото и выпускные альбомы. Цены считает сервер — выберите товар на главной.';
+    } else if (/привет|здравств|помощь/.test(last)) {
+      reply = 'Здравствуйте! Помогу с заказами, каталогом и оформлением.';
+    }
+    return {
+      reply,
+      messages: [...messages, { role: 'assistant', content: reply }],
+    };
   });
 
   app.get('/ai/jobs/:id', async (req) => {

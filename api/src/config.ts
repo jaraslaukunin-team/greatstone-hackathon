@@ -8,6 +8,7 @@ export type Config = {
   aiaiBaseUrl: string;
   aiaiApiKey: string;
   aiaiModel: string;
+  aiaiChatModel: string;
   aiaiEditMode: 'images' | 'chat';
   port: number;
 };
@@ -38,7 +39,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     aiProvider: env.AI_PROVIDER || 'stub',
     aiaiBaseUrl: env.AIAI_BASE_URL || 'https://api.aiai.by/v1',
     aiaiApiKey: env.AIAI_API_KEY ?? '',
-    aiaiModel: env.AIAI_MODEL ?? '',
+    aiaiModel: env.AIAI_MODEL || 'qwen-image-edit',
+    aiaiChatModel: env.AIAI_CHAT_MODEL || 'gpt-4o-mini',
     aiaiEditMode: editMode,
     port,
   };
