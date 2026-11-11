@@ -21,16 +21,7 @@ export default function OverviewScreen() {
     let cancelled = false;
     (async () => {
       const project = await client.get<ProjectDTO>(`/projects/${id}`);
-      // photos list is not a dedicated endpoint in mock; synthesize from project layout or rebuild
-      const photos: PhotoDTO[] = Array.from({ length: 12 }, (_, i) => ({
-        id: `00000000-0000-4000-8000-${String(0x100000000000 + i).slice(-12)}`,
-        width: i % 3 === 0 ? 1600 : 2400,
-        height: i % 3 === 0 ? 2400 : 1600,
-        takenAt: new Date(Date.now() - i * 86_400_000).toISOString(),
-        url: 'https://mock.local/photo.jpg',
-        uploadedBy: project.ownerId,
-        source: 'gallery',
-      }));
+      const photos = await client.get<PhotoDTO[]>(`/projects/${id}/photos`);
       const layout = autoLayoutLocal(photos, { pagesMin: 20, pagesMax: 60 });
       if (cancelled) return;
       setDraft({ ...project, layout });

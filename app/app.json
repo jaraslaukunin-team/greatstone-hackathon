@@ -8,7 +8,7 @@
     "scheme": "picpac",
     "userInterfaceStyle": "automatic",
     "extra": {
-      "apiUrl": "http://localhost:3000",
+      "apiUrl": "https://api.jaraslau.dev",
       "eas": {
         "projectId": "00000000-0000-4000-8000-000000000000"
       }
