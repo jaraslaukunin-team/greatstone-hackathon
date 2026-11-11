@@ -3,7 +3,7 @@ import { PgTable } from 'drizzle-orm/pg-core';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
 import type { Config } from '../src/config.js';
-import { closeDb, createDb, type Db } from '../src/db/client.js';
+import type { Db } from '../src/db/client.js';
 import * as schema from '../src/db/schema.js';
 import { seedDatabase, type SeedSummary } from '../src/db/seed.js';
 import { assertTestDatabaseName, assertTestDatabaseUrl, TEST_DATABASE_URL } from './testDbGuard.js';
@@ -16,6 +16,7 @@ export const testOverrides: Partial<Config> = {
   jwtSecret: 'test-jwt-secret',
   fileUrlSecret: 'test-file-url-secret',
   uploadDir: './uploads-test',
+  demoMode: true,
 };
 
 const tableNames = (Object.values(schema) as unknown[])
@@ -35,15 +36,12 @@ export function seed(db: Db): Promise<SeedSummary> {
   return seedDatabase(db);
 }
 
-export async function testApp(): Promise<{
+export async function testApp(extra: Partial<Config> = {}): Promise<{
   app: FastifyInstance;
   db: Db;
   reset(): Promise<void>;
 }> {
-  const app = await buildApp(testOverrides);
-  const db = createDb(app.config.databaseUrl);
-  app.addHook('onClose', async () => {
-    await closeDb(db);
-  });
+  const app = await buildApp({ ...testOverrides, ...extra });
+  const db = app.db;
   return { app, db, reset: () => resetDatabase(db) };
 }

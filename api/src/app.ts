@@ -1,5 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { loadConfig, type Config } from './config.js';
+import { registerAuth } from './auth/plugin.js';
+import { registerAuthRoutes } from './auth/routes.js';
 import { registerErrorHandling } from './errors.js';
 
 declare module 'fastify' {
@@ -21,6 +23,8 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   const app = Fastify({ logger: !silent });
   app.decorate('config', config);
   registerErrorHandling(app);
+  registerAuth(app);
+  registerAuthRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
 }
