@@ -12,6 +12,7 @@ import { registerOrderRoutes } from './modules/orders/routes.js';
 import { registerPhotoRoutes } from './modules/photos/routes.js';
 import { registerProjectRoutes } from './modules/projects/routes.js';
 import { registerQuoteRoutes } from './modules/quote/routes.js';
+import { registerSupportRoutes } from './modules/support/routes.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -42,6 +43,7 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerPhotoRoutes(app);
   registerOrderRoutes(app);
   registerOperatorRoutes(app);
+  registerSupportRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
 }

@@ -140,12 +140,21 @@ export const orderSchema = z.object({
   interactionIds: z.array(z.string()),
 });
 
+export const interactionMessageSchema = z.object({
+  id: z.string(),
+  authorId: z.string().nullable(),
+  authorRole: z.enum(['customer', 'operator']).nullable(),
+  body: z.string(),
+  createdAt: iso,
+});
 export const interactionSchema = z.object({
   id: z.string(),
-  projectId: z.string(),
-  userId: z.string(),
-  kind: z.enum(['joined', 'photos_added', 'approved']),
+  orderId: z.string().nullable(),
+  customerId: z.string().nullable(),
+  topic: z.string(),
+  status: z.enum(['open', 'answered', 'closed']),
   createdAt: iso,
+  messages: z.array(interactionMessageSchema),
 });
 export const albumProgressSchema = z.object({
   projectId: z.string(),

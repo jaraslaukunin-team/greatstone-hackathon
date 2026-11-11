@@ -227,7 +227,7 @@ export async function listOrders(db: Db, user: AuthUser): Promise<OrderDTO[]> {
   return toOrderDTOs(db, rows);
 }
 
-async function loadOrder(db: Db, user: AuthUser, id: string, opts: { operatorMay: boolean }): Promise<OrderRow> {
+export async function loadOrder(db: Db, user: AuthUser, id: string, opts: { operatorMay: boolean }): Promise<OrderRow> {
   if (!UUID.test(id)) throw notFound();
   const [row] = await db.select().from(orders).where(eq(orders.id, id));
   const allowed = row && (row.customerId === user.id || (opts.operatorMay && user.role === 'operator'));

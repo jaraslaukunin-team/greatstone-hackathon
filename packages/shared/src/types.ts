@@ -137,12 +137,22 @@ export type OrderDTO = {
   interactionIds: string[];
 };
 
+export type InteractionMessageDTO = {
+  id: string;
+  authorId: string | null;
+  authorRole: Role | null;
+  body: string;
+  createdAt: string;
+};
+
 export type InteractionDTO = {
   id: string;
-  projectId: string;
-  userId: string;
-  kind: 'joined' | 'photos_added' | 'approved';
+  orderId: string | null;
+  customerId: string | null;
+  topic: string;
+  status: 'open' | 'answered' | 'closed';
   createdAt: string;
+  messages: InteractionMessageDTO[];
 };
 
 export type AlbumProgressDTO = {
