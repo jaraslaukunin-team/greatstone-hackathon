@@ -97,9 +97,11 @@ export const projectSchema = z.object({
 });
 
 export const quoteRequestSchema = z.object({
-  projectId: z.string().uuid(),
+  variantId: z.string().uuid(),
+  pages: z.number().int().positive(),
+  quantity: z.number().int().positive(),
   delivery: deliveryMethodIdSchema,
-  promoCode: z.string().optional(),
+  promoCode: z.string().max(50).optional(),
 });
 export const quoteResponseSchema = z.object({
   itemsKop: kop,
@@ -107,6 +109,7 @@ export const quoteResponseSchema = z.object({
   discountKop: kop,
   totalKop: kop,
   currency: z.literal('BYN'),
+  promoApplied: z.boolean(),
 });
 
 export const orderAddressSchema = z.object({

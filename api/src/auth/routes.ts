@@ -6,6 +6,7 @@ import type { UserDTO } from '@picpac/shared';
 import { audit } from '../audit.js';
 import { authCodes, consents, profiles } from '../db/schema.js';
 import { AppError } from '../errors.js';
+import { parse } from '../validation.js';
 import { CODE_TTL_MS, hashCode, hashesEqual, requireAuth, signToken } from './plugin.js';
 
 const DEMO_CODE = '000000';
@@ -13,12 +14,6 @@ const DEMO_CODE = '000000';
 const contactSchema = z.string().trim().toLowerCase().min(3).max(200);
 const requestCodeSchema = z.object({ contact: contactSchema });
 const verifyCodeSchema = z.object({ contact: contactSchema, code: z.string().trim().regex(/^\d{6}$/) });
-
-function parse<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, data: unknown): T {
-  const r = schema.safeParse(data);
-  if (!r.success) throw new AppError(400, 'BAD_REQUEST', 'Некорректные данные запроса');
-  return r.data;
-}
 
 type Profile = typeof profiles.$inferSelect;
 

@@ -90,7 +90,9 @@ export type ProjectDTO = {
 };
 
 export type QuoteRequest = {
-  projectId: string;
+  variantId: string;
+  pages: number;
+  quantity: number;
   delivery: DeliveryMethodId;
   promoCode?: string;
 };
@@ -101,6 +103,7 @@ export type QuoteResponse = {
   discountKop: Kopecks;
   totalKop: Kopecks;
   currency: 'BYN';
+  promoApplied: boolean;
 };
 
 export type OrderAddress = {
