@@ -5,3 +5,4 @@ export * from './delivery';
 export * from './pricing';
 export * from './layout';
 export * from './quality';
+export * from './aspect';

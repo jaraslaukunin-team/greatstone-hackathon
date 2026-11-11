@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ASPECT_RATIOS } from './aspect';
 
 const iso = z.string().datetime();
 const kop = z.number().int().nonnegative();
@@ -20,7 +21,9 @@ export const cropSchema = z.object({
   scale: z.number().positive(),
   rotation: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]),
 });
-export const cellSchema = z.object({ photoId: z.string().nullable(), crop: cropSchema });
+export const fitModeSchema = z.enum(['contain', 'cover']);
+// fit необязателен: старые макеты без него читаются как contain.
+export const cellSchema = z.object({ photoId: z.string().nullable(), crop: cropSchema, fit: fitModeSchema.optional() });
 export const pageSchema = z.object({
   template: z.enum(['one', 'two', 'four', 'spread-one']),
   cells: z.array(cellSchema),
@@ -180,6 +183,7 @@ export const aiEditRequestSchema = z.object({
   photoId: z.string(),
   prompt: z.string().trim().min(1).max(500),
   kind: aiEditKindSchema.optional().default('edit'),
+  aspect: z.enum(ASPECT_RATIOS).optional(),
 });
 
 export const aiJobSchema = z.object({
