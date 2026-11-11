@@ -5,6 +5,12 @@ import type { ImageEditProvider } from './provider.js';
 type AiaiConfig = Pick<Config, 'aiaiBaseUrl' | 'aiaiApiKey' | 'aiaiModel' | 'aiaiEditMode'>;
 type Input = Parameters<ImageEditProvider['edit']>[0];
 
+class HttpError extends Error {
+  constructor(readonly status: number) {
+    super(`aiai.by ответил статусом ${status}`);
+  }
+}
+
 const DATA_URL = /^data:(image\/[\w.+-]+);base64,(.+)$/s;
 
 // Формат передачи фото на aiai.by в документации не описан, поэтому поддержаны два режима:
@@ -37,17 +43,27 @@ export class AiaiProvider implements ImageEditProvider {
       signal,
     });
     // Тело ответа и ключ в текст ошибки не попадают: их место в журнале провайдера, а не у пользователя.
-    if (!res.ok) throw new Error(`aiai.by ответил статусом ${res.status}`);
+    if (!res.ok) throw new HttpError(res.status);
     return res.json();
   }
 
   private async viaImages({ image, mime, prompt, size, signal }: Input) {
-    const form = new FormData();
-    form.set('model', this.cfg.aiaiModel);
-    form.set('prompt', prompt);
-    if (size) form.set('size', size);
-    form.set('image', new Blob([new Uint8Array(image)], { type: mime }), mime === 'image/png' ? 'image.png' : 'image.jpg');
-    const json = (await this.post('/images/edits', { body: form }, signal)) as { data?: { b64_json?: string }[] };
+    const build = (withSize: boolean) => {
+      const form = new FormData();
+      form.set('model', this.cfg.aiaiModel);
+      form.set('prompt', prompt);
+      if (withSize && size) form.set('size', size);
+      form.set('image', new Blob([new Uint8Array(image)], { type: mime }), mime === 'image/png' ? 'image.png' : 'image.jpg');
+      return form;
+    };
+    let json: { data?: { b64_json?: string }[] };
+    try {
+      json = (await this.post('/images/edits', { body: build(true) }, signal)) as typeof json;
+    } catch (e) {
+      // Не все модели принимают size: при отказе по параметрам (400/422) пробуем без него, размер выберет модель.
+      if (!size || !(e instanceof HttpError) || (e.status !== 400 && e.status !== 422)) throw e;
+      json = (await this.post('/images/edits', { body: build(false) }, signal)) as typeof json;
+    }
     const b64 = json.data?.[0]?.b64_json;
     if (!b64) throw new Error('Ответ aiai.by не содержит изображения');
     const out = Buffer.from(b64, 'base64');
