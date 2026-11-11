@@ -1,28 +1,63 @@
-import { formatByn, type PhotoDTO, type ProjectDTO } from '@picpac/shared';
+import { formatByn, type FitMode, type PhotoDTO, type ProjectDTO, type Size } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
-import { useVariantPrice } from '../../src/catalog/useCatalog';
+import { useCatalog, useVariantPrice } from '../../src/catalog/useCatalog';
 import { pickPhotos } from '../../src/photos/pickPhotos';
+import { frameSizeOf, orientFrame } from '../../src/print/frame';
 import { useProjectStore } from '../../src/project/projectStore';
 import { Button } from '../../src/ui/Button';
 import { Card } from '../../src/ui/Card';
-import { lightColors, radius, space, typography } from '../../src/theme/theme';
+import { FramePreview } from '../../src/ui/FramePreview';
+import { lightColors, space, typography } from '../../src/theme/theme';
 
-type Frame = { photo: PhotoDTO; copies: number };
+type Frame = { photo: PhotoDTO; copies: number; fit: FitMode };
+
+const DEFAULT_FRAME: Size = { width: 10, height: 15 };
 
 export default function PrintFramesScreen() {
-  const { variantId } = useLocalSearchParams<{ variantId: string }>();
+  const { variantId, photoId } = useLocalSearchParams<{ variantId: string; photoId?: string }>();
   const client = useApiClient();
+  const catalog = useCatalog();
   const setDraft = useProjectStore((s) => s.setDraft);
+  const { width: screenWidth } = useWindowDimensions();
   const project = useRef<ProjectDTO | null>(null);
+  const started = useRef(false);
   const [frames, setFrames] = useState<Frame[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const variant = catalog.data?.products.flatMap((p) => p.variants).find((v) => v.id === variantId);
+  const paper = (variant && frameSizeOf(variant.format)) || DEFAULT_FRAME;
+  const previewWidth = Math.min(140, Math.max(96, screenWidth * 0.3));
   const total = frames.reduce((sum, f) => sum + f.copies, 0);
   const quote = useVariantPrice(total > 0 ? (variantId ?? null) : null, Math.max(1, total));
+
+  async function ensureProject(): Promise<ProjectDTO> {
+    if (!project.current) {
+      project.current = await client.post<ProjectDTO>('/projects', { variantId, title: 'Печать фото', isShared: false });
+    }
+    return project.current;
+  }
+
+  // Фото из AI-редактора уже есть на сервере: копируем его в проект печати, выбирать заново не нужно.
+  useEffect(() => {
+    if (!photoId || started.current) return;
+    started.current = true;
+    setBusy(true);
+    void (async () => {
+      try {
+        const p = await ensureProject();
+        const photo = await client.post<PhotoDTO>(`/projects/${p.id}/photos/copy`, { fromPhotoId: photoId });
+        setFrames((list) => [...list, { photo, copies: 1, fit: 'contain' }]);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Не удалось добавить фото');
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [photoId]);
 
   async function addPhotos() {
     setError(null);
@@ -30,16 +65,10 @@ export default function PrintFramesScreen() {
     try {
       const picked = await pickPhotos();
       if (picked.length === 0) return;
-      if (!project.current) {
-        project.current = await client.post<ProjectDTO>('/projects', {
-          variantId,
-          title: 'Печать фото',
-          isShared: false,
-        });
-      }
+      const p = await ensureProject();
       for (const item of picked) {
-        const photo = await client.upload<PhotoDTO>(`/projects/${project.current.id}/photos`, { uri: item.uri });
-        setFrames((list) => [...list, { photo, copies: 1 }]);
+        const photo = await client.upload<PhotoDTO>(`/projects/${p.id}/photos`, { uri: item.uri });
+        setFrames((list) => [...list, { photo, copies: 1, fit: 'contain' }]);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось добавить фото');
@@ -48,10 +77,8 @@ export default function PrintFramesScreen() {
     }
   }
 
-  function setCopies(index: number, delta: number) {
-    setFrames((list) =>
-      list.map((f, i) => (i === index ? { ...f, copies: Math.max(1, Math.min(99, f.copies + delta)) } : f)),
-    );
+  function update(index: number, patch: Partial<Frame>) {
+    setFrames((list) => list.map((f, i) => (i === index ? { ...f, ...patch } : f)));
   }
 
   async function toCart() {
@@ -64,7 +91,7 @@ export default function PrintFramesScreen() {
         pages: frames.map((f) => ({
           template: 'one' as const,
           copies: f.copies,
-          cells: [{ photoId: f.photo.id, crop: { x: 0, y: 0, scale: 1, rotation: 0 as const } }],
+          cells: [{ photoId: f.photo.id, crop: { x: 0, y: 0, scale: 1, rotation: 0 as const }, fit: f.fit }],
         })),
       };
       const saved = await client.put<{ version: number }>(`/projects/${current.id}`, {
@@ -83,17 +110,39 @@ export default function PrintFramesScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Ваши отпечатки</Text>
-      {frames.length === 0 ? (
-        <Text style={styles.sub}>Выберите фото из галереи, затем укажите, сколько копий каждого нужно.</Text>
-      ) : null}
+      <Text style={styles.sub}>
+        {variant ? `${variant.format}. ` : ''}Фото печатается целиком с белыми полями; «Заполнить» обрежет края под формат.
+      </Text>
       {frames.map((frame, index) => (
         <Card key={frame.photo.id}>
           <View style={styles.row}>
-            <Image source={{ uri: client.resolveUrl(frame.photo.url) }} style={styles.thumb} />
-            <View style={styles.counter}>
-              <Button title="−" variant="secondary" onPress={() => setCopies(index, -1)} />
-              <Text style={styles.count}>{frame.copies}</Text>
-              <Button title="+" variant="secondary" onPress={() => setCopies(index, 1)} />
+            <FramePreview
+              uri={client.resolveUrl(frame.photo.url)}
+              photo={frame.photo}
+              frame={orientFrame(paper, frame.photo)}
+              fit={frame.fit}
+              width={previewWidth}
+            />
+            <View style={styles.controls}>
+              <View style={styles.counter}>
+                <Button title="−" variant="secondary" onPress={() => update(index, { copies: Math.max(1, frame.copies - 1) })} />
+                <Text style={styles.count} accessibilityLabel={`Копий: ${frame.copies}`}>
+                  {frame.copies}
+                </Text>
+                <Button title="+" variant="secondary" onPress={() => update(index, { copies: Math.min(99, frame.copies + 1) })} />
+              </View>
+              <View style={styles.counter}>
+                <Button
+                  title="Целиком"
+                  variant={frame.fit === 'contain' ? 'primary' : 'secondary'}
+                  onPress={() => update(index, { fit: 'contain' })}
+                />
+                <Button
+                  title="Заполнить"
+                  variant={frame.fit === 'cover' ? 'primary' : 'secondary'}
+                  onPress={() => update(index, { fit: 'cover' })}
+                />
+              </View>
             </View>
           </View>
         </Card>
@@ -123,8 +172,8 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  thumb: { width: 84, height: 84, borderRadius: radius.photo, backgroundColor: lightColors.border },
-  counter: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginLeft: 'auto' },
+  controls: { flex: 1, gap: space[2] },
+  counter: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space[2] },
   count: { ...typography.bodyStrong, color: lightColors.text, minWidth: 28, textAlign: 'center' },
   total: { ...typography.bodyStrong, color: lightColors.text },
   error: { ...typography.caption, color: lightColors.danger },

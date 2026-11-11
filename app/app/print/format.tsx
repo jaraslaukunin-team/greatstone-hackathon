@@ -6,25 +6,42 @@ import { Card } from '../../src/ui/Card';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function PrintFormatScreen() {
-  const { productId } = useLocalSearchParams<{ productId: string }>();
+  // photoId/sourceProjectId приходят из AI-редактора: тогда формат выбирается для уже готового фото.
+  const { productId, photoId, sourceProjectId } = useLocalSearchParams<{
+    productId?: string;
+    photoId?: string;
+    sourceProjectId?: string;
+  }>();
   const catalog = useCatalog();
   if (catalog.isLoading) return <ActivityIndicator style={{ marginTop: 40 }} color={lightColors.accent} />;
-  const product = catalog.data?.products.find((p) => p.id === productId);
+  const prints = (catalog.data?.products ?? []).filter((p) => p.kind === 'prints');
+  const products = productId ? prints.filter((p) => p.id === productId) : prints;
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Выберите формат</Text>
-      <Text style={styles.sub}>{product?.description ?? 'Глянцевая бумага, печать без полей'}</Text>
-      {(product?.variants ?? []).map((variant) => (
-        <Pressable
-          key={variant.id}
-          accessibilityRole="button"
-          onPress={() => router.push({ pathname: '/print/frames', params: { variantId: variant.id } })}
-        >
-          <Card chevron>
-            <Text style={styles.cardTitle}>{variant.format}</Text>
-            <Text style={styles.price}>{formatByn(variant.basePriceKop)} за отпечаток</Text>
-          </Card>
-        </Pressable>
+      <Text style={styles.sub}>
+        Фото печатается целиком, без растяжения. Обрезать под формат можно будет на следующем шаге.
+      </Text>
+      {products.map((product) => (
+        <Card key={product.id}>
+          <Text style={styles.product}>{product.title}</Text>
+          {product.variants.map((variant) => (
+            <Pressable
+              key={variant.id}
+              accessibilityRole="button"
+              style={styles.variant}
+              onPress={() =>
+                router.push({
+                  pathname: '/print/frames',
+                  params: { variantId: variant.id, photoId: photoId ?? '', sourceProjectId: sourceProjectId ?? '' },
+                })
+              }
+            >
+              <Text style={styles.cardTitle}>{variant.format}</Text>
+              <Text style={styles.price}>{formatByn(variant.basePriceKop)} за отпечаток</Text>
+            </Pressable>
+          ))}
+        </Card>
       ))}
     </ScrollView>
   );
@@ -35,6 +52,13 @@ const styles = StyleSheet.create({
   content: { padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
-  cardTitle: { ...typography.h2, color: lightColors.text },
-  price: { ...typography.price, color: lightColors.text, marginTop: space[2] },
+  product: { ...typography.h2, color: lightColors.text, marginBottom: space[2] },
+  variant: {
+    paddingVertical: space[3],
+    borderTopWidth: 1,
+    borderTopColor: lightColors.border,
+    minHeight: 44,
+  },
+  cardTitle: { ...typography.bodyStrong, color: lightColors.text },
+  price: { ...typography.caption, color: lightColors.textSecondary, marginTop: 2 },
 });
