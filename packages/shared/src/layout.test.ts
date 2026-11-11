@@ -32,8 +32,16 @@ describe('autoLayout', () => {
     const layout = autoLayout(photos, { pagesMin: 10, pagesMax: 20 });
     expect(layout.pages.length).toBe(20);
     const unplaced = unplacedPhotos(layout, photos);
-    expect(unplaced.length).toBeGreaterThan(0);
-    expect(unplaced.length + ids(layout).length).toBe(100);
+    const placed = ids(layout);
+    expect(placed.length).toBe(80);
+    expect(unplaced.length).toBe(20);
+    expect(new Set(placed).size).toBe(placed.length);
+    expect(unplaced.map((x) => x.id)).toEqual(photos.slice(80).map((x) => x.id));
+  });
+
+  it('treats an invalid takenAt as undated (last, stable)', () => {
+    const photos = [portrait('bad', 'garbage'), portrait('d2', '2026-02-01T00:00:00Z'), portrait('n', null), portrait('d1', '2026-01-01T00:00:00Z')];
+    expect(ids(autoLayout(photos, { pagesMin: 1, pagesMax: 10 }))).toEqual(['d1', 'd2', 'bad', 'n']);
   });
 
   it('uses template one for a portrait 3000x4000', () => {

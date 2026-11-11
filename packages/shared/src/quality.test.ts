@@ -50,4 +50,18 @@ describe('checkQuality', () => {
     };
     expect(checkQuality(layout, { a: photo(1000) }, variant)).toEqual([]);
   });
+
+  it('flags a cell whose photo is absent from the map as a missing-photo blocker', () => {
+    expect(checkQuality(layoutWith('ghost'), {}, variant)).toEqual([
+      { kind: 'missing-photo', severity: 'blocker', pageIndex: 0, cellIndex: 0 },
+    ]);
+  });
+
+  it('pins dpi boundaries at 150 and 100 (1-inch page)', () => {
+    const inch = { pageWidthCm: 2.54 };
+    expect(checkQuality(layoutWith('a'), { a: photo(150) }, inch)).toEqual([]);
+    expect(checkQuality(layoutWith('a'), { a: photo(149) }, inch)[0]).toMatchObject({ kind: 'low-dpi' });
+    expect(checkQuality(layoutWith('a'), { a: photo(100) }, inch)[0]).toMatchObject({ kind: 'low-dpi' });
+    expect(checkQuality(layoutWith('a'), { a: photo(99) }, inch)[0]).toMatchObject({ kind: 'very-low-dpi' });
+  });
 });

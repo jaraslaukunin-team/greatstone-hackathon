@@ -6,11 +6,14 @@ const emptyCell = (): Cell => ({ photoId: null, crop: { x: 0, y: 0, scale: 1, ro
 const cellFor = (photo: PhotoMeta): Cell => ({ photoId: photo.id, crop: { x: 0, y: 0, scale: 1, rotation: 0 } });
 const isLandscape = (p: PhotoMeta) => p.width > p.height;
 
-// Rule: photos go in takenAt order (undated last, stable); while photos remain and pages are left, a page takes
+// Rule: photos go in takenAt order (undated or unparseable last, stable); while photos remain and pages are left, a page takes
 // 4 photos if 4+ photos remain and they exceed the remaining pages, 2 if two landscapes come in a row, else 1.
 export function autoLayout(photos: PhotoMeta[], variant: { pagesMin: number; pagesMax: number }): Layout {
   const sorted = photos
-    .map((photo, index) => ({ photo, index, time: photo.takenAt === null ? Infinity : Date.parse(photo.takenAt) }))
+    .map((photo, index) => {
+      const t = photo.takenAt === null ? NaN : Date.parse(photo.takenAt);
+      return { photo, index, time: Number.isFinite(t) ? t : Infinity };
+    })
     .sort((a, b) => (a.time === b.time ? a.index - b.index : a.time - b.time))
     .map((x) => x.photo);
 

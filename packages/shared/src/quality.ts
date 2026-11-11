@@ -12,14 +12,14 @@ const LOW_DPI = 150;
 const VERY_LOW_DPI = 100;
 
 export type QualityIssue = {
-  kind: 'empty-cell' | 'low-dpi' | 'very-low-dpi';
+  kind: 'empty-cell' | 'missing-photo' | 'low-dpi' | 'very-low-dpi';
   severity: 'blocker' | 'warning';
   pageIndex: number;
   cellIndex: number;
   dpi?: number;
 };
 
-// Empty cell blocks the order; cells whose photo is absent from `photos` are skipped (the API reports missing photos separately).
+// An empty cell (photoId null) and a cell whose photoId is absent from `photos` ('missing-photo') are blockers.
 export function checkQuality(
   layout: Layout,
   photos: Record<string, PhotoMeta>,
@@ -33,7 +33,10 @@ export function checkQuality(
         return;
       }
       const photo = photos[cell.photoId];
-      if (!photo) return;
+      if (!photo) {
+        issues.push({ kind: 'missing-photo', severity: 'blocker', pageIndex, cellIndex });
+        return;
+      }
       const cellInches = (variant.pageWidthCm / 2.54) * CELL_WIDTH_FRACTION[page.template];
       const dpi = photo.width / cell.crop.scale / cellInches;
       if (dpi < VERY_LOW_DPI) issues.push({ kind: 'very-low-dpi', severity: 'warning', pageIndex, cellIndex, dpi });
