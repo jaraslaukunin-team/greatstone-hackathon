@@ -2,3 +2,9 @@
 # Документы хакатона отправлены в Telegram, в репозиторий не добавляем
 docs/specs/2026-11-11-picpac-mobile-design.md
 docs/specs/2026-11-11-picpac-mobile-ux.md
+
+node_modules
+dist
+.env
+uploads
+.expo
