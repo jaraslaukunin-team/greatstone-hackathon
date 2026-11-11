@@ -1,0 +1,65 @@
+import { formatByn, type QuoteResponse } from '@picpac/shared';
+import { Link, router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { useApiClient } from '../../src/api/hooks';
+import { ensureIdempotencyKey } from '../../src/checkout/idempotency';
+import { useProjectStore } from '../../src/project/projectStore';
+import { Button } from '../../src/ui/Button';
+import { Card } from '../../src/ui/Card';
+import { lightColors, space, typography } from '../../src/theme/theme';
+
+export default function CartScreen() {
+  const client = useApiClient();
+  const { draft, setIdempotencyKey } = useProjectStore();
+  const [quote, setQuote] = useState<QuoteResponse | null>(null);
+
+  useEffect(() => {
+    if (!draft) return;
+    ensureIdempotencyKey(draft, setIdempotencyKey);
+    void client
+      .post<QuoteResponse>('/price-quote', {
+        variantId: draft.project.variantId,
+        pages: Math.max(20, draft.layout.pages.length),
+        quantity: 1,
+        delivery: 'belpost',
+      })
+      .then(setQuote)
+      .catch(() => setQuote(null));
+  }, [client, draft, setIdempotencyKey]);
+
+  if (!draft) {
+    return (
+      <View style={styles.screen}>
+        <Text style={styles.title}>Корзина</Text>
+        <Text style={styles.sub}>Добавьте проект из каталога</Text>
+        <Link href="/catalog/books" asChild>
+          <Button title="К каталогу" />
+        </Link>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.screen}>
+      <Text style={styles.title}>Корзина</Text>
+      <Card>
+        <Text style={styles.cardTitle}>{draft.project.title}</Text>
+        <Text style={styles.cardSub}>{draft.layout.pages.length} страниц</Text>
+        <Text style={styles.price}>{quote ? formatByn(quote.totalKop) : '…'}</Text>
+      </Card>
+      <Text style={styles.hint}>Тестовый режим · деньги не списываются</Text>
+      <Button title="Оформить" onPress={() => router.push('/checkout/delivery')} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3], paddingTop: space[7] },
+  title: { ...typography.h1, color: lightColors.text },
+  sub: { ...typography.body, color: lightColors.textMuted },
+  cardTitle: { ...typography.bodyStrong, color: lightColors.text },
+  cardSub: { ...typography.caption, color: lightColors.textMuted, marginTop: 4 },
+  price: { ...typography.price, color: lightColors.text, marginTop: space[2] },
+  hint: { ...typography.caption, color: lightColors.warning },
+});

@@ -1,0 +1,57 @@
+import {
+  applyTemplate,
+  moveSpread,
+  replacePhoto,
+  setCrop,
+  swapCells,
+} from './editorActions';
+import type { Layout } from '@picpac/shared';
+
+const crop = { x: 0, y: 0, scale: 1, rotation: 0 as const };
+
+function layoutWith(photos: Array<string | null>): Layout {
+  return {
+    pages: photos.map((photoId) => ({
+      template: 'one' as const,
+      cells: [{ photoId, crop: { ...crop } }],
+    })),
+  };
+}
+
+describe('editorActions', () => {
+  it('swapCells меняет фото местами и не трогает остальное', () => {
+    const input = layoutWith(['a', 'b', 'c']);
+    const next = swapCells(input, { pageIndex: 0, cellIndex: 0 }, { pageIndex: 1, cellIndex: 0 });
+    expect(next.pages[0]?.cells[0]?.photoId).toBe('b');
+    expect(next.pages[1]?.cells[0]?.photoId).toBe('a');
+    expect(next.pages[2]?.cells[0]?.photoId).toBe('c');
+    expect(input.pages[0]?.cells[0]?.photoId).toBe('a');
+  });
+
+  it('moveSpread переставляет и сохраняет все фото', () => {
+    const input = layoutWith(['a', 'b', 'c']);
+    const next = moveSpread(input, 0, 2);
+    expect(next.pages.map((p) => p.cells[0]?.photoId)).toEqual(['b', 'c', 'a']);
+  });
+
+  it("applyTemplate('four') сохраняет фото и добавляет пустые ячейки", () => {
+    const input = layoutWith(['a']);
+    const next = applyTemplate(input, 0, 'four');
+    expect(next.pages[0]?.template).toBe('four');
+    expect(next.pages[0]?.cells).toHaveLength(4);
+    expect(next.pages[0]?.cells[0]?.photoId).toBe('a');
+    expect(next.pages[0]?.cells[1]?.photoId).toBeNull();
+  });
+
+  it('setCrop с scale < 1 приводит значение к 1', () => {
+    const input = layoutWith(['a']);
+    const next = setCrop(input, { pageIndex: 0, cellIndex: 0 }, { x: 0, y: 0, scale: 0.5, rotation: 0 });
+    expect(next.pages[0]?.cells[0]?.crop.scale).toBe(1);
+  });
+
+  it('replacePhoto заменяет photoId', () => {
+    const input = layoutWith(['a']);
+    const next = replacePhoto(input, { pageIndex: 0, cellIndex: 0 }, 'b');
+    expect(next.pages[0]?.cells[0]?.photoId).toBe('b');
+  });
+});
