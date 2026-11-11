@@ -10,7 +10,9 @@ export function registerAlbumRoutes(app: FastifyInstance): void {
   app.post('/projects/:id/invites', auth, async (req, reply) => {
     const { id } = req.params as { id: string };
     reply.code(201);
-    return createInvite(req.server, req.user!, id);
+    // Ссылка открывается в браузере; на телефоне её подхватит приложение.
+    const base = req.server.config.publicUrl ?? `${req.protocol}://${req.host}`;
+    return createInvite(req.server, req.user!, id, base);
   });
 
   app.post('/invites/accept', auth, async (req) => {

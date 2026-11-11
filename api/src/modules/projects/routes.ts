@@ -21,7 +21,7 @@ const createSchema = z.object({
   expectedMembers: z.number().int().min(0).optional(),
   joinPassword: z.string().min(4).max(64).optional(),
 });
-const passwordSchema = z.object({ password: z.string().min(4).max(64).nullable() });
+const passwordSchema = z.object({ password: z.string().min(4).max(64) });
 const saveSchema = z.object({ layout: z.unknown(), version: z.number().int().positive() });
 
 export function registerProjectRoutes(app: FastifyInstance): void {

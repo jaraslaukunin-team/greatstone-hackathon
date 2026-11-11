@@ -12,6 +12,7 @@ function order(status: OrderDTO['status']): OrderDTO {
     delivery: 'belpost',
     createdAt: '2026-11-11T12:00:00.000Z',
     history: [],
+    interactionIds: [],
   };
 }
 
@@ -23,10 +24,10 @@ describe('createOrderPoller', () => {
     const poller = createOrderPoller({
       getOrder: async () => order(statuses[Math.min(i++, statuses.length - 1)]!),
       intervalMs: 10,
-      setIntervalFn: (fn) => {
-        timers.push(fn as () => void);
-        return 1 as unknown as ReturnType<typeof setInterval>;
-      },
+      setIntervalFn: ((fn: () => void) => {
+        timers.push(fn);
+        return 1;
+      }) as unknown as typeof setInterval,
       clearIntervalFn: () => {
         timers.length = 0;
       },
@@ -56,7 +57,7 @@ describe('createOrderPoller', () => {
         return order('accepted');
       },
       intervalMs: 1000,
-      setIntervalFn: () => 1 as unknown as ReturnType<typeof setInterval>,
+      setIntervalFn: (() => 1) as unknown as typeof setInterval,
       clearIntervalFn: () => undefined,
     });
     const seen: string[] = [];

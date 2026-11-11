@@ -34,7 +34,8 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   const config: Config = { ...loadConfig(env), ...overrides };
 
   const silent = process.env.NODE_ENV === 'test' || process.env.VITEST !== undefined;
-  const app = Fastify({ logger: !silent });
+  // За Caddy один прокси: из X-Forwarded-* берётся адрес, который дописал он, а не подставленный клиентом.
+  const app = Fastify({ logger: !silent, trustProxy: (_address, hop) => hop < 1 });
   app.decorate('config', config);
   registerErrorHandling(app);
   // Заголовки безопасности на всех ответах; JSON с данными пользователя не кэшируется ни браузером, ни прокси.

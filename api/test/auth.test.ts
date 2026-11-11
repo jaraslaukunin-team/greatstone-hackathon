@@ -206,8 +206,13 @@ describe('лимиты входа', () => {
 
   const requestCode = (contact: string) =>
     app.inject({ method: 'POST', url: '/auth/request-code', payload: { contact } });
-  const verify = (contact: string, code: string) =>
-    app.inject({ method: 'POST', url: '/auth/verify-code', payload: { contact, code } });
+  const verify = (contact: string, code: string, ip?: string) =>
+    app.inject({
+      method: 'POST',
+      url: '/auth/verify-code',
+      payload: { contact, code },
+      headers: ip ? { 'x-forwarded-for': ip } : {},
+    });
   const wrong = async (contact: string, n: number) => {
     for (let i = 0; i < n; i++) expect((await verify(contact, `11111${i}`)).statusCode).toBe(401);
   };
@@ -289,6 +294,31 @@ describe('лимиты входа', () => {
       expect(blocked.statusCode).toBe(429);
       app.clock.now = () => new Date(NOW.getTime() + 11 * 60 * 1000);
       expect((await verify(contact, '123456')).statusCode).toBe(200);
+    });
+
+    it('посторонний не может заблокировать чужой вход: лимит считается по паре «контакт + адрес»', async () => {
+      const contact = 'victim@test.local';
+      await db.insert(authCodes).values({
+        contact,
+        codeHash: hashCode(app, contact, '123456'),
+        expiresAt: new Date(NOW.getTime() + 15 * 60 * 1000),
+      });
+      for (let i = 0; i < 6; i++) await verify(contact, `22222${i}`, '203.0.113.9');
+      expect((await verify(contact, `222229`, '203.0.113.9')).statusCode).toBe(429);
+      // владелец с другого адреса входит свободно
+      expect((await verify(contact, '123456', '198.51.100.7')).statusCode).toBe(200);
+    });
+
+    it('общий лимит на контакт: 30 неверных кодов с разных адресов блокируют перебор для всех', async () => {
+      const contact = 'target@test.local';
+      await db.insert(authCodes).values({
+        contact,
+        codeHash: hashCode(app, contact, '123456'),
+        expiresAt: new Date(NOW.getTime() + 15 * 60 * 1000),
+      });
+      for (let i = 0; i < 30; i++) expect((await verify(contact, `33333${i % 10}`, `198.51.100.${i + 1}`)).statusCode).toBe(401);
+      const blocked = await verify(contact, '123456', '192.0.2.200');
+      expect(blocked.statusCode).toBe(429);
     });
 
     it('демо-код 000000 без демо-режима не принимается', async () => {

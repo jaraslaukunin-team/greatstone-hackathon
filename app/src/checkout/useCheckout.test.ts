@@ -1,4 +1,5 @@
 import { ApiRequestError, NetworkError } from '../api/client';
+import type { ApiClient } from '../api/client';
 import { createCheckoutController } from './useCheckout';
 import { ensureIdempotencyKey } from './idempotency';
 import type { ProjectDraft } from '../project/projectStore';
@@ -63,7 +64,7 @@ describe('checkout', () => {
       }),
     };
     const controller = createCheckoutController({
-      client,
+      client: client as unknown as ApiClient,
       draft,
       setIdempotencyKey: (key) => {
         draft.idempotencyKey = key;
@@ -98,7 +99,7 @@ describe('checkout', () => {
       }),
     };
     const controller = createCheckoutController({
-      client,
+      client: client as unknown as ApiClient,
       draft,
       setIdempotencyKey: (key) => {
         draft.idempotencyKey = key;
@@ -142,7 +143,7 @@ describe('checkout', () => {
       }),
     };
     const controller = createCheckoutController({
-      client,
+      client: client as unknown as ApiClient,
       draft,
       setIdempotencyKey: (key) => {
         draft.idempotencyKey = key;

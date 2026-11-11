@@ -14,8 +14,12 @@ const DEMO_CODE = '000000';
 // Окно и лимиты: неверных кодов 5 и запросов кода 3 за 10 минут на контакт. Счёт идёт по журналу,
 // ключ — HMAC контакта, поэтому телефон или почта в журнал открытым текстом не попадают.
 const RATE_WINDOW_MS = 10 * 60 * 1000;
+// Основной лимит считается на пару «контакт + адрес»: посторонний не заблокирует чужой вход со своего адреса.
+// Общий лимит на контакт выше и останавливает перебор с множества адресов.
 const CODE_FAIL_LIMIT = 5;
+const CODE_FAIL_LIMIT_ANY_IP = 30;
 const CODE_REQUEST_LIMIT = 3;
+const CODE_REQUEST_LIMIT_ANY_IP = 10;
 const tooMany = () => new AppError(429, 'TOO_MANY_ATTEMPTS', 'Слишком много попыток. Подождите 10 минут и попробуйте снова');
 
 async function recentCount(app: FastifyInstance, action: string, key: string): Promise<number> {
@@ -29,6 +33,12 @@ async function recentCount(app: FastifyInstance, action: string, key: string): P
 
 const note = (app: FastifyInstance, action: string, key: string, result: 'ok' | 'denied') =>
   audit(app.db, { userId: null, action, objectType: 'contact', objectId: key, result, at: app.clock.now() });
+
+// Ключи считаются HMAC: ни контакт, ни адрес в журнал открытым текстом не попадают.
+const keysOf = (app: FastifyInstance, contact: string, ip: string) => ({
+  contact: hashCode(app, contact, 'rate-limit'),
+  pair: hashCode(app, contact, `rate-limit|${ip}`),
+});
 
 const contactSchema = z.string().trim().toLowerCase().min(3).max(200);
 const requestCodeSchema = z.object({ contact: contactSchema });
@@ -61,9 +71,15 @@ export function registerAuthRoutes(app: FastifyInstance): void {
 
   app.post('/auth/request-code', async (req, reply) => {
     const { contact } = parse(requestCodeSchema, req.body);
-    const key = hashCode(app, contact, 'rate-limit');
-    if ((await recentCount(app, 'auth.code_requested', key)) >= CODE_REQUEST_LIMIT) throw tooMany();
-    await note(app, 'auth.code_requested', key, 'ok');
+    const k = keysOf(app, contact, req.ip);
+    if (
+      (await recentCount(app, 'auth.code_requested', k.pair)) >= CODE_REQUEST_LIMIT ||
+      (await recentCount(app, 'auth.code_requested', k.contact)) >= CODE_REQUEST_LIMIT_ANY_IP
+    ) {
+      throw tooMany();
+    }
+    await note(app, 'auth.code_requested', k.pair, 'ok');
+    await note(app, 'auth.code_requested', k.contact, 'ok');
     const code = app.config.demoMode ? DEMO_CODE : String(randomInt(0, 1_000_000)).padStart(6, '0');
     await app.db.insert(authCodes).values({
       contact,
@@ -77,10 +93,16 @@ export function registerAuthRoutes(app: FastifyInstance): void {
 
   app.post('/auth/verify-code', async (req) => {
     const { contact, code } = parse(verifyCodeSchema, req.body);
-    const key = hashCode(app, contact, 'rate-limit');
+    const k = keysOf(app, contact, req.ip);
     // Демо-код остаётся рабочим даже после блокировки: он нужен для показа и не угадывается перебором.
     const demoLogin = app.config.demoMode && code === DEMO_CODE;
-    if (!demoLogin && (await recentCount(app, 'auth.code_failed', key)) >= CODE_FAIL_LIMIT) throw tooMany();
+    if (
+      !demoLogin &&
+      ((await recentCount(app, 'auth.code_failed', k.pair)) >= CODE_FAIL_LIMIT ||
+        (await recentCount(app, 'auth.code_failed', k.contact)) >= CODE_FAIL_LIMIT_ANY_IP)
+    ) {
+      throw tooMany();
+    }
     const candidates = await app.db
       .select()
       .from(authCodes)
@@ -89,7 +111,8 @@ export function registerAuthRoutes(app: FastifyInstance): void {
     const expected = hashCode(app, contact, code);
     const match = candidates.find((c) => hashesEqual(c.codeHash, expected));
     if (!match) {
-      await note(app, 'auth.code_failed', key, 'denied');
+      await note(app, 'auth.code_failed', k.pair, 'denied');
+      await note(app, 'auth.code_failed', k.contact, 'denied');
       throw new AppError(401, 'CODE_INVALID', 'Неверный код, проверьте его и попробуйте снова');
     }
     if (match.expiresAt.getTime() <= app.clock.now().getTime()) {

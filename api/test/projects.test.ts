@@ -74,7 +74,7 @@ describe('проекты и сохранение макета', () => {
   });
 
   it('созданный проект: черновик, версия 1, пустой макет, владелец видит его в списке', async () => {
-    const res = await create(alice, { isShared: true, expectedMembers: 25 });
+    const res = await create(alice, { isShared: true, expectedMembers: 25, joinPassword: 'album-pass' });
     expect(res.statusCode).toBe(201);
     const p = projectSchema.parse(res.json());
     expect(p).toMatchObject({
@@ -187,7 +187,7 @@ describe('проекты и сохранение макета', () => {
   });
 
   it('участник альбома читает проект и видит его в списке, но менять и удалять не может', async () => {
-    const p = (await create(alice, { isShared: true })).json() as { id: string };
+    const p = (await create(alice, { isShared: true, joinPassword: 'album-pass' })).json() as { id: string };
     await db.insert(projectMembers).values({ projectId: p.id, userId: bob.id, role: 'contributor' });
     expect((await call(bob, 'GET', `/projects/${p.id}`)).statusCode).toBe(200);
     expect(((await call(bob, 'GET', '/projects')).json() as { id: string }[]).map((x) => x.id)).toEqual([p.id]);
