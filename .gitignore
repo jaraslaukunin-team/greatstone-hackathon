@@ -9,6 +9,7 @@ docs/
 
 node_modules/
 dist/
+/web/
 .env
 uploads/
 uploads-test/
