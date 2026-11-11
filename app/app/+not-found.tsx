@@ -1,17 +1,17 @@
 import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
-
-import { Text, View } from '@/components/Themed';
+import { StyleSheet, Text, View } from 'react-native';
+import { Button } from '../src/ui/Button';
+import { lightColors, space, typography } from '../src/theme/theme';
 
 export default function NotFoundScreen() {
   return (
     <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
+      <Stack.Screen options={{ title: 'Страница не найдена' }} />
       <View style={styles.container}>
-        <Text style={styles.title}>This screen doesn't exist.</Text>
-
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to home screen!</Text>
+        <Text style={styles.title}>Такой страницы нет</Text>
+        <Text style={styles.sub}>Возможно, ссылка устарела. Вернитесь на главный экран.</Text>
+        <Link href="/" asChild>
+          <Button title="На главную" />
         </Link>
       </View>
     </>
@@ -21,20 +21,11 @@ export default function NotFoundScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: space[4],
+    gap: space[3],
+    backgroundColor: lightColors.bg,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#2e78b7',
-  },
+  title: { ...typography.h1, color: lightColors.text },
+  sub: { ...typography.body, color: lightColors.textSecondary, marginBottom: space[3] },
 });

@@ -1,7 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
+import { useFonts } from 'expo-font';
 import { Stack, router } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useMemo, useRef } from 'react';
+import { futuraFonts } from '../src/theme/fonts';
 import { ApiClientContext } from '../src/api/hooks';
 import { createApiClient } from '../src/api/client';
 import { API_URL } from '../src/config';
@@ -12,6 +15,8 @@ import { networkFailureRef } from '../src/dev/networkFailure';
 export { ErrorBoundary } from 'expo-router';
 
 const queryClient = new QueryClient();
+
+void SplashScreen.preventAutoHideAsync();
 
 function ApiBridge({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -50,6 +55,14 @@ function DeepLinkBridge({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts(futuraFonts);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) void SplashScreen.hideAsync();
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) return null;
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

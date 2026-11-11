@@ -1,10 +1,12 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../src/ui/Button';
+import { Input } from '../../src/ui/Input';
 import { useAuth } from '../../src/auth/AuthProvider';
-import { lightColors, radius, space, typography } from '../../src/theme/theme';
+import { lightColors, space, typography } from '../../src/theme/theme';
 import { ApiRequestError } from '../../src/api/client';
+import { BackButton } from '../../src/ui/BackButton';
 
 export default function CodeScreen() {
   const { contact } = useLocalSearchParams<{ contact: string }>();
@@ -27,12 +29,14 @@ export default function CodeScreen() {
 
   return (
     <View style={styles.screen}>
+      <View style={styles.back}>
+        <BackButton fallback="/(auth)/welcome" />
+      </View>
       <Text style={styles.title}>Код подтверждения</Text>
       <Text style={styles.sub}>Отправили на {contact}</Text>
-      <TextInput
-        style={styles.input}
+      <Input
+        style={styles.code}
         placeholder="000000"
-        placeholderTextColor={lightColors.textMuted}
         keyboardType="number-pad"
         value={code}
         onChangeText={setCode}
@@ -52,18 +56,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: space[3],
   },
+  back: { position: 'absolute', top: space[5], left: space[2] },
   title: { ...typography.h1, color: lightColors.text },
-  sub: { ...typography.body, color: lightColors.textMuted },
-  input: {
-    backgroundColor: lightColors.surfaceMuted,
-    borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: lightColors.border,
-    paddingHorizontal: space[4],
-    paddingVertical: space[3],
-    ...typography.h2,
-    color: lightColors.text,
-    letterSpacing: 8,
-  },
+  sub: { ...typography.body, color: lightColors.textSecondary },
+  code: { ...typography.h2, letterSpacing: 8 },
   error: { ...typography.caption, color: lightColors.danger },
 });

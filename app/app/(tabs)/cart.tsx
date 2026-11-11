@@ -8,6 +8,7 @@ import { useProjectStore } from '../../src/project/projectStore';
 import { Button } from '../../src/ui/Button';
 import { Card } from '../../src/ui/Card';
 import { lightColors, space, typography } from '../../src/theme/theme';
+import { EmptyState } from '../../src/ui/EmptyState';
 
 export default function CartScreen() {
   const client = useApiClient();
@@ -32,10 +33,11 @@ export default function CartScreen() {
     return (
       <View style={styles.screen}>
         <Text style={styles.title}>Корзина</Text>
-        <Text style={styles.sub}>Добавьте проект из каталога</Text>
-        <Link href="/catalog/books" asChild>
-          <Button title="К каталогу" />
-        </Link>
+        <EmptyState icon="cart" title="В корзине пусто" message="Добавьте проект из каталога">
+          <Link href="/catalog/books" asChild>
+            <Button title="К каталогу" />
+          </Link>
+        </EmptyState>
       </View>
     );
   }
@@ -57,9 +59,9 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3], paddingTop: space[7] },
   title: { ...typography.h1, color: lightColors.text },
-  sub: { ...typography.body, color: lightColors.textMuted },
+  sub: { ...typography.body, color: lightColors.textSecondary },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
-  cardSub: { ...typography.caption, color: lightColors.textMuted, marginTop: 4 },
+  cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
   price: { ...typography.price, color: lightColors.text, marginTop: space[2] },
   hint: { ...typography.caption, color: lightColors.warning },
 });

@@ -1,65 +1,60 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
-import { lightColors } from '../../src/theme/theme';
+import { StyleSheet, Text, View } from 'react-native';
+import { Icon, type IconName } from '../../src/ui/Icon';
+import { lightColors, typography } from '../../src/theme/theme';
 
-function TabLabel({ label, focused }: { label: string; focused: boolean }) {
+function TabLabel({ label, icon, focused }: { label: string; icon: IconName; focused: boolean }) {
   return (
-    <Text style={{ color: focused ? lightColors.accent : lightColors.textMuted, fontSize: 11 }}>
-      {label}
-    </Text>
+    <View style={styles.tab}>
+      <Icon name={icon} size={26} color={focused ? lightColors.accent : lightColors.textSecondary} />
+      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
+    </View>
   );
 }
+
+const items = [
+  { name: 'index', title: 'Главная', icon: 'home' },
+  { name: 'designs', title: 'Мои', icon: 'folder' },
+  { name: 'cart', title: 'Корзина', icon: 'cart' },
+  { name: 'orders', title: 'Заказы', icon: 'doc' },
+  { name: 'profile', title: 'Профиль', icon: 'user' },
+] as const;
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: lightColors.accent,
-        tabBarInactiveTintColor: lightColors.textMuted,
+        // иконка рисуется внутри tabBarLabel, стандартный слот скрываем
+        tabBarIcon: () => null,
+        tabBarIconStyle: { display: 'none' },
+        tabBarActiveTintColor: lightColors.text,
+        tabBarInactiveTintColor: lightColors.textSecondary,
         tabBarStyle: {
           backgroundColor: lightColors.surface,
           borderTopColor: lightColors.border,
-          height: 64,
+          height: 72,
+          paddingTop: 6,
           paddingBottom: 8,
         },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Главная',
-          tabBarLabel: ({ focused }) => <TabLabel label="Главная" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="designs"
-        options={{
-          title: 'Мои',
-          tabBarLabel: ({ focused }) => <TabLabel label="Мои" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="cart"
-        options={{
-          title: 'Корзина',
-          tabBarLabel: ({ focused }) => <TabLabel label="Корзина" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="orders"
-        options={{
-          title: 'Заказы',
-          tabBarLabel: ({ focused }) => <TabLabel label="Заказы" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Профиль',
-          tabBarLabel: ({ focused }) => <TabLabel label="Профиль" focused={focused} />,
-        }}
-      />
+      {items.map((item) => (
+        <Tabs.Screen
+          key={item.name}
+          name={item.name}
+          options={{
+            title: item.title,
+            tabBarLabel: ({ focused }) => <TabLabel label={item.title} icon={item.icon} focused={focused} />,
+          }}
+        />
+      ))}
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tab: { alignItems: 'center', justifyContent: 'center', gap: 3, minWidth: 64, minHeight: 44 },
+  label: { ...typography.label, color: lightColors.textSecondary },
+  labelActive: { color: lightColors.text },
+});

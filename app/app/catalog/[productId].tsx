@@ -56,7 +56,7 @@ export default function ProductScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text, marginTop: space[5] },
-  sub: { ...typography.body, color: lightColors.textMuted },
+  sub: { ...typography.body, color: lightColors.textSecondary },
   label: { ...typography.body, color: lightColors.text },
   row: { flexDirection: 'row', gap: space[2], marginTop: space[3] },
   price: { ...typography.price, color: lightColors.text, marginTop: space[3] },

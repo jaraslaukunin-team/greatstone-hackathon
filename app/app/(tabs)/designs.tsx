@@ -7,6 +7,8 @@ import { useProjectStore } from '../../src/project/projectStore';
 import { Card } from '../../src/ui/Card';
 import { StateBanner } from '../../src/ui/StateBanner';
 import { lightColors, space, typography } from '../../src/theme/theme';
+import { EmptyState } from '../../src/ui/EmptyState';
+import { Button } from '../../src/ui/Button';
 
 export default function DesignsScreen() {
   const client = useApiClient();
@@ -42,7 +44,13 @@ export default function DesignsScreen() {
       {error ? (
         <StateBanner title={error} actionLabel="Повторить" onAction={() => void load()} tone="danger" />
       ) : null}
-      {!loading && items.length === 0 ? <Text style={styles.sub}>Черновиков пока нет</Text> : null}
+      {!loading && !error && items.length === 0 ? (
+        <EmptyState icon="folder" title="Черновиков пока нет" message="Соберите фотокнигу — она сохранится здесь">
+          <Link href="/catalog/books" asChild>
+            <Button title="Выбрать фотокнигу" icon="plus" />
+          </Link>
+        </EmptyState>
+      ) : null}
       {items.map((project) => (
         <Link
           key={project.id}
@@ -50,7 +58,7 @@ export default function DesignsScreen() {
           onPress={() => setDraft(project)}
           asChild
         >
-          <Card>
+          <Card chevron>
             <Text style={styles.cardTitle}>{project.title}</Text>
             <Text style={styles.cardSub}>
               {project.status === 'draft' ? 'Черновик' : 'В заказе'} · v{project.version}
@@ -66,7 +74,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg },
   content: { padding: space[4], gap: space[3], paddingTop: space[7] },
   title: { ...typography.h1, color: lightColors.text },
-  sub: { ...typography.body, color: lightColors.textMuted },
+  sub: { ...typography.body, color: lightColors.textSecondary },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
-  cardSub: { ...typography.caption, color: lightColors.textMuted, marginTop: 4 },
+  cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
 });

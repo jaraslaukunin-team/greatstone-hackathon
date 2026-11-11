@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
+import { stackOptions } from '../../src/ui/stackOptions';
 
 export default function PrintLayout() {
-  return <Stack screenOptions={{ headerShown: true, title: 'Печать' }} />;
+  return <Stack screenOptions={{ ...stackOptions, title: 'Печать' }} />;
 }
