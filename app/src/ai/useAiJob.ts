@@ -56,16 +56,14 @@ export function useAiJob(client: ApiClient, jobId: string | null) {
 
 export async function startAiEdit(
   client: ApiClient,
-  body: { projectId: string; photoId: string; prompt: string },
-  inFlight: { current: Promise<AiJobDTO> | null },
-): Promise<AiJobDTO> {
+  body: { projectId: string; photoId: string; prompt: string; kind?: 'edit' | 'upscale' },
+  inFlight: { current: Promise<{ jobId: string }> | null },
+): Promise<{ jobId: string }> {
   if (inFlight.current) return inFlight.current;
-  // Сервер отвечает {jobId}: приводим к AiJobDTO, с которым работает остальное приложение.
   inFlight.current = client
     .post<{ jobId: string }>('/ai/edit', body)
-    .then((r): AiJobDTO => ({ id: r.jobId, status: 'pending' }))
     .finally(() => {
-    inFlight.current = null;
-  });
+      inFlight.current = null;
+    });
   return inFlight.current;
 }

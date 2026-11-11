@@ -32,7 +32,8 @@ services:
       AI_PROVIDER: ${AI_PROVIDER:-stub}
       AIAI_BASE_URL: ${AIAI_BASE_URL:-https://api.aiai.by/v1}
       AIAI_API_KEY: ${AIAI_API_KEY:-}
-      AIAI_MODEL: ${AIAI_MODEL:-}
+      AIAI_MODEL: ${AIAI_MODEL:-qwen-image-edit}
+      AIAI_CHAT_MODEL: ${AIAI_CHAT_MODEL:-gpt-4o-mini}
       AIAI_EDIT_MODE: ${AIAI_EDIT_MODE:-images}
       PORT: "3000"
     depends_on:

@@ -166,11 +166,35 @@ export type AlbumMemberDTO = {
 
 export type AlbumProgressDTO = { expected: number | null; members: AlbumMemberDTO[] };
 
+export type AiEditKind = 'edit' | 'upscale';
+
 export type AiJobDTO = {
   id: string;
   status: 'pending' | 'done' | 'failed';
+  kind?: AiEditKind;
   reason?: string;
   resultPhoto?: PhotoDTO;
+};
+
+export type AiAdjustRequest = {
+  projectId: string;
+  photoId: string;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  sharpen?: number;
+};
+
+export type AiChatMessage = { role: 'user' | 'assistant'; content: string };
+
+export type AiChatRequest = {
+  messages: AiChatMessage[];
+  orderId?: string;
+};
+
+export type AiChatResponse = {
+  reply: string;
+  messages: AiChatMessage[];
 };
 
 export type ApiErrorBody = { error: { code: string; message: string; details?: Record<string, unknown> } };
