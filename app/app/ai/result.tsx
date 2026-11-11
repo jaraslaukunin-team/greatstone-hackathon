@@ -1,47 +1,60 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { useAiJob } from '../../src/ai/useAiJob';
+import { BeforeAfterSlider } from '../../src/ui/BeforeAfterSlider';
 import { Button } from '../../src/ui/Button';
 import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
-const STATUS: Record<string, string> = {
-  idle: 'Ожидание',
-  pending: 'Обрабатываем фото, это займёт несколько секунд…',
-  done: 'Готово',
-  failed: 'Не получилось',
-};
-
 export default function AiResultScreen() {
-  const { jobId, sourceUrl } = useLocalSearchParams<{ jobId: string; sourceUrl?: string }>();
+  const { jobId, sourceUrl, projectId } = useLocalSearchParams<{
+    jobId: string;
+    sourceUrl?: string;
+    projectId?: string;
+  }>();
   const client = useApiClient();
   const job = useAiJob(client, jobId ?? null);
+  const before = sourceUrl ? client.resolveUrl(String(sourceUrl)) : null;
+  const result = job.status === 'done' ? job.result : undefined;
+
+  function print() {
+    if (!result) return;
+    router.push({ pathname: '/print/format', params: { photoId: result.id, sourceProjectId: projectId ?? '' } });
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>До и После</Text>
-      <Text style={styles.sub}>{STATUS[job.status] ?? job.status}</Text>
-      {job.reason ? <Text style={styles.error}>{job.reason}</Text> : null}
-      <View style={styles.row}>
-        {sourceUrl ? (
-          <View style={styles.half}>
-            <Text style={styles.caption}>До</Text>
-            <Image source={{ uri: client.resolveUrl(String(sourceUrl)) }} style={styles.img} resizeMode="cover" />
-          </View>
-        ) : null}
-        {job.result?.url ? (
-          <View style={styles.half}>
-            <Text style={styles.caption}>После</Text>
-            <Image source={{ uri: client.resolveUrl(job.result.url) }} style={styles.img} resizeMode="cover" />
-          </View>
-        ) : null}
-      </View>
       {job.status === 'pending' ? (
-        <Button title="Отменить" variant="secondary" onPress={() => job.cancel()} />
+        <View>
+          {before ? <Image source={{ uri: before }} style={styles.waiting} resizeMode="contain" /> : null}
+          <View style={styles.overlay}>
+            <ActivityIndicator color="#FFFFFF" size="large" />
+            <Text style={styles.overlayText}>Обрабатываем фото, это займёт несколько секунд…</Text>
+          </View>
+        </View>
       ) : null}
-      {job.status === 'done' ? (
+      {job.status === 'failed' ? <Text style={styles.error}>{job.reason ?? 'Не получилось обработать фото'}</Text> : null}
+      {result ? (
+        before ? (
+          <BeforeAfterSlider
+            beforeUri={before}
+            afterUri={client.resolveUrl(result.url)}
+            aspect={result.width / result.height}
+          />
+        ) : (
+          <Image
+            source={{ uri: client.resolveUrl(result.url) }}
+            style={[styles.single, { aspectRatio: result.width / result.height }]}
+            resizeMode="contain"
+          />
+        )
+      ) : null}
+      {job.status === 'pending' ? <Button title="Отменить" variant="secondary" onPress={() => job.cancel()} /> : null}
+      {result ? (
         <>
-          <Button title="Напечатать" onPress={() => router.push('/catalog/prints')} />
+          <Text style={styles.sub}>Потяните границу, чтобы сравнить. Результат уже сохранён в ваши фото.</Text>
+          <Button title="Напечатать это фото" onPress={print} disabled={!projectId} />
           <Button title="Обработать ещё раз" variant="secondary" onPress={() => router.replace('/ai/edit')} />
           <Button title="К ассистенту" variant="text" onPress={() => router.push('/(tabs)/assistant')} />
         </>
@@ -55,9 +68,20 @@ const styles = StyleSheet.create({
   content: { padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
-  error: { ...typography.caption, color: lightColors.danger },
-  row: { flexDirection: 'row', gap: space[2] },
-  half: { flex: 1, gap: space[1] },
-  caption: { ...typography.bodyStrong, color: lightColors.text },
-  img: { width: '100%', aspectRatio: 1, borderRadius: radius.card, backgroundColor: lightColors.border },
+  error: { ...typography.body, color: lightColors.danger },
+  waiting: { width: '100%', aspectRatio: 1, borderRadius: radius.card, backgroundColor: lightColors.border },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space[2],
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: radius.card,
+  },
+  overlayText: { ...typography.body, color: '#FFFFFF', textAlign: 'center', paddingHorizontal: space[4] },
+  single: { width: '100%', borderRadius: radius.card, backgroundColor: lightColors.border },
 });
