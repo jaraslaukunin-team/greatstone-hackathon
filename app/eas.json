@@ -17,7 +17,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:3000"
+        "EXPO_PUBLIC_API_URL": "https://api.jaraslau.dev"
       }
     },
     "production": {
@@ -25,7 +25,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "REPLACE_WITH_VPS_API_URL"
+        "EXPO_PUBLIC_API_URL": "https://api.jaraslau.dev"
       }
     }
   },
