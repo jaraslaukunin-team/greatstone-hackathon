@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "title" text DEFAULT '' NOT NULL;

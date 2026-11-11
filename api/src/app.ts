@@ -4,6 +4,7 @@ import { registerAuth } from './auth/plugin.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerErrorHandling } from './errors.js';
 import { registerCatalogRoutes } from './modules/catalog/routes.js';
+import { registerProjectRoutes } from './modules/projects/routes.js';
 import { registerQuoteRoutes } from './modules/quote/routes.js';
 
 declare module 'fastify' {
@@ -29,6 +30,7 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerAuthRoutes(app);
   registerCatalogRoutes(app);
   registerQuoteRoutes(app);
+  registerProjectRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
 }

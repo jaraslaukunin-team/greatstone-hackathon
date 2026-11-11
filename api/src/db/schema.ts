@@ -118,6 +118,7 @@ export const projects = pgTable(
     variantId: uuid('variant_id')
       .notNull()
       .references(() => productVariants.id),
+    title: text('title').notNull().default(''),
     status: projectStatusEnum('status').notNull().default('draft'),
     layout: jsonb('layout'),
     isShared: boolean('is_shared').notNull().default(false),

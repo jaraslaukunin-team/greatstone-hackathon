@@ -83,7 +83,7 @@ export type ProjectDTO = {
   ownerId: string;
   status: 'draft' | 'ordered';
   isShared: boolean;
-  expectedMembers: number;
+  expectedMembers: number | null;
   layout: Layout;
   version: number;
   updatedAt: string;

@@ -90,7 +90,7 @@ export const projectSchema = z.object({
   ownerId: z.string(),
   status: z.enum(['draft', 'ordered']),
   isShared: z.boolean(),
-  expectedMembers: z.number().int().nonnegative(),
+  expectedMembers: z.number().int().nonnegative().nullable(),
   layout: layoutSchema,
   version: z.number().int(),
   updatedAt: iso,
