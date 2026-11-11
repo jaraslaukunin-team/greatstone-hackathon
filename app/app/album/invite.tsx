@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { ApiRequestError } from '../../src/api/client';
 import { parseInviteUrl } from '../../src/album/parseInvite';
+import { savePendingInvite } from '../../src/album/pendingInvite';
 import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
 import { lightColors, space, typography } from '../../src/theme/theme';
@@ -31,6 +32,12 @@ export default function InviteScreen() {
       setState('done');
       router.replace('/(tabs)/designs');
     } catch (e) {
+      if (e instanceof ApiRequestError && e.status === 401 && e.code === 'UNAUTHORIZED') {
+        // Приглашение открыли до входа: запоминаем токен, после входа оно откроется само.
+        await savePendingInvite(token);
+        router.replace('/(auth)/welcome');
+        return;
+      }
       if (e instanceof ApiRequestError && (e.code === 'PASSWORD_REQUIRED' || e.code === 'PASSWORD_INVALID')) {
         setState('password');
         setMessage(e.code === 'PASSWORD_INVALID' ? e.message : null);

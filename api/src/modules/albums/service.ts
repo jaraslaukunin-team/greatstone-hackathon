@@ -15,7 +15,12 @@ export const INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 // В базе хранится только хеш токена: утечка таблицы не даёт доступа к альбомам.
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 
-export async function createInvite(app: FastifyInstance, user: AuthUser, projectId: string): Promise<InviteDTO> {
+export async function createInvite(
+  app: FastifyInstance,
+  user: AuthUser,
+  projectId: string,
+  baseUrl: string,
+): Promise<InviteDTO> {
   const project = await assertProjectAccess(app.db, user, projectId, 'organizer');
   if (!project.isShared) throw new AppError(409, 'PROJECT_NOT_SHARED', 'Приглашать можно только в совместный альбом');
   if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Альбом уже заказан');
@@ -23,7 +28,7 @@ export async function createInvite(app: FastifyInstance, user: AuthUser, project
   const expiresAt = new Date(app.clock.now().getTime() + INVITE_TTL_MS);
   await app.db.insert(projectInvites).values({ projectId, token: hashToken(token), expiresAt });
   await audit(app.db, { userId: user.id, action: 'album.invite', objectType: 'project', objectId: projectId, result: 'ok' });
-  return { token, url: `picpac://invite/${token}`, expiresAt: expiresAt.toISOString() };
+  return { token, url: `${baseUrl.replace(/\/+$/, '')}/invite/${token}`, expiresAt: expiresAt.toISOString() };
 }
 
 const PASSWORD_WINDOW_MS = 10 * 60 * 1000;

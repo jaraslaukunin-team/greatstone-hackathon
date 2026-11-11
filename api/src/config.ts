@@ -11,6 +11,8 @@ export type Config = {
   aiaiChatModel: string;
   aiaiEditMode: 'images' | 'chat';
   port: number;
+  /** Публичный адрес сайта для ссылок-приглашений; без него берётся из заголовков запроса. */
+  publicUrl?: string;
 };
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -43,5 +45,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     aiaiChatModel: env.AIAI_CHAT_MODEL || 'gpt-4o-mini',
     aiaiEditMode: editMode,
     port,
+    publicUrl: env.PUBLIC_URL || undefined,
   };
 }

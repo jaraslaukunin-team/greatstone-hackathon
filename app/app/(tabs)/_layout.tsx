@@ -1,4 +1,6 @@
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
+import { useEffect } from 'react';
+import { takePendingInvite } from '../../src/album/pendingInvite';
 import { StyleSheet, Text, View } from 'react-native';
 import { Icon, type IconName } from '../../src/ui/Icon';
 import { lightColors, typography } from '../../src/theme/theme';
@@ -22,6 +24,13 @@ const items = [
 ] as const;
 
 export default function TabsLayout() {
+  // Приглашение, открытое до входа, принимаем сразу после входа.
+  useEffect(() => {
+    void takePendingInvite().then((token) => {
+      if (token) router.replace({ pathname: '/album/invite', params: { token } });
+    });
+  }, []);
+
   return (
     <Tabs
       screenOptions={{

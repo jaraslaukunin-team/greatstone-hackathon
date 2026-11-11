@@ -23,7 +23,7 @@ export default function CreateAlbumScreen() {
 
   async function create() {
     if (!variantId) return;
-    const problem = password ? passwordProblem(password) : null;
+    const problem = passwordProblem(password);
     if (problem) {
       setError(problem);
       return;
@@ -36,7 +36,7 @@ export default function CreateAlbumScreen() {
         title,
         isShared: true,
         expectedMembers: Number(expected) || 1,
-        ...(password ? { joinPassword: password } : {}),
+        joinPassword: password,
       });
       router.push(`/album/${project.id}`);
     } catch (e) {
@@ -54,17 +54,17 @@ export default function CreateAlbumScreen() {
       <Input
         value={password}
         onChangeText={setPassword}
-        placeholder="Пароль для входа (необязательно)"
+        placeholder="Пароль для входа (обязательно)"
         secureTextEntry
         autoCapitalize="none"
         autoComplete="off"
       />
       <Text style={styles.hint}>
-        С паролем в альбом вступят только те, кому вы передали и ссылку, и пароль. Так фото детей не попадут к чужим, даже
-        если ссылка утечёт.
+        В альбом вступят только те, кому вы передали и ссылку, и пароль. Так фото детей не попадут к чужим, даже если
+        ссылка утечёт. Пароль можно сменить позже, убрать его нельзя.
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Создать" onPress={() => void create()} disabled={busy || !variantId} />
+      <Button title="Создать" onPress={() => void create()} disabled={busy || !variantId || password.length === 0} />
     </View>
   );
 }

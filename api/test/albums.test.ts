@@ -13,6 +13,7 @@ type Session = { token: string; id: string };
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = new Date('2026-11-11T12:00:00Z');
+const PW = 'album-pass';
 const photo = readFileSync(join(__dirname, '..', 'fixtures', 'photo-ok.jpg'));
 
 function multipart(filename: string, data: Buffer) {
@@ -59,7 +60,7 @@ describe('совместный альбом', () => {
     });
   const invite = async (s: Session = alice) => inviteSchema.parse((await call(s, 'POST', `/projects/${projectId}/invites`)).json());
   const accept = (s: Session | null, token: string, childName?: string) =>
-    call(s, 'POST', '/invites/accept', { token, ...(childName ? { childName } : {}) });
+    call(s, 'POST', '/invites/accept', { token, password: PW, ...(childName ? { childName } : {}) });
   const addPhotoRow = (owner: Session, position = 0) =>
     db.insert(projectPhotos).values({
       id: randomUUID(),
@@ -81,7 +82,7 @@ describe('совместный альбом', () => {
     carol = await guest();
     const variantId = (await db.select().from(productVariants).where(eq(productVariants.format, 'Выпускной 20×20')))[0]!.id;
     projectId = (
-      (await call(alice, 'POST', '/projects', { variantId, title: '11 Б', isShared: true, expectedMembers: 25 })).json() as {
+      (await call(alice, 'POST', '/projects', { variantId, title: '11 Б', isShared: true, expectedMembers: 25, joinPassword: PW })).json() as {
         id: string;
       }
     ).id;
@@ -91,13 +92,37 @@ describe('совместный альбом', () => {
     const res = await call(alice, 'POST', `/projects/${projectId}/invites`);
     expect(res.statusCode).toBe(201);
     const inv = inviteSchema.parse(res.json());
-    expect(inv.url).toBe(`picpac://invite/${inv.token}`);
+    // Ссылка открывается в браузере: адрес сайта + /invite/<токен>.
+    expect(inv.url).toBe(`http://localhost:80/invite/${inv.token}`);
     expect(inv.token.length).toBeGreaterThanOrEqual(32);
     expect(Date.parse(inv.expiresAt)).toBe(NOW.getTime() + 14 * DAY);
     const rows = await db.select().from(projectInvites).where(eq(projectInvites.projectId, projectId));
     expect(rows).toHaveLength(1);
     expect(rows[0]!.token).not.toBe(inv.token);
     expect(rows[0]!.token).not.toContain(inv.token);
+  });
+
+  it('ссылка строится из заголовков за прокси (https и домен), а PUBLIC_URL имеет приоритет', async () => {
+    const viaProxy = await app.inject({
+      method: 'POST',
+      url: `/projects/${projectId}/invites`,
+      headers: { authorization: `Bearer ${alice.token}`, 'x-forwarded-proto': 'https', 'x-forwarded-host': 'api.example.by' },
+    });
+    expect(inviteSchema.parse(viaProxy.json()).url).toMatch(/^https:\/\/api\.example\.by\/invite\/[\w-]+$/);
+    // нестандартный порт сохраняется (для локального запуска и тестовых стендов)
+    const withPort = await app.inject({
+      method: 'POST',
+      url: `/projects/${projectId}/invites`,
+      headers: { authorization: `Bearer ${alice.token}`, host: 'localhost:8099' },
+    });
+    expect(inviteSchema.parse(withPort.json()).url).toMatch(/^http:\/\/localhost:8099\/invite\/[\w-]+$/);
+    app.config.publicUrl = 'https://picpac.by/';
+    try {
+      const fixed = inviteSchema.parse((await call(alice, 'POST', `/projects/${projectId}/invites`)).json());
+      expect(fixed.url).toBe(`https://picpac.by/invite/${fixed.token}`);
+    } finally {
+      app.config.publicUrl = undefined;
+    }
   });
 
   it('приглашение создают только организатор: посторонний и участник получают 404, без токена 401', async () => {
@@ -231,7 +256,7 @@ describe('совместный альбом', () => {
     let pid: string;
     const create = async (extra: Record<string, unknown> = {}) => {
       const variantId = (await db.select().from(productVariants).where(eq(productVariants.format, 'Выпускной 20×20')))[0]!.id;
-      return call(alice, 'POST', '/projects', { variantId, title: '11 А', isShared: true, expectedMembers: 20, ...extra });
+      return call(alice, 'POST', '/projects', { variantId, title: '11 А', isShared: true, expectedMembers: 20, joinPassword: 'secret-1', ...extra });
     };
     const tokenOf = async () => inviteSchema.parse((await call(alice, 'POST', `/projects/${pid}/invites`)).json()).token;
     const join = (s: Session, token: string, password?: string) =>
@@ -250,14 +275,23 @@ describe('совместный альбом', () => {
       const row = (await db.select().from(projects).where(eq(projects.id, pid)))[0]!;
       expect(row.joinPasswordHash).toMatch(/^[0-9a-f]+:[0-9a-f]+$/);
       expect(row.joinPasswordHash).not.toContain('secret-1');
-      const open = projectSchema.parse((await call(alice, 'GET', `/projects/${projectId}`)).json());
-      expect(open.hasPassword).toBe(false);
+      // пароль есть у каждого выпускного альбома
+      const other = projectSchema.parse((await call(alice, 'GET', `/projects/${projectId}`)).json());
+      expect(other.hasPassword).toBe(true);
     });
 
     it('слишком короткий и слишком длинный пароль: 400; пароль для не общего проекта: 400', async () => {
       expect((await create({ joinPassword: 'abc' })).statusCode).toBe(400);
       expect((await create({ joinPassword: 'x'.repeat(65) })).statusCode).toBe(400);
       expect((await create({ joinPassword: 'secret-1', isShared: false })).statusCode).toBe(400);
+    });
+
+    it('альбом без пароля создать нельзя: 400 PASSWORD_REQUIRED', async () => {
+      const variantId = (await db.select().from(productVariants).where(eq(productVariants.format, 'Выпускной 20×20')))[0]!.id;
+      const res = await call(alice, 'POST', '/projects', { variantId, title: '11 В', isShared: true, expectedMembers: 20 });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error.code).toBe('PASSWORD_REQUIRED');
+      expect(await db.select().from(projects).where(eq(projects.title, '11 В'))).toHaveLength(0);
     });
 
     it('вход: без пароля 401 PASSWORD_REQUIRED, неверный 401 PASSWORD_INVALID, верный 200 с ролью contributor', async () => {
@@ -306,7 +340,7 @@ describe('совместный альбом', () => {
       expect((await join(bob, token)).statusCode).toBe(200);
     });
 
-    it('смена пароля: организатор 204, старый перестаёт подходить; участник и посторонний 404; null снимает пароль', async () => {
+    it('смена пароля: организатор 204, старый перестаёт подходить; участник и посторонний 404; снять пароль нельзя', async () => {
       const token = await tokenOf();
       expect((await join(bob, token, 'secret-1')).statusCode).toBe(200);
       const put = (s: Session, password: string | null) =>
@@ -316,11 +350,12 @@ describe('совместный альбом', () => {
       expect((await put(alice, 'new-pass-2')).statusCode).toBe(204);
       expect((await join(carol, token, 'secret-1')).json().error.code).toBe('PASSWORD_INVALID');
       expect((await join(carol, token, 'new-pass-2')).statusCode).toBe(200);
-      expect((await put(alice, null)).statusCode).toBe(204);
-      const dave = await guest();
-      expect((await join(dave, token)).statusCode).toBe(200);
-      expect(projectSchema.parse((await call(alice, 'GET', `/projects/${pid}`)).json()).hasPassword).toBe(false);
+      // пароль обязателен: null и слишком короткий отклоняются, действует прежний
+      expect((await put(alice, null)).statusCode).toBe(400);
       expect((await put(alice, 'abc')).statusCode).toBe(400);
+      const dave = await guest();
+      expect((await join(dave, token)).json().error.code).toBe('PASSWORD_REQUIRED');
+      expect(projectSchema.parse((await call(alice, 'GET', `/projects/${pid}`)).json()).hasPassword).toBe(true);
     });
 
     it('в журнал пишутся неудачи и смена пароля, но не сам пароль', async () => {

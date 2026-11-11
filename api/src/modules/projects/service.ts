@@ -89,6 +89,9 @@ export async function createProject(
   input: { variantId: string; title: string; isShared?: boolean; expectedMembers?: number; joinPassword?: string },
 ): Promise<ProjectDTO> {
   await loadVariant(db, input.variantId);
+  if (input.isShared && input.joinPassword === undefined) {
+    throw new AppError(400, 'PASSWORD_REQUIRED', 'Для выпускного альбома нужен пароль: по ссылке без него вступить нельзя');
+  }
   if (input.joinPassword !== undefined && !input.isShared) {
     throw new AppError(400, 'PASSWORD_NOT_ALLOWED', 'Пароль можно задать только общему выпускному альбому');
   }
@@ -158,18 +161,18 @@ export async function deleteProject(db: Db, storage: Storage, user: AuthUser, pr
   await audit(db, { userId: user.id, action: 'project.delete', objectType: 'project', objectId: projectId, result: 'ok' });
 }
 
-// Пароль входа в общий альбом меняет и снимает только организатор (null снимает).
-export async function setJoinPassword(db: Db, user: AuthUser, projectId: string, password: string | null): Promise<void> {
+// Пароль входа в общий альбом обязателен: его меняет только организатор, снять его нельзя.
+export async function setJoinPassword(db: Db, user: AuthUser, projectId: string, password: string): Promise<void> {
   const project = await assertProjectAccess(db, user, projectId, 'organizer');
   if (!project.isShared) throw new AppError(409, 'PROJECT_NOT_SHARED', 'Пароль есть только у общего выпускного альбома');
   if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Альбом уже заказан');
   await db
     .update(projects)
-    .set({ joinPasswordHash: password === null ? null : await hashPassword(password), updatedAt: new Date() })
+    .set({ joinPasswordHash: await hashPassword(password), updatedAt: new Date() })
     .where(eq(projects.id, projectId));
   await audit(db, {
     userId: user.id,
-    action: password === null ? 'album.password_removed' : 'album.password_changed',
+    action: 'album.password_changed',
     objectType: 'project',
     objectId: projectId,
     result: 'ok',
