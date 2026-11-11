@@ -5,6 +5,8 @@ import { registerAuth } from './auth/plugin.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerErrorHandling } from './errors.js';
 import { registerStorage } from './storage/plugin.js';
+import { registerAiRoutes } from './modules/ai/routes.js';
+import { registerAi } from './modules/ai/plugin.js';
 import { registerAlbumRoutes } from './modules/albums/routes.js';
 import { registerCatalogRoutes } from './modules/catalog/routes.js';
 import { MAX_PHOTO_BYTES } from './modules/catalog/service.js';
@@ -36,6 +38,7 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerErrorHandling(app);
   registerAuth(app);
   registerStorage(app);
+  registerAi(app);
   await app.register(multipart, { limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } });
   registerAuthRoutes(app);
   registerCatalogRoutes(app);
@@ -46,6 +49,7 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerOperatorRoutes(app);
   registerSupportRoutes(app);
   registerAlbumRoutes(app);
+  registerAiRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
 }

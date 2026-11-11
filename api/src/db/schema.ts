@@ -268,14 +268,19 @@ export const aiJobs = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
     sourcePhoto: text('source_photo').notNull(),
     prompt: text('prompt').notNull(),
     resultPath: text('result_path'),
+    resultPhotoId: uuid('result_photo_id').references(() => projectPhotos.id, { onDelete: 'set null' }),
+    reason: text('reason'),
     status: aiJobStatusEnum('status').notNull().default('pending'),
     provider: text('provider').notNull(),
     createdAt: createdAt(),
   },
-  (t) => [index('ai_jobs_user_idx').on(t.userId)],
+  (t) => [index('ai_jobs_user_idx').on(t.userId), index('ai_jobs_user_created_idx').on(t.userId, t.createdAt)],
 );
 
 export const consents = pgTable(
