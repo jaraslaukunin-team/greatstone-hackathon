@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, count, eq, gte, inArray, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import type { AiEditKind, AiJobDTO } from '@picpac/shared';
+import type { AiEditKind, AiJobDTO, AspectRatio } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import { aiJobs, consents, projectPhotos, projects } from '../../db/schema.js';
@@ -11,6 +11,7 @@ import { storageKey, toPhotoDTO } from '../photos/service.js';
 import { assertProjectAccess, viewerRole } from '../projects/service.js';
 import { isPromptAllowed } from './promptFilter.js';
 import { wrapEditPrompt } from './promptWrap.js';
+import { sizeFor } from './sizeFor.js';
 
 export const AI_HOURLY_LIMIT = 10;
 const HOUR_MS = 60 * 60 * 1000;
@@ -24,7 +25,7 @@ export async function acceptConsent(app: FastifyInstance, user: AuthUser): Promi
 export async function requestEdit(
   app: FastifyInstance,
   user: AuthUser,
-  input: { projectId: string; photoId: string; prompt: string; kind?: AiEditKind },
+  input: { projectId: string; photoId: string; prompt: string; kind?: AiEditKind; aspect?: AspectRatio },
 ): Promise<{ jobId: string }> {
   const db = app.db;
   const kind: AiEditKind = input.kind ?? 'edit';
@@ -81,6 +82,7 @@ export async function requestEdit(
         projectId: project.id,
         sourcePhoto: photo.id,
         prompt: wrappedPrompt,
+        size: sizeFor(input.aspect ?? 'original', photo),
         provider: app.ai.provider.name,
         createdAt: now,
       })
@@ -127,7 +129,13 @@ async function runJob(app: FastifyInstance, jobId: string): Promise<void> {
 
     let output: { image: Buffer; mime: string };
     try {
-      output = await app.ai.provider.edit({ image: source, mime, prompt: job.prompt, signal: controller.signal });
+      output = await app.ai.provider.edit({
+        image: source,
+        mime,
+        prompt: job.prompt,
+        size: job.size ?? undefined,
+        signal: controller.signal,
+      });
     } catch (e) {
       app.log.error(e, 'AI-провайдер вернул ошибку');
       return fail({
