@@ -6,10 +6,12 @@ import { verifySignature } from '../../storage/signedUrl.js';
 import { MAX_PHOTO_BYTES } from '../catalog/service.js';
 import { assertProjectAccess } from '../projects/service.js';
 import { sniffMime } from './imageMeta.js';
-import { addPhoto, deletePhoto, listPhotos, loadPhotoFile } from './service.js';
+import { parse } from '../../validation.js';
+import { addPhoto, copyPhoto, deletePhoto, listPhotos, loadPhotoFile } from './service.js';
 
 const tooLarge = () =>
   new AppError(413, 'FILE_TOO_LARGE', `Файл слишком большой: можно загрузить фото до ${MAX_PHOTO_BYTES / 1024 / 1024} МБ`);
+const copySchema = z.object({ fromPhotoId: z.string().max(100) });
 const fileQuery = z.object({ exp: z.coerce.number().int(), sig: z.string() });
 
 export function registerPhotoRoutes(app: FastifyInstance): void {
@@ -36,6 +38,13 @@ export function registerPhotoRoutes(app: FastifyInstance): void {
     if (part.file.truncated) throw tooLarge();
     reply.code(201);
     return addPhoto(req.server, req.user!, id, data);
+  });
+
+  app.post('/projects/:id/photos/copy', auth, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const body = parse(copySchema, req.body);
+    reply.code(201);
+    return copyPhoto(req.server, req.user!, id, body.fromPhotoId);
   });
 
   app.get('/projects/:id/photos', auth, async (req) => {

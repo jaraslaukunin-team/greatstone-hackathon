@@ -72,6 +72,60 @@ export async function addPhoto(
   }
 }
 
+/**
+ * Копирует фото в другой проект пользователя (например, результат AI в проект печати).
+ * Файл копируется физически: удаление исходного проекта не ломает копию.
+ */
+export async function copyPhoto(
+  app: FastifyInstance,
+  user: AuthUser,
+  targetProjectId: string,
+  fromPhotoId: string,
+): Promise<PhotoDTO> {
+  const target = await assertProjectAccess(app.db, user, targetProjectId, 'write');
+  const deny = async () => {
+    await audit(app.db, { userId: user.id, action: 'access.denied', objectType: 'photo', objectId: fromPhotoId, result: 'denied' });
+    return notFound();
+  };
+  if (!UUID.test(fromPhotoId)) throw await deny();
+  const [src] = await app.db.select().from(projectPhotos).where(eq(projectPhotos.id, fromPhotoId));
+  if (!src) throw await deny();
+  const source = await assertProjectAccess(app.db, user, src.projectId, 'read');
+  // Участник альбома копирует только свои фото, как и видит только свои.
+  if ((await viewerRole(app.db, user, source)) === 'contributor' && src.uploadedBy !== user.id) throw await deny();
+  if (target.status === 'ordered') throw ordered();
+
+  const data = await app.storage.get(src.storagePath);
+  const [{ next }] = (await app.db
+    .select({ next: sql<number>`coalesce(max(${projectPhotos.position}) + 1, 0)::int` })
+    .from(projectPhotos)
+    .where(eq(projectPhotos.projectId, targetProjectId))) as [{ next: number }];
+  const id = randomUUID();
+  const key = storageKey(targetProjectId, id);
+  await app.storage.put(key, data);
+  try {
+    const [row] = await app.db
+      .insert(projectPhotos)
+      .values({
+        id,
+        projectId: targetProjectId,
+        uploadedBy: user.id,
+        storagePath: key,
+        position: next,
+        width: src.width,
+        height: src.height,
+        takenAt: src.takenAt,
+        source: src.source,
+      })
+      .returning();
+    await audit(app.db, { userId: user.id, action: 'photo.copy', objectType: 'photo', objectId: id, result: 'ok' });
+    return toPhotoDTO(app, row!);
+  } catch (e) {
+    await app.storage.remove(key).catch(() => undefined);
+    throw e;
+  }
+}
+
 // Участник альбома видит только свои фото; владелец, организатор и оператор видят все.
 export async function listPhotos(app: FastifyInstance, user: AuthUser, projectId: string): Promise<PhotoDTO[]> {
   const project = await assertProjectAccess(app.db, user, projectId, 'read');

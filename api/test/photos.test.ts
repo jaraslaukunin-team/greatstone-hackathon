@@ -265,4 +265,72 @@ describe('фото проекта', () => {
     await expect(app.storage.get(`projects/${projectId}/${a.id}`)).rejects.toThrow();
     await expect(app.storage.get(`projects/${projectId}/${b.id}`)).rejects.toThrow();
   });
+
+  describe('копирование фото между проектами', () => {
+    const newProject = async (s: Session) => {
+      const variantId = (await db.select().from(productVariants).where(eq(productVariants.format, 'Classic 20×20')))[0]!.id;
+      return (
+        (await app.inject({
+          method: 'POST',
+          url: '/projects',
+          payload: { variantId, title: 'Печать' },
+          headers: { authorization: `Bearer ${s.token}` },
+        })).json() as { id: string }
+      ).id;
+    };
+    const copy = (s: Session, target: string, fromPhotoId: string) =>
+      app.inject({
+        method: 'POST',
+        url: `/projects/${target}/photos/copy`,
+        payload: { fromPhotoId },
+        headers: { authorization: `Bearer ${s.token}` },
+      });
+
+    it('копия в свой проект: 201, новый id, те же размеры и источник, файл открывается', async () => {
+      const src = (await upload(alice, projectId, 'photo-ok.jpg', fixture('photo-ok.jpg'))).json() as { id: string };
+      await db.update(projectPhotos).set({ source: 'ai' }).where(eq(projectPhotos.id, src.id));
+      const target = await newProject(alice);
+      const res = await copy(alice, target, src.id);
+      expect(res.statusCode).toBe(201);
+      const dto = photoSchema.parse(res.json());
+      expect(dto.id).not.toBe(src.id);
+      expect(dto.width).toBe(2400);
+      expect(dto.height).toBe(1600);
+      expect(dto.source).toBe('ai');
+      expect((await app.inject({ method: 'GET', url: dto.url })).statusCode).toBe(200);
+      expect(await rows(target)).toHaveLength(1);
+    });
+
+    it('удаление исходного проекта не ломает копию', async () => {
+      const src = (await upload(alice, projectId, 'photo-ok.jpg', fixture('photo-ok.jpg'))).json() as { id: string };
+      const target = await newProject(alice);
+      const dto = (await copy(alice, target, src.id)).json() as { url: string };
+      expect((await call(alice, 'DELETE', `/projects/${projectId}`)).statusCode).toBe(204);
+      expect((await app.inject({ method: 'GET', url: dto.url })).statusCode).toBe(200);
+    });
+
+    it('чужое фото, чужой целевой проект и не-uuid: 404 и запись access.denied; файл не копируется', async () => {
+      const src = (await upload(alice, projectId, 'photo-ok.jpg', fixture('photo-ok.jpg'))).json() as { id: string };
+      const bobs = await newProject(bob);
+      expect((await copy(bob, bobs, src.id)).statusCode).toBe(404);
+      expect((await copy(bob, projectId, src.id)).statusCode).toBe(404);
+      expect((await copy(alice, bobs, src.id)).statusCode).toBe(404);
+      expect((await copy(alice, projectId, 'not-a-uuid')).statusCode).toBe(404);
+      expect(await rows(bobs)).toHaveLength(0);
+      const denied = await db
+        .select()
+        .from(auditLog)
+        .where(and(eq(auditLog.userId, bob.id), eq(auditLog.action, 'access.denied')));
+      expect(denied.length).toBeGreaterThan(0);
+    });
+
+    it('в заказанный проект копировать нельзя: 409', async () => {
+      const src = (await upload(alice, projectId, 'photo-ok.jpg', fixture('photo-ok.jpg'))).json() as { id: string };
+      const target = await newProject(alice);
+      await db.update(projects).set({ status: 'ordered' }).where(eq(projects.id, target));
+      const res = await copy(alice, target, src.id);
+      expect(res.statusCode).toBe(409);
+      expect(res.json().error.code).toBe('PROJECT_ORDERED');
+    });
+  });
 });
