@@ -7,7 +7,7 @@ import { autoLayoutLocal, unplacedPhotos } from '../../../src/editor/autoLayoutL
 import { useProjectStore } from '../../../src/project/projectStore';
 import { syncProject } from '../../../src/project/syncProject';
 import { Button } from '../../../src/ui/Button';
-import { Card } from '../../../src/ui/Card';
+import { BookViewer } from '../../../src/book/BookViewer';
 import { lightColors, space, typography } from '../../../src/theme/theme';
 
 export default function OverviewScreen() {
@@ -16,12 +16,14 @@ export default function OverviewScreen() {
   const { draft, setDraft, setLayout, setSyncState } = useProjectStore();
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState('Собираем вашу книгу…');
+  const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const project = await client.get<ProjectDTO>(`/projects/${id}`);
       const photos = await client.get<PhotoDTO[]>(`/projects/${id}/photos`);
+      if (!cancelled) setPhotoMap(new Map(photos.map((p) => [p.id, p])));
       const catalog = await client.get<CatalogDTO>('/catalog').catch(() => null);
       const variant = catalog?.products.flatMap((p) => p.variants).find((v) => v.id === project.variantId);
       // Правки пользователя не затираем: прежний макет (локальный или с сервера) остаётся, пока в нём разложены все фото.
@@ -63,21 +65,16 @@ export default function OverviewScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Обзор книги</Text>
       <Text style={styles.sub}>{message}</Text>
-      {(draft?.layout?.pages ?? []).slice(0, 8).map((page, index) => (
-        <Card key={index}>
-          <Text style={styles.cardTitle}>
-            Разворот {index + 1} · {page.template}
-          </Text>
-          <Text style={styles.cardSub}>
-            Фото: {page.cells.filter((c) => c.photoId).length}/{page.cells.length}
-          </Text>
-          <Button
-            title="Открыть"
-            variant="secondary"
-            onPress={() => router.push(`/project/${id}/spread/${index}`)}
-          />
-        </Card>
-      ))}
+      {draft?.layout?.pages?.length ? (
+        <BookViewer
+          title={draft.project.title}
+          layout={draft.layout}
+          photos={photoMap}
+          resolveUrl={client.resolveUrl}
+          onOpenPage={(page) => router.push(`/project/${id}/spread/${page}`)}
+        />
+      ) : null}
+      <Text style={styles.hint}>Листайте свайпом или стрелками. Нажмите на «Разворот», чтобы открыть его в редакторе.</Text>
       <Button title="Проверить перед заказом" disabled={busy} onPress={() => router.push(`/project/${id}/review`)} />
     </ScrollView>
   );
@@ -88,6 +85,7 @@ const styles = StyleSheet.create({
   content: { padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
+  hint: { ...typography.caption, color: lightColors.textSecondary },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginVertical: space[2] },
 });
