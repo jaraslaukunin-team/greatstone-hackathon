@@ -6,11 +6,13 @@ import type { Config } from '../src/config.js';
 import { closeDb, createDb, type Db } from '../src/db/client.js';
 import * as schema from '../src/db/schema.js';
 import { seedDatabase, type SeedSummary } from '../src/db/seed.js';
+import { assertTestDatabaseName, assertTestDatabaseUrl, TEST_DATABASE_URL } from './testDbGuard.js';
+
+assertTestDatabaseUrl(TEST_DATABASE_URL);
 
 // Тестовые константы, не настоящие секреты.
 export const testOverrides: Partial<Config> = {
-  databaseUrl:
-    process.env.DATABASE_URL_TEST ?? 'postgres://picpac:picpac@localhost:5433/picpac_test',
+  databaseUrl: TEST_DATABASE_URL,
   jwtSecret: 'test-jwt-secret',
   fileUrlSecret: 'test-file-url-secret',
   uploadDir: './uploads-test',
@@ -22,6 +24,9 @@ const tableNames = (Object.values(schema) as unknown[])
 
 // Очищает все таблицы и сбрасывает счётчики (в том числе order_number_seq).
 export async function resetDatabase(db: Db): Promise<void> {
+  // Проверяем реальную базу соединения, а не адрес из переменной окружения.
+  const res = await db.execute(sql`SELECT current_database() AS name`);
+  assertTestDatabaseName(String((res.rows[0] as { name: string }).name));
   await db.execute(sql.raw(`TRUNCATE ${tableNames.join(', ')} RESTART IDENTITY CASCADE`));
   await db.execute(sql`ALTER SEQUENCE order_number_seq RESTART WITH 1`);
 }

@@ -1,4 +1,4 @@
-import { count, eq, lt } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { Db } from '../src/db/client.js';
@@ -49,12 +49,53 @@ describe('seedDatabase', () => {
 
     const [old] = await db.select().from(s.promoCodes).where(eq(s.promoCodes.code, 'OLD20'));
     expect(old!.validUntil.getTime()).toBeLessThan(Date.now());
-    expect(await db.select().from(s.promoCodes).where(lt(s.promoCodes.discountPercent, 100))).toHaveLength(3);
+    const promos = await db.select().from(s.promoCodes);
+    expect(promos).toHaveLength(3);
+    const percent = (code: string) => promos.find((p) => p.code === code)?.discountPercent;
+    expect(percent('HELLO10')).toBe(10);
+    expect(percent('SCHOOL15')).toBe(15);
+    expect(percent('OLD20')).toBe(20);
+
+    const contacts = (await db.select().from(s.profiles)).map((p) => p.contact).sort();
+    expect(contacts).toEqual(['customer1@test.local', 'customer2@test.local', 'operator@test.local']);
 
     const statuses = new Set((await db.select().from(s.orders)).map((o) => o.status));
     expect(statuses.size).toBeGreaterThanOrEqual(4);
     const numbers = (await db.select().from(s.orders)).map((o) => o.number);
     for (const n of numbers) expect(n).toMatch(/^PP-\d{6}$/);
+  });
+
+  it('reset() сбрасывает последовательность номеров заказов', async () => {
+    await seedDatabase(db);
+    await reset();
+    await seedDatabase(db);
+    const numbers = (await db.select().from(s.orders)).map((o) => o.number);
+    expect(numbers).toContain('PP-000001');
+    expect(numbers).toHaveLength(5);
+  });
+
+  it('база отклоняет отрицательные цены и скидку больше 100%', async () => {
+    await seedDatabase(db);
+    const [v] = await db.select().from(s.productVariants);
+    const { id: _id, ...variant } = v!;
+    const code = (e: unknown) => (e as { code?: string }).code;
+    for (const bad of [{ basePrice: -1 }, { pricePerPage: -1 }, { minDpi: 0 }, { pagesMin: -1 }, { pageWidthCm: 0 }]) {
+      const err = await db.insert(s.productVariants).values({ ...variant, ...bad }).catch((e) => e);
+      expect(code(err)).toBe('23514');
+    }
+    const promo = { code: 'BAD', validUntil: new Date() };
+    for (const discountPercent of [101, -1]) {
+      const err = await db.insert(s.promoCodes).values({ ...promo, discountPercent }).catch((e) => e);
+      expect(code(err)).toBe('23514');
+    }
+    const [o] = await db.select().from(s.orders);
+    const { id: _oid, number: _n, ...order } = o!;
+    const err = await db.insert(s.orders).values({ ...order, idempotencyKey: 'neg', total: -1 }).catch((e) => e);
+    expect(code(err)).toBe('23514');
+    const [p] = await db.select().from(s.projects);
+    const { id: _pid, ...project } = p!;
+    const err2 = await db.insert(s.projects).values({ ...project, expectedMembers: -1 }).catch((e) => e);
+    expect(code(err2)).toBe('23514');
   });
 
   it('повторный вызов не меняет число строк', async () => {

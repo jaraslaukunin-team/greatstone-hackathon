@@ -89,15 +89,23 @@ export const productVariants = pgTable(
     index('product_variants_product_idx').on(t.productId),
     check('product_variants_pages_chk', sql`${t.pagesMin} <= ${t.pagesMax}`),
     check('product_variants_width_chk', sql`${t.pageWidthCm} > 0`),
+    check('product_variants_pages_min_chk', sql`${t.pagesMin} >= 0`),
+    check('product_variants_base_price_chk', sql`${t.basePrice} >= 0`),
+    check('product_variants_price_per_page_chk', sql`${t.pricePerPage} >= 0`),
+    check('product_variants_min_dpi_chk', sql`${t.minDpi} > 0`),
   ],
 );
 
-export const promoCodes = pgTable('promo_codes', {
-  id: id(),
-  code: text('code').notNull().unique(),
-  discountPercent: integer('discount_percent').notNull(),
-  validUntil: ts('valid_until').notNull(),
-});
+export const promoCodes = pgTable(
+  'promo_codes',
+  {
+    id: id(),
+    code: text('code').notNull().unique(),
+    discountPercent: integer('discount_percent').notNull(),
+    validUntil: ts('valid_until').notNull(),
+  },
+  (t) => [check('promo_codes_percent_chk', sql`${t.discountPercent} between 0 and 100`)],
+);
 
 export const projects = pgTable(
   'projects',
@@ -117,7 +125,11 @@ export const projects = pgTable(
     createdAt: createdAt(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
-  (t) => [index('projects_owner_idx').on(t.ownerId)],
+  (t) => [
+    index('projects_owner_idx').on(t.ownerId),
+    index('projects_variant_idx').on(t.variantId),
+    check('projects_expected_members_chk', sql`${t.expectedMembers} is null or ${t.expectedMembers} >= 0`),
+  ],
 );
 
 export const projectPhotos = pgTable(
@@ -153,18 +165,25 @@ export const projectMembers = pgTable(
     childName: text('child_name'),
     createdAt: createdAt(),
   },
-  (t) => [unique('project_members_project_user_uq').on(t.projectId, t.userId)],
+  (t) => [
+    unique('project_members_project_user_uq').on(t.projectId, t.userId),
+    index('project_members_user_idx').on(t.userId),
+  ],
 );
 
-export const projectInvites = pgTable('project_invites', {
-  id: id(),
-  projectId: uuid('project_id')
-    .notNull()
-    .references(() => projects.id, { onDelete: 'cascade' }),
-  token: text('token').notNull().unique(),
-  expiresAt: ts('expires_at').notNull(),
-  createdAt: createdAt(),
-});
+export const projectInvites = pgTable(
+  'project_invites',
+  {
+    id: id(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    token: text('token').notNull().unique(),
+    expiresAt: ts('expires_at').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('project_invites_project_idx').on(t.projectId)],
+);
 
 export const orders = pgTable(
   'orders',
@@ -190,6 +209,8 @@ export const orders = pgTable(
   (t) => [
     uniqueIndex('orders_customer_idempotency_uq').on(t.customerId, t.idempotencyKey),
     index('orders_customer_idx').on(t.customerId),
+    index('orders_project_idx').on(t.projectId),
+    check('orders_total_chk', sql`${t.total} >= 0`),
   ],
 );
 
@@ -208,14 +229,21 @@ export const orderStatusHistory = pgTable(
   (t) => [index('order_status_history_order_idx').on(t.orderId)],
 );
 
-export const interactions = pgTable('interactions', {
-  id: id(),
-  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
-  customerId: uuid('customer_id').references(() => profiles.id, { onDelete: 'set null' }),
-  topic: text('topic').notNull(),
-  status: interactionStatusEnum('status').notNull().default('open'),
-  createdAt: createdAt(),
-});
+export const interactions = pgTable(
+  'interactions',
+  {
+    id: id(),
+    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+    customerId: uuid('customer_id').references(() => profiles.id, { onDelete: 'set null' }),
+    topic: text('topic').notNull(),
+    status: interactionStatusEnum('status').notNull().default('open'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('interactions_customer_idx').on(t.customerId),
+    index('interactions_order_idx').on(t.orderId),
+  ],
+);
 
 export const interactionMessages = pgTable(
   'interaction_messages',
@@ -231,18 +259,22 @@ export const interactionMessages = pgTable(
   (t) => [index('interaction_messages_interaction_idx').on(t.interactionId)],
 );
 
-export const aiJobs = pgTable('ai_jobs', {
-  id: id(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => profiles.id, { onDelete: 'cascade' }),
-  sourcePhoto: text('source_photo').notNull(),
-  prompt: text('prompt').notNull(),
-  resultPath: text('result_path'),
-  status: aiJobStatusEnum('status').notNull().default('pending'),
-  provider: text('provider').notNull(),
-  createdAt: createdAt(),
-});
+export const aiJobs = pgTable(
+  'ai_jobs',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    sourcePhoto: text('source_photo').notNull(),
+    prompt: text('prompt').notNull(),
+    resultPath: text('result_path'),
+    status: aiJobStatusEnum('status').notNull().default('pending'),
+    provider: text('provider').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('ai_jobs_user_idx').on(t.userId)],
+);
 
 export const consents = pgTable(
   'consents',
@@ -257,13 +289,17 @@ export const consents = pgTable(
   (t) => [unique('consents_user_kind_uq').on(t.userId, t.kind)],
 );
 
-export const auditLog = pgTable('audit_log', {
-  id: id(),
-  // Без внешнего ключа: журнал переживает удаление пользователя.
-  userId: uuid('user_id'),
-  at: ts('at').notNull().defaultNow(),
-  action: text('action').notNull(),
-  objectType: text('object_type'),
-  objectId: text('object_id'),
-  result: text('result').notNull(),
-});
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: id(),
+    // Без внешнего ключа: журнал переживает удаление пользователя.
+    userId: uuid('user_id'),
+    at: ts('at').notNull().defaultNow(),
+    action: text('action').notNull(),
+    objectType: text('object_type'),
+    objectId: text('object_id'),
+    result: text('result').notNull(),
+  },
+  (t) => [index('audit_log_at_idx').on(t.at), index('audit_log_user_idx').on(t.userId)],
+);
