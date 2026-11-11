@@ -67,8 +67,8 @@ export default function ReviewScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text, marginTop: space[5] },
-  sub: { ...typography.body, color: lightColors.textMuted },
+  sub: { ...typography.body, color: lightColors.textSecondary },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
-  cardSub: { ...typography.caption, color: lightColors.textMuted, marginVertical: space[2] },
+  cardSub: { ...typography.caption, color: lightColors.textSecondary, marginVertical: space[2] },
   hint: { ...typography.caption, color: lightColors.warning },
 });

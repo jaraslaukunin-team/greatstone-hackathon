@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../src/ui/Button';
+import { Input } from '../../src/ui/Input';
 import { useAuth } from '../../src/auth/AuthProvider';
-import { lightColors, radius, space, typography } from '../../src/theme/theme';
+import { lightColors, space, typography } from '../../src/theme/theme';
 import { ApiRequestError } from '../../src/api/client';
+import { BackButton } from '../../src/ui/BackButton';
 
 export default function LoginScreen() {
   const { requestCode, loginAsGuest } = useAuth();
@@ -27,12 +29,14 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.screen}>
+      <View style={styles.back}>
+        <BackButton fallback="/(auth)/welcome" />
+      </View>
       <Text style={styles.title}>Рады видеть вас</Text>
       <Text style={styles.sub}>Войдите или начните без регистрации</Text>
-      <TextInput
-        style={styles.input}
+      <Input
+       
         placeholder="Телефон или e-mail"
-        placeholderTextColor={lightColors.textMuted}
         autoCapitalize="none"
         value={contact}
         onChangeText={setContact}
@@ -52,17 +56,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: space[3],
   },
+  back: { position: 'absolute', top: space[5], left: space[2] },
   title: { ...typography.h1, color: lightColors.text },
-  sub: { ...typography.body, color: lightColors.textMuted },
-  input: {
-    backgroundColor: lightColors.surfaceMuted,
-    borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: lightColors.border,
-    paddingHorizontal: space[4],
-    paddingVertical: space[3],
-    ...typography.body,
-    color: lightColors.text,
-  },
+  sub: { ...typography.body, color: lightColors.textSecondary },
   error: { ...typography.caption, color: lightColors.danger },
 });

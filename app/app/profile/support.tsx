@@ -20,5 +20,5 @@ export default function ProfileSupportScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
-  sub: { ...typography.body, color: lightColors.textMuted },
+  sub: { ...typography.body, color: lightColors.textSecondary },
 });

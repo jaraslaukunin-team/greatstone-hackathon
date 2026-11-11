@@ -44,6 +44,6 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text },
   error: { ...typography.caption, color: lightColors.danger },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
-  cardSub: { ...typography.caption, color: lightColors.textMuted, marginTop: 4 },
-  history: { ...typography.caption, color: lightColors.textMuted },
+  cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
+  history: { ...typography.caption, color: lightColors.textSecondary },
 });

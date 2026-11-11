@@ -34,5 +34,5 @@ const styles = StyleSheet.create({
   content: { padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
-  cardSub: { ...typography.caption, color: lightColors.textMuted, marginTop: 4 },
+  cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
 });

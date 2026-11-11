@@ -24,6 +24,7 @@ export default function DeliveryScreen() {
           <Text style={styles.cardSub}>{method.hint}</Text>
           <Button
             title={selected === method.id ? 'Выбрано' : 'Выбрать'}
+            icon={selected === method.id ? 'check' : undefined}
             variant={selected === method.id ? 'primary' : 'secondary'}
             onPress={() => setSelected(method.id)}
           />
@@ -43,5 +44,5 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
-  cardSub: { ...typography.caption, color: lightColors.textMuted, marginVertical: space[2] },
+  cardSub: { ...typography.caption, color: lightColors.textSecondary, marginVertical: space[2] },
 });
