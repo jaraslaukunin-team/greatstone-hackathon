@@ -5,6 +5,7 @@ import { registerAuth } from './auth/plugin.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerErrorHandling } from './errors.js';
 import { registerStorage } from './storage/plugin.js';
+import { renderRootPage } from './rootPage.js';
 import { registerAiRoutes } from './modules/ai/routes.js';
 import { registerAi } from './modules/ai/plugin.js';
 import { registerAlbumRoutes } from './modules/albums/routes.js';
@@ -53,5 +54,12 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerAiRoutes(app);
   registerPrivacyRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
+  // Корень: браузеру понятная страница, программам JSON. Ничего внутреннего здесь не раскрывается.
+  app.get('/', async (req, reply) => {
+    if (req.headers.accept?.includes('text/html')) {
+      return reply.type('text/html; charset=utf-8').send(renderRootPage());
+    }
+    return { service: 'picpac-api', status: 'ok', health: '/health' };
+  });
   return app;
 }
