@@ -7,10 +7,16 @@ docs/
 .agents/
 2026-11-11-picpac-mobile-*.md
 
-node_modules
-dist
+node_modules/
+dist/
 .env
-uploads
-.expo
-uploads-test
+uploads/
+uploads-test/
+.expo/
+coverage/
+*.log
+.DS_Store
+.turbo/
+*.tsbuildinfo
 .idea/
+.cursor/

@@ -4,10 +4,16 @@
   "version": "0.0.0",
   "workspaces": [
     "packages/*",
-    "api"
+    "api",
+    "app",
+    "tools/*"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "npm test --workspaces --if-present",
-    "licenses": "node scripts/licenses.mjs"
+    "licenses": "node scripts/licenses.mjs",
+    "mock-api": "npm run start -w @picpac/mock-api"
   }
 }
