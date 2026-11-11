@@ -1,4 +1,4 @@
-import type { CatalogDTO, PhotoDTO, ProjectDTO } from '@picpac/shared';
+import { ASPECT_RATIOS, type AspectRatio, type CatalogDTO, type PhotoDTO, type ProjectDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -28,6 +28,7 @@ export default function AiEditScreen() {
   const params = useLocalSearchParams<{ photoId?: string; projectId?: string; photoUrl?: string }>();
   const client = useApiClient();
   const [prompt, setPrompt] = useState('Тёплая ретро-плёнка');
+  const [aspect, setAspect] = useState<AspectRatio>('original');
   const [photo, setPhoto] = useState<{ id: string; url: string } | null>(
     params.photoId && params.photoUrl ? { id: params.photoId, url: params.photoUrl } : null,
   );
@@ -59,8 +60,8 @@ export default function AiEditScreen() {
     setError(null);
     setBusy(true);
     try {
-      const { jobId } = await startAiEdit(client, { projectId, photoId: photo.id, prompt, kind: 'edit' }, inFlight);
-      router.push({ pathname: '/ai/result', params: { jobId, sourceUrl: photo.url } });
+      const { jobId } = await startAiEdit(client, { projectId, photoId: photo.id, prompt, kind: 'edit', aspect }, inFlight);
+      router.push({ pathname: '/ai/result', params: { jobId, sourceUrl: photo.url, projectId } });
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось запустить AI');
     } finally {
@@ -78,6 +79,17 @@ export default function AiEditScreen() {
         disabled={busy}
         onPress={() => void choosePhoto()}
       />
+      <Text style={styles.label}>Формат результата</Text>
+      <View style={styles.aspects}>
+        {ASPECT_RATIOS.map((a) => (
+          <Button
+            key={a}
+            title={a === 'original' ? 'Как у фото' : a}
+            variant={a === aspect ? 'primary' : 'secondary'}
+            onPress={() => setAspect(a)}
+          />
+        ))}
+      </View>
       <Input multiline value={prompt} onChangeText={setPrompt} placeholder="Что изменить?" />
       <View style={styles.row}>
         {['Ретро', 'На море', 'Студийный свет'].map((preset) => (
@@ -97,5 +109,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text },
   preview: { width: '100%', height: 240, borderRadius: radius.card, backgroundColor: lightColors.border },
   row: { gap: space[2] },
+  label: { ...typography.bodyStrong, color: lightColors.text },
+  aspects: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   error: { ...typography.caption, color: lightColors.danger },
 });

@@ -148,7 +148,7 @@ export default function AssistantScreen() {
         { projectId, photoId, prompt, kind },
         inFlight,
       );
-      router.push({ pathname: '/ai/result', params: { jobId, sourceUrl: photos.find((p) => p.id === photoId)?.url ?? '' } });
+      router.push({ pathname: '/ai/result', params: { jobId, sourceUrl: photos.find((p) => p.id === photoId)?.url ?? '', projectId } });
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось запустить AI');
     } finally {

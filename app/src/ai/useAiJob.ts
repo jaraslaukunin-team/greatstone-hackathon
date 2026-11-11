@@ -1,4 +1,5 @@
 import type { AiJobDTO, PhotoDTO } from '@picpac/shared';
+import type { AspectRatio } from '@picpac/shared';
 import { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../api/client';
 
@@ -56,7 +57,7 @@ export function useAiJob(client: ApiClient, jobId: string | null) {
 
 export async function startAiEdit(
   client: ApiClient,
-  body: { projectId: string; photoId: string; prompt: string; kind?: 'edit' | 'upscale' },
+  body: { projectId: string; photoId: string; prompt: string; kind?: 'edit' | 'upscale'; aspect?: AspectRatio },
   inFlight: { current: Promise<{ jobId: string }> | null },
 ): Promise<{ jobId: string }> {
   if (inFlight.current) return inFlight.current;
