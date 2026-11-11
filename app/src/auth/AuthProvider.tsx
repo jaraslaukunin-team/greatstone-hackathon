@@ -1,5 +1,4 @@
 import type { UserDTO } from '@picpac/shared';
-import * as SecureStore from 'expo-secure-store';
 import {
   createContext,
   useCallback,
@@ -11,6 +10,7 @@ import {
 } from 'react';
 import { createApiClient } from '../api/client';
 import { API_URL } from '../config';
+import { authStorage } from './storage';
 import { createTokenStore } from './tokenStore';
 
 type AuthContextValue = {
@@ -25,11 +25,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const tokenStore = createTokenStore({
-  getItem: (key) => SecureStore.getItemAsync(key),
-  setItem: (key, value) => SecureStore.setItemAsync(key, value),
-  deleteItem: (key) => SecureStore.deleteItemAsync(key),
-});
+const tokenStore = createTokenStore(authStorage);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserDTO | null>(null);
