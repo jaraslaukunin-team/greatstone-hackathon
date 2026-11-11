@@ -1,12 +1,13 @@
 import type { AiJobDTO } from '@picpac/shared';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { startAiEdit } from '../../src/ai/useAiJob';
 import { ApiRequestError } from '../../src/api/client';
 import { Button } from '../../src/ui/Button';
-import { lightColors, radius, space, typography } from '../../src/theme/theme';
+import { Input } from '../../src/ui/Input';
+import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function AiEditScreen() {
   const client = useApiClient();
@@ -31,12 +32,11 @@ export default function AiEditScreen() {
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>AI-редактор</Text>
-      <TextInput
-        style={styles.input}
+      <Input
+        multiline
         value={prompt}
         onChangeText={setPrompt}
         placeholder="Что изменить?"
-        placeholderTextColor={lightColors.textMuted}
       />
       <View style={styles.row}>
         {['Ретро', 'На море', 'Студийный свет'].map((preset) => (
@@ -52,15 +52,6 @@ export default function AiEditScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
-  input: {
-    backgroundColor: lightColors.surfaceMuted,
-    borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: lightColors.border,
-    padding: space[3],
-    minHeight: 96,
-    color: lightColors.text,
-  },
   row: { gap: space[2] },
   error: { ...typography.caption, color: lightColors.danger },
 });

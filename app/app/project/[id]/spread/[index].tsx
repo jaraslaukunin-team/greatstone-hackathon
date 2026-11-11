@@ -75,6 +75,6 @@ export default function SpreadEditorScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[2] },
   title: { ...typography.h1, color: lightColors.text, marginTop: space[5] },
-  sub: { ...typography.body, color: lightColors.textMuted },
+  sub: { ...typography.body, color: lightColors.textSecondary },
   cell: { ...typography.caption, color: lightColors.text },
 });

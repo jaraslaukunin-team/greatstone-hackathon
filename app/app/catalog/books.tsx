@@ -35,7 +35,7 @@ export default function BooksScreen() {
         const variant = product.variants[0];
         return (
           <Link key={product.id} href={`/catalog/${product.id}`} asChild>
-            <Card>
+            <Card chevron>
               <Text style={styles.cardTitle}>{product.title}</Text>
               <Text style={styles.cardSub}>{product.description}</Text>
               {variant ? (
@@ -53,8 +53,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg },
   content: { padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
-  sub: { ...typography.body, color: lightColors.textMuted, marginBottom: space[2] },
+  sub: { ...typography.body, color: lightColors.textSecondary, marginBottom: space[2] },
   cardTitle: { ...typography.h2, color: lightColors.text },
-  cardSub: { ...typography.caption, color: lightColors.textMuted, marginTop: 4 },
+  cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
   price: { ...typography.price, color: lightColors.text, marginTop: space[2] },
 });
