@@ -1,0 +1,15 @@
+{
+  "name": "picpac",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "api",
+    "app"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "npm run test --workspaces --if-present"
+  }
+}
