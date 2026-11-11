@@ -1,0 +1,10 @@
+**/node_modules
+.git
+.env
+.expo
+.superpowers
+uploads
+uploads-test
+docs
+app
+**/*.log

@@ -1,0 +1,6 @@
+# HTTPS для API. API_DOMAIN: домен или <ip-сервера>.nip.io, тогда сертификат Caddy получает сам.
+# Без API_DOMAIN используется localhost (самоподписанный сертификат, для проверки на своей машине).
+{$API_DOMAIN:localhost} {
+	encode zstd gzip
+	reverse_proxy api:3000
+}

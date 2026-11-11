@@ -5,11 +5,15 @@ import { registerAuth } from './auth/plugin.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerErrorHandling } from './errors.js';
 import { registerStorage } from './storage/plugin.js';
+import { registerAiRoutes } from './modules/ai/routes.js';
+import { registerAi } from './modules/ai/plugin.js';
+import { registerAlbumRoutes } from './modules/albums/routes.js';
 import { registerCatalogRoutes } from './modules/catalog/routes.js';
 import { MAX_PHOTO_BYTES } from './modules/catalog/service.js';
 import { registerOperatorRoutes } from './modules/operator/routes.js';
 import { registerOrderRoutes } from './modules/orders/routes.js';
 import { registerPhotoRoutes } from './modules/photos/routes.js';
+import { registerPrivacyRoutes } from './modules/privacy/routes.js';
 import { registerProjectRoutes } from './modules/projects/routes.js';
 import { registerQuoteRoutes } from './modules/quote/routes.js';
 import { registerSupportRoutes } from './modules/support/routes.js';
@@ -35,6 +39,7 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerErrorHandling(app);
   registerAuth(app);
   registerStorage(app);
+  registerAi(app);
   await app.register(multipart, { limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } });
   registerAuthRoutes(app);
   registerCatalogRoutes(app);
@@ -44,6 +49,9 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerOrderRoutes(app);
   registerOperatorRoutes(app);
   registerSupportRoutes(app);
+  registerAlbumRoutes(app);
+  registerAiRoutes(app);
+  registerPrivacyRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
 }

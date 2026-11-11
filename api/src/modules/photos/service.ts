@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import type { PhotoDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
@@ -7,7 +7,7 @@ import type { AuthUser } from '../../auth/plugin.js';
 import { projectPhotos } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import { signUrl } from '../../storage/signedUrl.js';
-import { assertProjectAccess } from '../projects/service.js';
+import { assertProjectAccess, viewerRole } from '../projects/service.js';
 import { readImageMeta } from './imageMeta.js';
 
 type PhotoRow = typeof projectPhotos.$inferSelect;
@@ -72,13 +72,15 @@ export async function addPhoto(
   }
 }
 
-// Участники альбома видят только свои фото: это ограничение добавляет задача про альбомы.
+// Участник альбома видит только свои фото; владелец, организатор и оператор видят все.
 export async function listPhotos(app: FastifyInstance, user: AuthUser, projectId: string): Promise<PhotoDTO[]> {
-  await assertProjectAccess(app.db, user, projectId, 'read');
+  const project = await assertProjectAccess(app.db, user, projectId, 'read');
+  const role = await viewerRole(app.db, user, project);
+  const own = role === 'contributor' ? eq(projectPhotos.uploadedBy, user.id) : undefined;
   const rows = await app.db
     .select()
     .from(projectPhotos)
-    .where(eq(projectPhotos.projectId, projectId))
+    .where(and(eq(projectPhotos.projectId, projectId), own))
     .orderBy(asc(projectPhotos.position), asc(projectPhotos.createdAt));
   return rows.map((r) => toPhotoDTO(app, r));
 }

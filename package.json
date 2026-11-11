@@ -2,6 +2,12 @@
   "name": "picpac",
   "private": true,
   "version": "0.0.0",
-  "workspaces": ["packages/*", "api"],
-  "scripts": { "test": "npm test --workspaces --if-present" }
+  "workspaces": [
+    "packages/*",
+    "api"
+  ],
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "licenses": "node scripts/licenses.mjs"
+  }
 }

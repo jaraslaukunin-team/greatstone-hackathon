@@ -155,13 +155,16 @@ export type InteractionDTO = {
   messages: InteractionMessageDTO[];
 };
 
-export type AlbumProgressDTO = {
-  projectId: string;
-  expectedMembers: number;
-  joinedMembers: number;
+export type InviteDTO = { token: string; url: string; expiresAt: string };
+
+export type AlbumMemberDTO = {
+  userId: string;
+  childName: string | null;
+  role: 'organizer' | 'contributor';
   photosCount: number;
-  approvedMembers: number;
 };
+
+export type AlbumProgressDTO = { expected: number | null; members: AlbumMemberDTO[] };
 
 export type AiJobDTO = {
   id: string;
