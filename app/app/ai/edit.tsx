@@ -1,29 +1,38 @@
-import type { AiJobDTO } from '@picpac/shared';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
-import { startAiEdit } from '../../src/ai/useAiJob';
 import { ApiRequestError } from '../../src/api/client';
+import { startAiEdit } from '../../src/ai/useAiJob';
+import { useProjectStore } from '../../src/project/projectStore';
 import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function AiEditScreen() {
+  const params = useLocalSearchParams<{ photoId?: string; projectId?: string }>();
   const client = useApiClient();
+  const draft = useProjectStore((s) => s.draft);
+  const projectId = params.projectId ?? draft?.project.id;
+  const photoId = params.photoId;
   const [prompt, setPrompt] = useState('Тёплая ретро-плёнка');
   const [error, setError] = useState<string | null>(null);
-  const inFlight = useRef<Promise<AiJobDTO> | null>(null);
+  const inFlight = useRef<Promise<{ jobId: string }> | null>(null);
 
   async function submit() {
     setError(null);
+    if (!projectId || !photoId) {
+      setError('Не выбраны проект или фото — откройте вкладку AI');
+      return;
+    }
     try {
-      const job = await startAiEdit(
+      await client.post('/ai/consent', { consent: true });
+      const { jobId } = await startAiEdit(
         client,
-        { photoId: '00000000-0000-4000-8000-000000000701', prompt },
+        { projectId, photoId, prompt, kind: 'edit' },
         inFlight,
       );
-      router.push({ pathname: '/ai/result', params: { jobId: job.id } });
+      router.push({ pathname: '/ai/result', params: { jobId } });
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось запустить AI');
     }
@@ -32,12 +41,7 @@ export default function AiEditScreen() {
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>AI-редактор</Text>
-      <Input
-        multiline
-        value={prompt}
-        onChangeText={setPrompt}
-        placeholder="Что изменить?"
-      />
+      <Input multiline value={prompt} onChangeText={setPrompt} placeholder="Что изменить?" />
       <View style={styles.row}>
         {['Ретро', 'На море', 'Студийный свет'].map((preset) => (
           <Button key={preset} title={preset} variant="secondary" onPress={() => setPrompt(preset)} />
@@ -45,6 +49,7 @@ export default function AiEditScreen() {
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button title="Обработать" onPress={() => void submit()} />
+      <Button title="Открыть ассистента" variant="text" onPress={() => router.push('/(tabs)/assistant')} />
     </View>
   );
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, count, eq, gte, inArray, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import type { AiJobDTO } from '@picpac/shared';
+import type { AiEditKind, AiJobDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import { aiJobs, consents, projectPhotos, projects } from '../../db/schema.js';
@@ -10,6 +10,7 @@ import { readImageMeta, sniffMime } from '../photos/imageMeta.js';
 import { storageKey, toPhotoDTO } from '../photos/service.js';
 import { assertProjectAccess, viewerRole } from '../projects/service.js';
 import { isPromptAllowed } from './promptFilter.js';
+import { wrapEditPrompt } from './promptWrap.js';
 
 export const AI_HOURLY_LIMIT = 10;
 const HOUR_MS = 60 * 60 * 1000;
@@ -23,9 +24,10 @@ export async function acceptConsent(app: FastifyInstance, user: AuthUser): Promi
 export async function requestEdit(
   app: FastifyInstance,
   user: AuthUser,
-  input: { projectId: string; photoId: string; prompt: string },
+  input: { projectId: string; photoId: string; prompt: string; kind?: AiEditKind },
 ): Promise<{ jobId: string }> {
   const db = app.db;
+  const kind: AiEditKind = input.kind ?? 'edit';
   const [consent] = await db
     .select({ id: consents.id })
     .from(consents)
@@ -54,6 +56,7 @@ export async function requestEdit(
     throw new AppError(422, 'PROMPT_REJECTED', 'Такой запрос обработать нельзя. Опишите другое изменение фото');
   }
 
+  const wrappedPrompt = wrapEditPrompt(input.prompt, kind);
   const now = app.clock.now();
   // Лимит считается при заблокированном пользователе, поэтому параллельные запросы его не обходят.
   const job = await db.transaction(async (tx) => {
@@ -77,7 +80,7 @@ export async function requestEdit(
         userId: user.id,
         projectId: project.id,
         sourcePhoto: photo.id,
-        prompt: input.prompt,
+        prompt: wrappedPrompt,
         provider: app.ai.provider.name,
         createdAt: now,
       })

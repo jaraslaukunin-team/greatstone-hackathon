@@ -38,7 +38,8 @@ describe('loadConfig', () => {
     expect(c).toMatchObject({
       databaseUrl: 'd', jwtSecret: 'j', fileUrlSecret: 'f', uploadDir: './uploads',
       demoMode: false, aiProvider: 'stub', aiaiBaseUrl: 'https://api.aiai.by/v1',
-      aiaiApiKey: '', aiaiModel: '', aiaiEditMode: 'images', port: 3000,
+      aiaiApiKey: '', aiaiModel: 'qwen-image-edit', aiaiChatModel: 'gpt-4o-mini',
+      aiaiEditMode: 'images', port: 3000,
     });
   });
 
