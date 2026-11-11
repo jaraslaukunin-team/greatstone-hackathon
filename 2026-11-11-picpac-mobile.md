@@ -445,11 +445,11 @@ greatstone-hackathon/
 - Consumes: DTO и схемы из `@picpac/shared`.
 - Produces: `theme.ts` с токенами из UX-документа (цвета светлой и тёмной тем, шаг 4, радиусы 8/16/24, типографика); `createApiClient(opts: {baseUrl: string; getToken: () => string | null}): {get<T>(path: string): Promise<T>; post<T>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T>; put; delete}`, где ошибки приходят как `ApiRequestError {status, code, message}`, а сетевой сбой как `NetworkError`. Нижнее меню из 5 вкладок: Главная, Мои дизайны, Корзина, Заказы, Профиль.
 
-- [ ] **Step 1: Write the failing test:** клиент подставляет `Authorization: Bearer`; ответ `{error: {code: 'PRICE_CHANGED', message}}` превращается в `ApiRequestError` с этим `code`; отказ `fetch` превращается в `NetworkError`.
-- [ ] **Step 2: Run** `npm test -w app -- client`. Expected: FAIL.
-- [ ] **Step 3: Implement** каркас. Проверить, что Metro видит `@picpac/shared` из соседней папки монорепозитория (импорт `formatByn` на экране вкладки «Главная» показывает `0,00 BYN`); если нет, настроить `metro.config.js` на `watchFolders` корня.
-- [ ] **Step 4: Run** `npm test -w app` и `npx expo start`. Expected: тесты PASS, на устройстве видны 5 вкладок.
-- [ ] **Step 5: Commit** `feat(app): каркас, тема, API-клиент`
+- [x] **Step 1: Write the failing test:** клиент подставляет `Authorization: Bearer`; ответ `{error: {code: 'PRICE_CHANGED', message}}` превращается в `ApiRequestError` с этим `code`; отказ `fetch` превращается в `NetworkError`.
+- [x] **Step 2: Run** `npm test -w app -- client`. Expected: FAIL.
+- [x] **Step 3: Implement** каркас. Проверить, что Metro видит `@picpac/shared` из соседней папки монорепозитория (импорт `formatByn` на экране вкладки «Главная» показывает `0,00 BYN`); если нет, настроить `metro.config.js` на `watchFolders` корня.
+- [x] **Step 4: Run** `npm test -w app` и `npx expo start`. Expected: тесты PASS, на устройстве видны 5 вкладок.
+- [x] **Step 5: Commit** `feat(app): каркас, тема, API-клиент`
 
 ### Task B2: Вход и гостевой режим
 
@@ -460,11 +460,11 @@ greatstone-hackathon/
 **Interfaces:**
 - Produces: `useAuth(): {user: UserDTO | null; token: string | null; loginAsGuest(): Promise<void>; requestCode(contact: string): Promise<void>; verifyCode(contact: string, code: string): Promise<void>; logout(): Promise<void>}`; токен хранится в `expo-secure-store`, при `401` приложение возвращается на экран входа.
 
-- [ ] **Step 1: Write the failing test:** `tokenStore` сохраняет и читает токен; при ошибке хранилища `get()` возвращает `null`, а не падает.
-- [ ] **Step 2: Run** `npm test -w app -- tokenStore`. Expected: FAIL.
-- [ ] **Step 3: Implement** экраны по списку из UX-документа (онбординг, вход, код, «Продолжить как гость»).
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную: вход гостем открывает вкладки; неверный код `111111` показывает «Неверный код», `000000` пускает; после перезапуска приложения пользователь остаётся авторизован.
-- [ ] **Step 5: Commit** `feat(app): вход и гостевой режим`
+- [x] **Step 1: Write the failing test:** `tokenStore` сохраняет и читает токен; при ошибке хранилища `get()` возвращает `null`, а не падает.
+- [x] **Step 2: Run** `npm test -w app -- tokenStore`. Expected: FAIL.
+- [x] **Step 3: Implement** экраны по списку из UX-документа (онбординг, вход, код, «Продолжить как гость»).
+- [x] **Step 4: Run.** Expected: тест PASS; вручную: вход гостем открывает вкладки; неверный код `111111` показывает «Неверный код», `000000` пускает; после перезапуска приложения пользователь остаётся авторизован.
+- [x] **Step 5: Commit** `feat(app): вход и гостевой режим`
 
 ### Task B3: Каталог
 
@@ -475,11 +475,11 @@ greatstone-hackathon/
 - Consumes: `GET /catalog`, `POST /price-quote`.
 - Produces: `useCatalog(): UseQueryResult<CatalogDTO>`; главная с двумя крупными входами («Фотокнига», «Печать фото») и плитками «Выпускной альбом» и «AI-редактор»; карточка линейки с переключателем формата и числа страниц, цена обновляется запросом `price-quote`.
 
-- [ ] **Step 1: Write the failing test:** хук `useVariantPrice(variantId, pages)` вызывает `price-quote` и отдаёт `totalKop`; при ошибке сети возвращает последнее удачное значение с флагом `stale`.
-- [ ] **Step 2: Run** `npm test -w app -- catalog`. Expected: FAIL.
-- [ ] **Step 3: Implement** экраны и хук.
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную: каталог показывает 6 продуктов из API, при выключенном API видно состояние ошибки с кнопкой «Повторить», цен в коде приложения нет (`grep -rn "8100" app/src` ничего не находит).
-- [ ] **Step 5: Commit** `feat(app): каталог`
+- [x] **Step 1: Write the failing test:** хук `useVariantPrice(variantId, pages)` вызывает `price-quote` и отдаёт `totalKop`; при ошибке сети возвращает последнее удачное значение с флагом `stale`.
+- [x] **Step 2: Run** `npm test -w app -- catalog`. Expected: FAIL.
+- [x] **Step 3: Implement** экраны и хук.
+- [x] **Step 4: Run.** Expected: тест PASS; вручную: каталог показывает 6 продуктов из API, при выключенном API видно состояние ошибки с кнопкой «Повторить», цен в коде приложения нет (`grep -rn "8100" app/src` ничего не находит).
+- [x] **Step 5: Commit** `feat(app): каталог`
 
 ### Task B4: Выбор фото и очередь загрузки
 
@@ -491,11 +491,11 @@ greatstone-hackathon/
 - Consumes: `POST /projects/:id/photos`.
 - Produces: `class UploadQueue { constructor(deps: {upload: (task: UploadTask) => Promise<PhotoDTO>; storage: KeyValueStore; isOnline: () => boolean}); enqueue(task: UploadTask): void; onChange(cb: (state: QueueState) => void): () => void; resume(): Promise<void> }`, где `UploadTask = {localId: string; projectId: string; uri: string}`. Очередь переживает перезапуск (хранится в `storage`), делает до 5 повторов с нарастающей паузой, при отсутствии сети ждёт. `pickPhotos()` выбирает несколько фото и конвертирует HEIC в JPEG.
 
-- [ ] **Step 1: Write the failing test:** задача выполняется и вызывает `onChange` с прогрессом; при `isOnline() === false` ничего не отправляется, после `resume()` отправляется; после ошибки `upload` повторяется и в итоге завершается; очередь из сохранённого `storage` восстанавливается новым экземпляром; одна и та же `localId` не загружается дважды.
-- [ ] **Step 2: Run** `npm test -w app -- UploadQueue`. Expected: FAIL.
-- [ ] **Step 3: Implement** очередь, выбор фото и экран загрузки с кольцом прогресса и сообщениями о неподдерживаемом формате и слишком большом файле (тексты из ответа API).
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную: выбрать 12 фото, отключить сеть на середине, включить, все фото догрузились без дублей.
-- [ ] **Step 5: Commit** `feat(app): выбор фото и очередь загрузки`
+- [x] **Step 1: Write the failing test:** задача выполняется и вызывает `onChange` с прогрессом; при `isOnline() === false` ничего не отправляется, после `resume()` отправляется; после ошибки `upload` повторяется и в итоге завершается; очередь из сохранённого `storage` восстанавливается новым экземпляром; одна и та же `localId` не загружается дважды.
+- [x] **Step 2: Run** `npm test -w app -- UploadQueue`. Expected: FAIL.
+- [x] **Step 3: Implement** очередь, выбор фото и экран загрузки с кольцом прогресса и сообщениями о неподдерживаемом формате и слишком большом файле (тексты из ответа API).
+- [x] **Step 4: Run.** Expected: тест PASS; вручную: выбрать 12 фото, отключить сеть на середине, включить, все фото догрузились без дублей.
+- [x] **Step 5: Commit** `feat(app): выбор фото и очередь загрузки`
 
 ### Task B5: Хранилище проекта и черновик
 
@@ -507,11 +507,11 @@ greatstone-hackathon/
 - Consumes: `ProjectDTO`, `Layout`, `PUT /projects/:id`.
 - Produces: `useProjectStore` (Zustand с `persist` в AsyncStorage): `{draft: ProjectDraft | null; setLayout(layout: Layout): void; syncState: 'saved' | 'saving' | 'local-only'}`, `ProjectDraft = {project: ProjectDTO; layout: Layout; idempotencyKey: string | null}`; `syncProject(deps): Promise<void>` отправляет макет с `version`, при `409 VERSION_CONFLICT` подтягивает серверную версию и сохраняет локальные правки как новую.
 
-- [ ] **Step 1: Write the failing test:** `setLayout` сохраняет макет локально сразу; при недоступной сети `syncState` равен `local-only`, после успешной отправки `saved`; конфликт версий не теряет локальные правки; макет из 10 страниц сохраняется и читается с тем же порядком; перезапуск (новое создание стора из `storage`) восстанавливает черновик.
-- [ ] **Step 2: Run** `npm test -w app -- projectStore`. Expected: FAIL.
-- [ ] **Step 3: Implement** стор, синхронизацию и список «Мои дизайны» с состояниями пусто, загрузка, «только на телефоне».
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную: изменить порядок, закрыть приложение принудительно, открыть, порядок сохранён.
-- [ ] **Step 5: Commit** `feat(app): черновик проекта и синхронизация`
+- [x] **Step 1: Write the failing test:** `setLayout` сохраняет макет локально сразу; при недоступной сети `syncState` равен `local-only`, после успешной отправки `saved`; конфликт версий не теряет локальные правки; макет из 10 страниц сохраняется и читается с тем же порядком; перезапуск (новое создание стора из `storage`) восстанавливает черновик.
+- [x] **Step 2: Run** `npm test -w app -- projectStore`. Expected: FAIL.
+- [x] **Step 3: Implement** стор, синхронизацию и список «Мои дизайны» с состояниями пусто, загрузка, «только на телефоне».
+- [x] **Step 4: Run.** Expected: тест PASS; вручную: изменить порядок, закрыть приложение принудительно, открыть, порядок сохранён.
+- [x] **Step 5: Commit** `feat(app): черновик проекта и синхронизация`
 
 ### Task B6: Автомакет и редактор разворота
 
@@ -523,11 +523,11 @@ greatstone-hackathon/
 - Consumes: `autoLayout` (`S2`), `useProjectStore` (`B5`).
 - Produces: чистые действия над макетом `swapCells(layout, a: CellRef, b: CellRef): Layout`, `moveSpread(layout, from: number, to: number): Layout`, `setCrop(layout, ref: CellRef, crop: Cell['crop']): Layout`, `applyTemplate(layout, pageIndex: number, template: Page['template']): Layout`, `replacePhoto(layout, ref: CellRef, photoId: string): Layout`. Экраны: обзор книги, редактор разворота с жестами и панелью инструментов по UX-документу (раздел 5). Первая очередь: порядок, кадрирование, поворот на 90°, замена фото, шаблоны на 1, 2 и 4 фото. Фон, текст и обложка только после обязательного пути.
 
-- [ ] **Step 1: Write the failing test:** `swapCells` меняет фото местами и не трогает остальное; `moveSpread` переставляет и сохраняет все фото; `applyTemplate('four')` на странице с одним фото сохраняет фото и добавляет пустые ячейки; `setCrop` с `scale < 1` приводит значение к 1; действия не мутируют входной макет.
-- [ ] **Step 2: Run** `npm test -w app -- editorActions`. Expected: FAIL.
-- [ ] **Step 3: Implement** действия и экраны. Все жесты дублируются кнопками. Автомакет запускается после загрузки фото и показывает экран «Собираем вашу книгу».
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную: из 12 фото собирается книга, поменять местами два фото, повернуть одно, закрыть и открыть, правки на месте, кнопки «Отменить» и «Повторить» работают.
-- [ ] **Step 5: Commit** `feat(app): автомакет и редактор разворота`
+- [x] **Step 1: Write the failing test:** `swapCells` меняет фото местами и не трогает остальное; `moveSpread` переставляет и сохраняет все фото; `applyTemplate('four')` на странице с одним фото сохраняет фото и добавляет пустые ячейки; `setCrop` с `scale < 1` приводит значение к 1; действия не мутируют входной макет.
+- [x] **Step 2: Run** `npm test -w app -- editorActions`. Expected: FAIL.
+- [x] **Step 3: Implement** действия и экраны. Все жесты дублируются кнопками. Автомакет запускается после загрузки фото и показывает экран «Собираем вашу книгу».
+- [x] **Step 4: Run.** Expected: тест PASS; вручную: из 12 фото собирается книга, поменять местами два фото, повернуть одно, закрыть и открыть, правки на месте, кнопки «Отменить» и «Повторить» работают.
+- [x] **Step 5: Commit** `feat(app): автомакет и редактор разворота`
 
 ### Task B7: Проверка перед заказом
 
@@ -538,11 +538,11 @@ greatstone-hackathon/
 - Consumes: `checkQuality` (`S2`), `VariantDTO.pageWidthCm`.
 - Produces: экран со списком замечаний; тап по замечанию открывает нужный разворот; кнопки «Заменить», «Оставить как есть» (для предупреждений); при `empty-cell` кнопка «Оформить» заблокирована с пояснением.
 
-- [ ] **Step 1: Write the failing test:** `groupIssues(issues): {blockers: QualityIssue[]; warnings: QualityIssue[]}` разделяет замечания, а `canProceed(issues, acknowledged: string[]): boolean` истинна только без блокеров и когда предупреждения подтверждены.
-- [ ] **Step 2: Run** `npm test -w app -- review`. Expected: FAIL.
-- [ ] **Step 3: Implement** экран и функции.
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную: добавить фото 700 px (фикстура `photo-small.jpg`), видно «серьёзное предупреждение», пустая ячейка блокирует кнопку и объясняет почему.
-- [ ] **Step 5: Commit** `feat(app): проверка качества перед заказом`
+- [x] **Step 1: Write the failing test:** `groupIssues(issues): {blockers: QualityIssue[]; warnings: QualityIssue[]}` разделяет замечания, а `canProceed(issues, acknowledged: string[]): boolean` истинна только без блокеров и когда предупреждения подтверждены.
+- [x] **Step 2: Run** `npm test -w app -- review`. Expected: FAIL.
+- [x] **Step 3: Implement** экран и функции.
+- [x] **Step 4: Run.** Expected: тест PASS; вручную: добавить фото 700 px (фикстура `photo-small.jpg`), видно «серьёзное предупреждение», пустая ячейка блокирует кнопку и объясняет почему.
+- [x] **Step 5: Commit** `feat(app): проверка качества перед заказом`
 
 ### Task B8: Корзина и оформление
 
@@ -554,11 +554,11 @@ greatstone-hackathon/
 - Consumes: `POST /price-quote`, `POST /orders`.
 - Produces: `ensureIdempotencyKey(draft): string` создаёт ключ один раз при входе в корзину и хранит в черновике; `useCheckout()` с `submit(): Promise<OrderDTO>`. Оплата в тестовом режиме: экраны карты, ЕРИП (27-значный номер с кнопкой «Скопировать» и инструкцией пути) и оплаты курьеру (только для `courier_minsk`) с плашкой «Тестовый режим». Реальных платежей нет.
 
-- [ ] **Step 1: Write the failing test:** повторный вызов `ensureIdempotencyKey` возвращает тот же ключ; `submit()` при `NetworkError` оставляет ключ и позволяет повторить; при `PRICE_CHANGED` обновляет сумму и не создаёт заказ; успешный ответ очищает ключ и возвращает заказ; двойное нажатие «Оплатить» создаёт один запрос.
-- [ ] **Step 2: Run** `npm test -w app -- useCheckout`. Expected: FAIL.
-- [ ] **Step 3: Implement** экраны и хук. Порог бесплатной доставки показывается в карточке способа («До бесплатной доставки Белпочтой 23,40 BYN»).
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную: оформить заказ, выключить сеть перед «Оплатить», видно «Заказ не отправлен», включить, «Повторить», в `GET /orders` ровно один новый заказ.
-- [ ] **Step 5: Commit** `feat(app): корзина и оформление`
+- [x] **Step 1: Write the failing test:** повторный вызов `ensureIdempotencyKey` возвращает тот же ключ; `submit()` при `NetworkError` оставляет ключ и позволяет повторить; при `PRICE_CHANGED` обновляет сумму и не создаёт заказ; успешный ответ очищает ключ и возвращает заказ; двойное нажатие «Оплатить» создаёт один запрос.
+- [x] **Step 2: Run** `npm test -w app -- useCheckout`. Expected: FAIL.
+- [x] **Step 3: Implement** экраны и хук. Порог бесплатной доставки показывается в карточке способа («До бесплатной доставки Белпочтой 23,40 BYN»).
+- [x] **Step 4: Run.** Expected: тест PASS; вручную: оформить заказ, выключить сеть перед «Оплатить», видно «Заказ не отправлен», включить, «Повторить», в `GET /orders` ровно один новый заказ.
+- [x] **Step 5: Commit** `feat(app): корзина и оформление`
 
 ### Task B9: Заказы, статусы и поддержка
 
@@ -569,11 +569,11 @@ greatstone-hackathon/
 **Interfaces:**
 - Produces: `useOrderPolling(orderId: string, intervalMs = 5000)` опрашивает `GET /orders/:id` пока экран открыт и останавливается на `completed` или `cancelled`; лента статусов; кнопка «Отменить» видна только в `accepted`; обращение по заказу (чат), история с составом, суммой и статусом.
 
-- [ ] **Step 1: Write the failing test:** опрос обновляет статус при изменении; останавливается на финальном статусе; при ошибке сети не падает и продолжает; размонтирование останавливает таймер.
-- [ ] **Step 2: Run** `npm test -w app -- useOrderPolling`. Expected: FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную: оператор (через `curl` или экран `B13`) меняет статус, на телефоне лента обновляется за 5 секунд, из истории открывается состав, сумма и обращение.
-- [ ] **Step 5: Commit** `feat(app): заказы, статусы и поддержка`
+- [x] **Step 1: Write the failing test:** опрос обновляет статус при изменении; останавливается на финальном статусе; при ошибке сети не падает и продолжает; размонтирование останавливает таймер.
+- [x] **Step 2: Run** `npm test -w app -- useOrderPolling`. Expected: FAIL.
+- [x] **Step 3: Implement.**
+- [x] **Step 4: Run.** Expected: тест PASS; вручную: оператор (через `curl` или экран `B13`) меняет статус, на телефоне лента обновляется за 5 секунд, из истории открывается состав, сумма и обращение.
+- [x] **Step 5: Commit** `feat(app): заказы, статусы и поддержка`
 
 ### Task B10: Печать фото
 
@@ -584,10 +584,10 @@ greatstone-hackathon/
 - Consumes: `Layout` из `S0`. Макет печати: страница на каждое фото, шаблон `one`, `copies` у страницы. Цена: `pages` равно сумме `copies`, как зафиксировано в `A8`.
 - Produces: выбор формата и бумаги, лента кадров со счётчиком копий, кадрирование одного кадра, переход в корзину.
 
-- [ ] **Step 1: Verify the baseline** `npm test -w app`. Expected: все тесты предыдущих задач PASS.
-- [ ] **Step 2: Implement** экраны, повторно используя `UploadQueue`, `projectStore`, `QualityBadge`.
-- [ ] **Step 3: Run вручную:** выбрать 24 фото 10×15, поставить копии, цена в корзине совпадает с `price-quote` для суммы копий.
-- [ ] **Step 4: Commit** `feat(app): печать фото`
+- [x] **Step 1: Verify the baseline** `npm test -w app`. Expected: все тесты предыдущих задач PASS.
+- [x] **Step 2: Implement** экраны, повторно используя `UploadQueue`, `projectStore`, `QualityBadge`.
+- [x] **Step 3: Run вручную:** выбрать 24 фото 10×15, поставить копии, цена в корзине совпадает с `price-quote` для суммы копий.
+- [x] **Step 4: Commit** `feat(app): печать фото`
 
 ### Task B11: Совместный выпускной альбом
 
@@ -599,11 +599,11 @@ greatstone-hackathon/
 - Consumes: эндпоинты `A11`.
 - Produces: `parseInviteUrl(url: string): string | null` достаёт токен из `picpac://invite/<token>` и из веб-формы; экран создания альбома (название, число учеников), кнопка «Поделиться ссылкой» через системное меню, экран приглашения, прогресс «18 из 25 добавили».
 
-- [ ] **Step 1: Write the failing test:** `parseInviteUrl('picpac://invite/abc123')` равно `'abc123'`; пустая строка и чужая схема дают `null`.
-- [ ] **Step 2: Run** `npm test -w app -- parseInvite`. Expected: FAIL.
-- [ ] **Step 3: Implement** экраны и обработку deep link в корневом `_layout.tsx`.
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную с двумя телефонами или двумя учётками: организатор создаёт альбом и отправляет ссылку, второй открывает её, добавляет фото, у организатора прогресс растёт, второй не видит фото организатора.
-- [ ] **Step 5: Commit** `feat(app): совместный выпускной альбом`
+- [x] **Step 1: Write the failing test:** `parseInviteUrl('picpac://invite/abc123')` равно `'abc123'`; пустая строка и чужая схема дают `null`.
+- [x] **Step 2: Run** `npm test -w app -- parseInvite`. Expected: FAIL.
+- [x] **Step 3: Implement** экраны и обработку deep link в корневом `_layout.tsx`.
+- [x] **Step 4: Run.** Expected: тест PASS; вручную с двумя телефонами или двумя учётками: организатор создаёт альбом и отправляет ссылку, второй открывает её, добавляет фото, у организатора прогресс растёт, второй не видит фото организатора.
+- [x] **Step 5: Commit** `feat(app): совместный выпускной альбом`
 
 ### Task B12: AI-редактор
 
@@ -615,11 +615,11 @@ greatstone-hackathon/
 - Consumes: `POST /ai/consent`, `POST /ai/edit`, `GET /ai/jobs/:id`.
 - Produces: `useAiJob(jobId: string | null): {status: 'idle' | 'pending' | 'done' | 'failed'; result?: PhotoDTO; reason?: string; cancel(): void}`; экраны: согласие на передачу фото, выбор фото и запрос с пресетами, ожидание с отменой, «До и После», кнопки «В книгу» (добавляет фото в проект) и «Напечатать». Результат попадает в заказ только после действия клиента.
 
-- [ ] **Step 1: Write the failing test:** хук опрашивает задачу до `done` и отдаёт `result`; при `failed` отдаёт `reason`; `cancel()` останавливает опрос; повторный вызов `POST /ai/edit` при двойном нажатии не создаёт две задачи.
-- [ ] **Step 2: Run** `npm test -w app -- useAiJob`. Expected: FAIL.
-- [ ] **Step 3: Implement** экраны, тексты ошибок берутся из API (`PROMPT_REJECTED`, `AI_LIMIT`, `AI_CONSENT_REQUIRED`).
-- [ ] **Step 4: Run.** Expected: тест PASS; вручную: без согласия переход на экран согласия, после согласия задача проходит (на `stub` за секунду), результат видно в сравнении, кнопка «В книгу» добавляет фото в проект.
-- [ ] **Step 5: Commit** `feat(app): AI-редактор`
+- [x] **Step 1: Write the failing test:** хук опрашивает задачу до `done` и отдаёт `result`; при `failed` отдаёт `reason`; `cancel()` останавливает опрос; повторный вызов `POST /ai/edit` при двойном нажатии не создаёт две задачи.
+- [x] **Step 2: Run** `npm test -w app -- useAiJob`. Expected: FAIL.
+- [x] **Step 3: Implement** экраны, тексты ошибок берутся из API (`PROMPT_REJECTED`, `AI_LIMIT`, `AI_CONSENT_REQUIRED`).
+- [x] **Step 4: Run.** Expected: тест PASS; вручную: без согласия переход на экран согласия, после согласия задача проходит (на `stub` за секунду), результат видно в сравнении, кнопка «В книгу» добавляет фото в проект.
+- [x] **Step 5: Commit** `feat(app): AI-редактор`
 
 ### Task B13: Экраны оператора
 
@@ -630,10 +630,10 @@ greatstone-hackathon/
 - Consumes: `A9`, `A10`.
 - Produces: очередь заказов с фильтром по статусу, карточка заказа с макетом, кнопка «Следующий статус» (разрешённые переходы с `canTransition`), ответы на обращения. Раздел виден только при `user.role === 'operator'`.
 
-- [ ] **Step 1: Verify the baseline** `npm test -w app`. Expected: PASS.
-- [ ] **Step 2: Implement** экраны.
-- [ ] **Step 3: Run вручную:** вход как `operator@test.local` показывает очередь, клиентская учётка раздела не видит; перевод статуса отражается у клиента за 5 секунд.
-- [ ] **Step 4: Commit** `feat(app): экраны оператора`
+- [x] **Step 1: Verify the baseline** `npm test -w app`. Expected: PASS.
+- [x] **Step 2: Implement** экраны.
+- [x] **Step 3: Run вручную:** вход как `operator@test.local` показывает очередь, клиентская учётка раздела не видит; перевод статуса отражается у клиента за 5 секунд.
+- [x] **Step 4: Commit** `feat(app): экраны оператора`
 
 ### Task B14: Профиль, удаление данных и имитация сбоя
 
@@ -643,10 +643,10 @@ greatstone-hackathon/
 **Interfaces:**
 - Produces: профиль с адресами, уведомлениями и поддержкой (чат, Instagram `@picpac_by`, `support@picpac.by`); экран «Мои данные» с `DELETE /me/data` и подтверждением; переключатель «Имитация сбоя сети» в меню разработчика: `setNetworkFailure(on: boolean): void`, при `on` клиент из `B1` бросает `NetworkError` на каждый запрос.
 
-- [ ] **Step 1: Verify the baseline** `npm test -w app`. Expected: PASS.
-- [ ] **Step 2: Implement** экраны и переключатель (виден только в разработческой сборке и при долгом нажатии на версию в профиле).
-- [ ] **Step 3: Run вручную:** удаление данных возвращает на экран входа, старый токен после этого получает `401`; при включённом сбое сети все запросы падают с понятной плашкой, черновик не теряется.
-- [ ] **Step 4: Commit** `feat(app): профиль, удаление данных, имитация сбоя`
+- [x] **Step 1: Verify the baseline** `npm test -w app`. Expected: PASS.
+- [x] **Step 2: Implement** экраны и переключатель (виден только в разработческой сборке и при долгом нажатии на версию в профиле).
+- [x] **Step 3: Run вручную:** удаление данных возвращает на экран входа, старый токен после этого получает `401`; при включённом сбое сети все запросы падают с понятной плашкой, черновик не теряется.
+- [x] **Step 4: Commit** `feat(app): профиль, удаление данных, имитация сбоя`
 
 ### Task B15: Сборка APK и сценарий демо
 
@@ -656,10 +656,10 @@ greatstone-hackathon/
 **Interfaces:**
 - Produces: APK по ссылке из EAS Build, запасной вариант через Expo Go по QR; `EXPO_PUBLIC_API_URL` указывает на VPS; сценарий демо на 5–7 минут: вход, каталог, 10+ фото, автомакет, правка, предупреждение о качестве, заказ, сбой сети и повтор без дубля, смена статуса оператором, альбом с двумя участниками, AI-редактор.
 
-- [ ] **Step 1: Run** `eas build -p android --profile preview` в день 1 и повторять каждый вечер. Expected: ссылка на APK.
-- [ ] **Step 2: Install** APK на чистый телефон, пройти обязательный путь без помощи автора. Expected: заказ создан, статус виден.
-- [ ] **Step 3: Write** `docs/demo-script.md` по списку выше с тем, что говорит каждый участник.
-- [ ] **Step 4: Commit** `chore(app): сборка APK и сценарий демо`
+- [x] **Step 1: Run** `eas build -p android --profile preview` в день 1 и повторять каждый вечер. Expected: ссылка на APK.
+- [x] **Step 2: Install** APK на чистый телефон, пройти обязательный путь без помощи автора. Expected: заказ создан, статус виден.
+- [x] **Step 3: Write** `docs/demo-script.md` по списку выше с тем, что говорит каждый участник.
+- [x] **Step 4: Commit** `chore(app): сборка APK и сценарий демо`
 
 ---
 
