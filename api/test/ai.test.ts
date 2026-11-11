@@ -187,7 +187,7 @@ describe('AI-редактор', () => {
     };
     return { token: j.token, id: j.user.id };
   };
-  const call = (s: Session | null, method: 'GET' | 'POST', url: string, payload?: unknown) =>
+  const call = (s: Session | null, method: 'GET' | 'POST' | 'DELETE', url: string, payload?: unknown) =>
     app.inject({
       method,
       url,
@@ -402,6 +402,23 @@ describe('AI-редактор', () => {
     expect((await db.select().from(aiJobs).where(eq(aiJobs.id, plain.jobId)))[0]!.size).toBe('1536x1024');
     expect(sizes).toEqual(['1024x1536', '1536x1024']);
     expect((await edit(alice, { aspect: '2:1' })).statusCode).toBe(400);
+  });
+
+  it('отзыв согласия: DELETE /ai/consent 204, AI снова требует согласие, запись в журнале; без токена 401', async () => {
+    await consent(alice);
+    expect((await edit(alice)).statusCode).toBe(202);
+    await app.ai.idle();
+    expect((await call(null, 'DELETE', '/ai/consent')).statusCode).toBe(401);
+    expect((await call(alice, 'DELETE', '/ai/consent')).statusCode).toBe(204);
+    expect((await db.select().from(consents).where(eq(consents.userId, alice.id)))).toHaveLength(0);
+    const again = await edit(alice);
+    expect(again.statusCode).toBe(403);
+    expect(again.json().error.code).toBe('AI_CONSENT_REQUIRED');
+    const me = await call(alice, 'GET', '/me');
+    expect(me.json().aiConsent).toBe(false);
+    expect((await db.select().from(auditLog).where(eq(auditLog.action, 'ai.consent_revoked'))).length).toBe(1);
+    // повторный отзыв безопасен
+    expect((await call(alice, 'DELETE', '/ai/consent')).statusCode).toBe(204);
   });
 
   it('kind upscale сохраняет обёрнутый prompt в задаче', async () => {

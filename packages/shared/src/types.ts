@@ -170,6 +170,14 @@ export type AlbumProgressDTO = { expected: number | null; members: AlbumMemberDT
 
 export type AiEditKind = 'edit' | 'upscale';
 
+/** Что приложение хранит о пользователе: для экрана «Мои данные и безопасность». */
+export type DataSummaryDTO = {
+  projects: number;
+  photos: number;
+  orders: number;
+  aiConsentAt: string | null;
+};
+
 export type AiJobDTO = {
   id: string;
   status: 'pending' | 'done' | 'failed';

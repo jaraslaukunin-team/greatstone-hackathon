@@ -37,6 +37,15 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   const app = Fastify({ logger: !silent });
   app.decorate('config', config);
   registerErrorHandling(app);
+  // Заголовки безопасности на всех ответах; JSON с данными пользователя не кэшируется ни браузером, ни прокси.
+  app.addHook('onSend', async (_req, reply, payload) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('Referrer-Policy', 'no-referrer');
+    if (!reply.hasHeader('cache-control') && String(reply.getHeader('content-type') ?? '').includes('application/json')) {
+      reply.header('Cache-Control', 'no-store');
+    }
+    return payload;
+  });
   registerAuth(app);
   registerStorage(app);
   registerAi(app);

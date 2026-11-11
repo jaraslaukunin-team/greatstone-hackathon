@@ -1,8 +1,9 @@
-import { and, eq, inArray, ne, or } from 'drizzle-orm';
+import { and, count, eq, inArray, ne, or } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
+import type { DataSummaryDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
-import { interactions, orders, profiles, projectPhotos, projects } from '../../db/schema.js';
+import { consents, interactions, orders, profiles, projectPhotos, projects } from '../../db/schema.js';
 
 // Удаляет данные пользователя одной транзакцией, файлы стираются после её фиксации.
 // Заказы остаются как финансовая запись без имени и адреса (customer_id и project_id становятся NULL).
@@ -37,4 +38,19 @@ export async function deleteMyData(app: FastifyInstance, user: AuthUser): Promis
   for (const r of results) if (r.status === 'rejected') app.log.error(r.reason, 'не удалось удалить файл при удалении данных');
 
   await audit(db, { userId: user.id, action: 'data.delete', objectType: 'profile', objectId: user.id, result: 'ok' });
+}
+
+/** Сводка для экрана «Мои данные и безопасность»: только то, что принадлежит самому пользователю. */
+export async function getDataSummary(app: FastifyInstance, user: AuthUser): Promise<DataSummaryDTO> {
+  const db = app.db;
+  const [[p], [ph], [o], [c]] = await Promise.all([
+    db.select({ n: count() }).from(projects).where(eq(projects.ownerId, user.id)),
+    db.select({ n: count() }).from(projectPhotos).where(eq(projectPhotos.uploadedBy, user.id)),
+    db.select({ n: count() }).from(orders).where(eq(orders.customerId, user.id)),
+    db
+      .select({ at: consents.acceptedAt })
+      .from(consents)
+      .where(and(eq(consents.userId, user.id), eq(consents.kind, 'ai_processing'))),
+  ]);
+  return { projects: p!.n, photos: ph!.n, orders: o!.n, aiConsentAt: c ? c.at.toISOString() : null };
 }

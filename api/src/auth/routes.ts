@@ -1,15 +1,34 @@
 import { randomInt } from 'node:crypto';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, gt, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { UserDTO } from '@picpac/shared';
 import { audit } from '../audit.js';
-import { authCodes, consents, profiles } from '../db/schema.js';
+import { auditLog, authCodes, consents, profiles } from '../db/schema.js';
 import { AppError } from '../errors.js';
 import { parse } from '../validation.js';
 import { CODE_TTL_MS, hashCode, hashesEqual, requireAuth, signToken } from './plugin.js';
 
 const DEMO_CODE = '000000';
+
+// Окно и лимиты: неверных кодов 5 и запросов кода 3 за 10 минут на контакт. Счёт идёт по журналу,
+// ключ — HMAC контакта, поэтому телефон или почта в журнал открытым текстом не попадают.
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const CODE_FAIL_LIMIT = 5;
+const CODE_REQUEST_LIMIT = 3;
+const tooMany = () => new AppError(429, 'TOO_MANY_ATTEMPTS', 'Слишком много попыток. Подождите 10 минут и попробуйте снова');
+
+async function recentCount(app: FastifyInstance, action: string, key: string): Promise<number> {
+  const since = new Date(app.clock.now().getTime() - RATE_WINDOW_MS);
+  const [{ n }] = (await app.db
+    .select({ n: count() })
+    .from(auditLog)
+    .where(and(eq(auditLog.action, action), eq(auditLog.objectId, key), gt(auditLog.at, since)))) as [{ n: number }];
+  return n;
+}
+
+const note = (app: FastifyInstance, action: string, key: string, result: 'ok' | 'denied') =>
+  audit(app.db, { userId: null, action, objectType: 'contact', objectId: key, result, at: app.clock.now() });
 
 const contactSchema = z.string().trim().toLowerCase().min(3).max(200);
 const requestCodeSchema = z.object({ contact: contactSchema });
@@ -42,6 +61,9 @@ export function registerAuthRoutes(app: FastifyInstance): void {
 
   app.post('/auth/request-code', async (req, reply) => {
     const { contact } = parse(requestCodeSchema, req.body);
+    const key = hashCode(app, contact, 'rate-limit');
+    if ((await recentCount(app, 'auth.code_requested', key)) >= CODE_REQUEST_LIMIT) throw tooMany();
+    await note(app, 'auth.code_requested', key, 'ok');
     const code = app.config.demoMode ? DEMO_CODE : String(randomInt(0, 1_000_000)).padStart(6, '0');
     await app.db.insert(authCodes).values({
       contact,
@@ -55,6 +77,10 @@ export function registerAuthRoutes(app: FastifyInstance): void {
 
   app.post('/auth/verify-code', async (req) => {
     const { contact, code } = parse(verifyCodeSchema, req.body);
+    const key = hashCode(app, contact, 'rate-limit');
+    // Демо-код остаётся рабочим даже после блокировки: он нужен для показа и не угадывается перебором.
+    const demoLogin = app.config.demoMode && code === DEMO_CODE;
+    if (!demoLogin && (await recentCount(app, 'auth.code_failed', key)) >= CODE_FAIL_LIMIT) throw tooMany();
     const candidates = await app.db
       .select()
       .from(authCodes)
@@ -62,7 +88,10 @@ export function registerAuthRoutes(app: FastifyInstance): void {
       .orderBy(desc(authCodes.createdAt));
     const expected = hashCode(app, contact, code);
     const match = candidates.find((c) => hashesEqual(c.codeHash, expected));
-    if (!match) throw new AppError(401, 'CODE_INVALID', 'Неверный код, проверьте его и попробуйте снова');
+    if (!match) {
+      await note(app, 'auth.code_failed', key, 'denied');
+      throw new AppError(401, 'CODE_INVALID', 'Неверный код, проверьте его и попробуйте снова');
+    }
     if (match.expiresAt.getTime() <= app.clock.now().getTime()) {
       throw new AppError(401, 'CODE_EXPIRED', 'Срок действия кода истёк, запросите новый');
     }

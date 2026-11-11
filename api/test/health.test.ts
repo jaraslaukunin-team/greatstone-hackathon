@@ -18,6 +18,15 @@ describe('health', () => {
     expect(res.json()).toEqual({ status: 'ok' });
   });
 
+  it('ответы API несут заголовки безопасности и не кэшируются', async () => {
+    const res = await app.inject({ method: 'GET', url: '/health' });
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['referrer-policy']).toBe('no-referrer');
+    expect(res.headers['cache-control']).toBe('no-store');
+    const missing = await app.inject({ method: 'GET', url: '/nope' });
+    expect(missing.headers['x-content-type-options']).toBe('nosniff');
+  });
+
   it('неизвестный путь даёт 404 в формате ApiErrorBody', async () => {
     const res = await app.inject({ method: 'GET', url: '/nope' });
     expect(res.statusCode).toBe(404);

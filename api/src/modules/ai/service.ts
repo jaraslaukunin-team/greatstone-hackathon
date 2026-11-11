@@ -22,6 +22,17 @@ export async function acceptConsent(app: FastifyInstance, user: AuthUser): Promi
   await audit(app.db, { userId: user.id, action: 'ai.consent', objectType: 'profile', objectId: user.id, result: 'ok' });
 }
 
+// Отзыв согласия: после него AI снова просит согласие. Уже сделанные результаты остаются в проектах пользователя.
+export async function revokeConsent(app: FastifyInstance, user: AuthUser): Promise<void> {
+  const removed = await app.db
+    .delete(consents)
+    .where(and(eq(consents.userId, user.id), eq(consents.kind, 'ai_processing')))
+    .returning({ id: consents.id });
+  if (removed.length > 0) {
+    await audit(app.db, { userId: user.id, action: 'ai.consent_revoked', objectType: 'profile', objectId: user.id, result: 'ok' });
+  }
+}
+
 export async function requestEdit(
   app: FastifyInstance,
   user: AuthUser,

@@ -5,6 +5,9 @@
 {$API_DOMAIN:localhost} {
 	encode zstd gzip
 
+	# Браузер дальше ходит на домен только по HTTPS.
+	header Strict-Transport-Security "max-age=31536000"
+
 	@assets path /_expo/* /assets/* /favicon.ico
 	handle @assets {
 		root * /srv/web
