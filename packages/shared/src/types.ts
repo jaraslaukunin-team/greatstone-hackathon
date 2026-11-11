@@ -50,7 +50,9 @@ export type DeliveryOptionDTO = {
   id: DeliveryMethodId;
   title: string;
   priceKop: Kopecks;
-  etaDays: number;
+  freeFromKop: Kopecks | null;
+  etaDays: [number, number];
+  payOnDelivery: boolean;
 };
 
 export type LimitsDTO = {

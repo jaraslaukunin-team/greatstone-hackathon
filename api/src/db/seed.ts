@@ -31,33 +31,33 @@ const CUSTOMER2 = uid(NS.profile, 2);
 const OPERATOR = uid(NS.profile, 3);
 
 type VariantSeed = [format: string, pagesMin: number, pagesMax: number, base: number, perPage: number, widthCm: number];
-type ProductSeed = { kind: 'photobook' | 'prints' | 'graduation'; title: string; lead: number; variants: VariantSeed[] };
+type ProductSeed = { kind: 'photobook' | 'prints' | 'graduation'; title: string; description: string; lead: number; variants: VariantSeed[] };
 
 // Цены в копейках, выдуманные, но правдоподобные.
 const PRODUCTS: ProductSeed[] = [
-  { kind: 'photobook', title: 'Фотокнига Lite', lead: 5, variants: [
+  { kind: 'photobook', title: 'Фотокнига Lite', description: 'Твёрдая обложка и гибкие журнальные страницы. Подходит, когда фото много.', lead: 5, variants: [
     ['Lite 15×15', 20, 40, 7000, 100, 15],
     ['Lite 20×20', 20, 40, 7900, 120, 20],
   ] },
-  { kind: 'photobook', title: 'Фотокнига Classic', lead: 7, variants: [
+  { kind: 'photobook', title: 'Фотокнига Classic', description: 'Плотные страницы, разворот раскрывается на 180° без шва по центру.', lead: 7, variants: [
     ['Classic 15×15', 20, 60, 6500, 130, 15],
     ['Classic 20×20', 20, 60, 8100, 150, 20],
     ['Classic 20×30', 20, 60, 9800, 190, 20],
   ] },
-  { kind: 'photobook', title: 'Фотокнига Premium', lead: 10, variants: [
+  { kind: 'photobook', title: 'Фотокнига Premium', description: 'Печать на матовой фотобумаге, плотные развороты и твёрдая обложка.', lead: 10, variants: [
     ['Premium 20×20', 20, 80, 10050, 200, 20],
     ['Premium 20×30', 20, 80, 12500, 250, 20],
     ['Premium 30×30', 20, 80, 15000, 320, 30],
   ] },
-  { kind: 'graduation', title: 'Выпускной альбом', lead: 14, variants: [
+  { kind: 'graduation', title: 'Выпускной альбом', description: 'Книга выпуска: личные страницы учеников и общие развороты класса.', lead: 14, variants: [
     ['Выпускной 20×20', 12, 40, 9000, 180, 20],
     ['Выпускной 20×30', 12, 40, 11500, 230, 20],
   ] },
-  { kind: 'prints', title: 'Печать 10×15', lead: 2, variants: [
+  { kind: 'prints', title: 'Печать 10×15', description: 'Классические отпечатки 10×15 см, от одного кадра.', lead: 2, variants: [
     ['10×15 матовая', 10, 500, 0, 61, 10],
     ['10×15 глянцевая', 10, 500, 0, 61, 10],
   ] },
-  { kind: 'prints', title: 'Печать 15×20', lead: 2, variants: [
+  { kind: 'prints', title: 'Печать 15×20', description: 'Крупные отпечатки 15×20 см для рамок и подарков.', lead: 2, variants: [
     ['15×20 матовая', 10, 300, 0, 150, 15],
     ['15×20 глянцевая', 10, 300, 0, 150, 15],
   ] },
@@ -98,7 +98,7 @@ export async function seedDatabase(db: Db): Promise<SeedSummary> {
     const productId = uid(NS.product, ++productNo);
     await db
       .insert(s.products)
-      .values({ id: productId, kind: p.kind, title: p.title, leadTimeDays: p.lead })
+      .values({ id: productId, kind: p.kind, title: p.title, description: p.description, leadTimeDays: p.lead })
       .onConflictDoNothing();
     for (const [format, pagesMin, pagesMax, basePrice, pricePerPage, pageWidthCm] of p.variants) {
       const id = uid(NS.variant, ++variantNo);

@@ -15,6 +15,13 @@
       "when": 1794399324181,
       "tag": "0001_shiny_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794401078890,
+      "tag": "0002_cuddly_korvac",
+      "breakpoints": true
     }
   ]
 }

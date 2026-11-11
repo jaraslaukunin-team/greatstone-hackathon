@@ -59,7 +59,9 @@ export const deliveryOptionSchema = z.object({
   id: deliveryMethodIdSchema,
   title: z.string(),
   priceKop: kop,
-  etaDays: z.number().int(),
+  freeFromKop: kop.nullable(),
+  etaDays: z.tuple([z.number().int(), z.number().int()]),
+  payOnDelivery: z.boolean(),
 });
 export const limitsSchema = z.object({
   maxPhotoBytes: z.number().int().positive(),

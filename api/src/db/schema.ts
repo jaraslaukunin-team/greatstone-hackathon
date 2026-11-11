@@ -67,6 +67,7 @@ export const products = pgTable('products', {
   id: id(),
   kind: productKindEnum('kind').notNull(),
   title: text('title').notNull(),
+  description: text('description').notNull().default(''),
   leadTimeDays: integer('lead_time_days').notNull(),
 });
 

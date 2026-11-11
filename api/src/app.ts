@@ -3,6 +3,7 @@ import { loadConfig, type Config } from './config.js';
 import { registerAuth } from './auth/plugin.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerErrorHandling } from './errors.js';
+import { registerCatalogRoutes } from './modules/catalog/routes.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -25,6 +26,7 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerErrorHandling(app);
   registerAuth(app);
   registerAuthRoutes(app);
+  registerCatalogRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
 }
