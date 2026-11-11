@@ -72,7 +72,7 @@ export type PhotoDTO = {
   height: number;
   takenAt: string | null;
   url: string;
-  uploadedBy: string;
+  uploadedBy: string | null;
   source: 'gallery' | 'ai';
 };
 

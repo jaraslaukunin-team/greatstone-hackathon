@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { getTableName, is, sql } from 'drizzle-orm';
 import { PgTable } from 'drizzle-orm/pg-core';
 import type { FastifyInstance } from 'fastify';
@@ -10,12 +13,15 @@ import { assertTestDatabaseName, assertTestDatabaseUrl, TEST_DATABASE_URL } from
 
 assertTestDatabaseUrl(TEST_DATABASE_URL);
 
+// Загрузки тестов уходят во временную папку, а не в репозиторий.
+export const TEST_UPLOAD_DIR = mkdtempSync(join(tmpdir(), 'picpac-uploads-'));
+
 // Тестовые константы, не настоящие секреты.
 export const testOverrides: Partial<Config> = {
   databaseUrl: TEST_DATABASE_URL,
   jwtSecret: 'test-jwt-secret',
   fileUrlSecret: 'test-file-url-secret',
-  uploadDir: './uploads-test',
+  uploadDir: TEST_UPLOAD_DIR,
   demoMode: true,
 };
 

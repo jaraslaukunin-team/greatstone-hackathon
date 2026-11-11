@@ -3,8 +3,9 @@ import type { Layout, ProjectDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import type { Db } from '../../db/client.js';
-import { orders, projectMembers, projects } from '../../db/schema.js';
+import { orders, projectMembers, projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
+import type { Storage } from '../../storage/storage.js';
 import { loadVariant } from '../quote/service.js';
 
 export type ProjectRow = typeof projects.$inferSelect;
@@ -122,12 +123,18 @@ export async function saveLayout(
   throw new AppError(409, 'VERSION_CONFLICT', 'Проект изменён в другом месте, обновите его и повторите');
 }
 
-export async function deleteProject(db: Db, user: AuthUser, projectId: string): Promise<void> {
+export async function deleteProject(db: Db, storage: Storage, user: AuthUser, projectId: string): Promise<void> {
   const project = await assertProjectAccess(db, user, projectId, 'organizer');
   const [order] = await db.select({ id: orders.id }).from(orders).where(eq(orders.projectId, projectId)).limit(1);
   if (project.status === 'ordered' || order) {
     throw new AppError(409, 'PROJECT_ORDERED', 'Проект уже заказан, его нельзя удалить');
   }
+  const files = await db
+    .select({ path: projectPhotos.storagePath })
+    .from(projectPhotos)
+    .where(eq(projectPhotos.projectId, projectId));
   await db.delete(projects).where(eq(projects.id, projectId));
+  // Файлы удаляем после фиксации строк: сбой диска не должен вернуть удалённый проект.
+  await Promise.allSettled(files.map((f) => storage.remove(f.path)));
   await audit(db, { userId: user.id, action: 'project.delete', objectType: 'project', objectId: projectId, result: 'ok' });
 }

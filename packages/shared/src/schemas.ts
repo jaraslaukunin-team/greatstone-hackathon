@@ -79,7 +79,7 @@ export const photoSchema = z.object({
   height: z.number().int().positive(),
   takenAt: iso.nullable(),
   url: z.string(),
-  uploadedBy: z.string(),
+  uploadedBy: z.string().nullable(),
   source: z.enum(['gallery', 'ai']),
 });
 

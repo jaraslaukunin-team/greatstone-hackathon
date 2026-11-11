@@ -47,7 +47,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
 
   app.delete('/projects/:id', auth, async (req, reply) => {
     const { id } = req.params as { id: string };
-    await deleteProject(req.server.db, req.user!, id);
+    await deleteProject(req.server.db, req.server.storage, req.user!, id);
     return reply.code(204).send();
   });
 }

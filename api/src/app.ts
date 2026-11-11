@@ -1,9 +1,13 @@
+import multipart from '@fastify/multipart';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { loadConfig, type Config } from './config.js';
 import { registerAuth } from './auth/plugin.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerErrorHandling } from './errors.js';
+import { registerStorage } from './storage/plugin.js';
 import { registerCatalogRoutes } from './modules/catalog/routes.js';
+import { MAX_PHOTO_BYTES } from './modules/catalog/service.js';
+import { registerPhotoRoutes } from './modules/photos/routes.js';
 import { registerProjectRoutes } from './modules/projects/routes.js';
 import { registerQuoteRoutes } from './modules/quote/routes.js';
 
@@ -27,10 +31,13 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   app.decorate('config', config);
   registerErrorHandling(app);
   registerAuth(app);
+  registerStorage(app);
+  await app.register(multipart, { limits: { fileSize: MAX_PHOTO_BYTES, files: 1 } });
   registerAuthRoutes(app);
   registerCatalogRoutes(app);
   registerQuoteRoutes(app);
   registerProjectRoutes(app);
+  registerPhotoRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
 }
