@@ -2,6 +2,7 @@ import type { Layout, ProjectDTO } from '@picpac/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { sanitizeDraft } from './sanitizeDraft';
 
 export type ProjectDraft = {
   project: ProjectDTO;
@@ -30,7 +31,7 @@ export const useProjectStore = create<ProjectState>()(
         set({
           draft: {
             project,
-            layout: project.layout,
+            layout: project.layout ?? { pages: [] },
             idempotencyKey: null,
           },
           syncState: 'saved',
@@ -68,6 +69,15 @@ export const useProjectStore = create<ProjectState>()(
       name: 'picpac.project-draft',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ draft: state.draft, syncState: state.syncState }),
+      // Битый черновик от старой версии не должен ломать экраны: при запуске отбрасываем его.
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as { draft?: unknown; syncState?: SyncState };
+        return {
+          ...current,
+          draft: sanitizeDraft<ProjectDraft>(saved.draft),
+          syncState: saved.syncState ?? current.syncState,
+        };
+      },
     },
   ),
 );
