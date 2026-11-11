@@ -30,7 +30,7 @@ export default function ProfileScreen() {
       <Text style={styles.sub}>{user?.displayName ?? 'Гость'}</Text>
       <Text style={styles.meta}>Роль: {user?.role ?? '—'}</Text>
 
-      <Button title="Мои данные" icon="lock" variant="secondary" onPress={() => router.push('/profile/data')} />
+      <Button title="Мои данные и безопасность" icon="lock" variant="secondary" onPress={() => router.push('/profile/data')} />
       <Button title="Поддержка" icon="info" variant="secondary" onPress={() => router.push('/profile/support')} />
 
       <View style={styles.row}>
