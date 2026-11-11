@@ -1,0 +1,269 @@
+import { sql } from 'drizzle-orm';
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgSequence,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
+
+// Деньги везде целые копейки (BYN), время везде timestamptz.
+const id = () => uuid('id').primaryKey().default(sql`gen_random_uuid()`);
+const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
+const createdAt = () => ts('created_at').notNull().defaultNow();
+
+export const roleEnum = pgEnum('role', ['customer', 'operator']);
+export const productKindEnum = pgEnum('product_kind', ['photobook', 'prints', 'graduation']);
+export const projectStatusEnum = pgEnum('project_status', ['draft', 'ordered']);
+export const photoSourceEnum = pgEnum('photo_source', ['gallery', 'ai']);
+export const memberRoleEnum = pgEnum('member_role', ['organizer', 'contributor']);
+export const orderStatusEnum = pgEnum('order_status', [
+  'accepted',
+  'moderation',
+  'production',
+  'ready_for_delivery',
+  'completed',
+  'cancelled',
+]);
+export const deliveryMethodEnum = pgEnum('delivery_method', ['courier_minsk', 'ems', 'belpost']);
+export const interactionStatusEnum = pgEnum('interaction_status', ['open', 'answered', 'closed']);
+export const aiJobStatusEnum = pgEnum('ai_job_status', ['pending', 'done', 'failed']);
+export const consentKindEnum = pgEnum('consent_kind', ['ai_processing']);
+
+export const orderNumberSeq = pgSequence('order_number_seq');
+
+export const profiles = pgTable('profiles', {
+  id: id(),
+  role: roleEnum('role').notNull().default('customer'),
+  displayName: text('display_name').notNull(),
+  isGuest: boolean('is_guest').notNull().default(false),
+  // Email или телефон для входа по коду.
+  contact: text('contact').unique(),
+  createdAt: createdAt(),
+});
+
+export const authCodes = pgTable(
+  'auth_codes',
+  {
+    id: id(),
+    contact: text('contact').notNull(),
+    codeHash: text('code_hash').notNull(),
+    expiresAt: ts('expires_at').notNull(),
+    usedAt: ts('used_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('auth_codes_contact_idx').on(t.contact)],
+);
+
+export const products = pgTable('products', {
+  id: id(),
+  kind: productKindEnum('kind').notNull(),
+  title: text('title').notNull(),
+  leadTimeDays: integer('lead_time_days').notNull(),
+});
+
+export const productVariants = pgTable(
+  'product_variants',
+  {
+    id: id(),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    format: text('format').notNull(),
+    pagesMin: integer('pages_min').notNull(),
+    pagesMax: integer('pages_max').notNull(),
+    basePrice: integer('base_price').notNull(),
+    pricePerPage: integer('price_per_page').notNull(),
+    pageWidthCm: integer('page_width_cm').notNull(),
+    minDpi: integer('min_dpi').notNull().default(150),
+  },
+  (t) => [
+    index('product_variants_product_idx').on(t.productId),
+    check('product_variants_pages_chk', sql`${t.pagesMin} <= ${t.pagesMax}`),
+    check('product_variants_width_chk', sql`${t.pageWidthCm} > 0`),
+  ],
+);
+
+export const promoCodes = pgTable('promo_codes', {
+  id: id(),
+  code: text('code').notNull().unique(),
+  discountPercent: integer('discount_percent').notNull(),
+  validUntil: ts('valid_until').notNull(),
+});
+
+export const projects = pgTable(
+  'projects',
+  {
+    id: id(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    variantId: uuid('variant_id')
+      .notNull()
+      .references(() => productVariants.id),
+    status: projectStatusEnum('status').notNull().default('draft'),
+    layout: jsonb('layout'),
+    isShared: boolean('is_shared').notNull().default(false),
+    expectedMembers: integer('expected_members'),
+    version: integer('version').notNull().default(1),
+    createdAt: createdAt(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('projects_owner_idx').on(t.ownerId)],
+);
+
+export const projectPhotos = pgTable(
+  'project_photos',
+  {
+    id: id(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    uploadedBy: uuid('uploaded_by').references(() => profiles.id, { onDelete: 'set null' }),
+    storagePath: text('storage_path').notNull(),
+    position: integer('position').notNull().default(0),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    takenAt: ts('taken_at'),
+    source: photoSourceEnum('source').notNull().default('gallery'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('project_photos_project_idx').on(t.projectId)],
+);
+
+export const projectMembers = pgTable(
+  'project_members',
+  {
+    id: id(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    role: memberRoleEnum('role').notNull(),
+    childName: text('child_name'),
+    createdAt: createdAt(),
+  },
+  (t) => [unique('project_members_project_user_uq').on(t.projectId, t.userId)],
+);
+
+export const projectInvites = pgTable('project_invites', {
+  id: id(),
+  projectId: uuid('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  expiresAt: ts('expires_at').notNull(),
+  createdAt: createdAt(),
+});
+
+export const orders = pgTable(
+  'orders',
+  {
+    id: id(),
+    number: text('number')
+      .notNull()
+      .unique()
+      .default(sql`'PP-' || lpad(nextval('order_number_seq')::text, 6, '0')`),
+    // NULL после анонимизации при удалении аккаунта.
+    customerId: uuid('customer_id').references(() => profiles.id, { onDelete: 'set null' }),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    total: integer('total').notNull(),
+    currency: text('currency').notNull().default('BYN'),
+    deliveryMethod: deliveryMethodEnum('delivery_method').notNull(),
+    recipientName: text('recipient_name'),
+    address: text('address'),
+    status: orderStatusEnum('status').notNull().default('accepted'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('orders_customer_idempotency_uq').on(t.customerId, t.idempotencyKey),
+    index('orders_customer_idx').on(t.customerId),
+  ],
+);
+
+export const orderStatusHistory = pgTable(
+  'order_status_history',
+  {
+    id: id(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    status: orderStatusEnum('status').notNull(),
+    changedBy: uuid('changed_by').references(() => profiles.id, { onDelete: 'set null' }),
+    changedAt: ts('changed_at').notNull().defaultNow(),
+    comment: text('comment'),
+  },
+  (t) => [index('order_status_history_order_idx').on(t.orderId)],
+);
+
+export const interactions = pgTable('interactions', {
+  id: id(),
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+  customerId: uuid('customer_id').references(() => profiles.id, { onDelete: 'set null' }),
+  topic: text('topic').notNull(),
+  status: interactionStatusEnum('status').notNull().default('open'),
+  createdAt: createdAt(),
+});
+
+export const interactionMessages = pgTable(
+  'interaction_messages',
+  {
+    id: id(),
+    interactionId: uuid('interaction_id')
+      .notNull()
+      .references(() => interactions.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id').references(() => profiles.id, { onDelete: 'set null' }),
+    body: text('body').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('interaction_messages_interaction_idx').on(t.interactionId)],
+);
+
+export const aiJobs = pgTable('ai_jobs', {
+  id: id(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  sourcePhoto: text('source_photo').notNull(),
+  prompt: text('prompt').notNull(),
+  resultPath: text('result_path'),
+  status: aiJobStatusEnum('status').notNull().default('pending'),
+  provider: text('provider').notNull(),
+  createdAt: createdAt(),
+});
+
+export const consents = pgTable(
+  'consents',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    kind: consentKindEnum('kind').notNull(),
+    acceptedAt: ts('accepted_at').notNull().defaultNow(),
+  },
+  (t) => [unique('consents_user_kind_uq').on(t.userId, t.kind)],
+);
+
+export const auditLog = pgTable('audit_log', {
+  id: id(),
+  // Без внешнего ключа: журнал переживает удаление пользователя.
+  userId: uuid('user_id'),
+  at: ts('at').notNull().defaultNow(),
+  action: text('action').notNull(),
+  objectType: text('object_type'),
+  objectId: text('object_id'),
+  result: text('result').notNull(),
+});
