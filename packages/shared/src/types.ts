@@ -127,7 +127,7 @@ export type OrderHistoryEntry = { status: OrderStatus; at: string; note?: string
 export type OrderDTO = {
   id: string;
   number: string;
-  projectId: string;
+  projectId: string | null;
   status: OrderStatus;
   totalKop: Kopecks;
   currency: 'BYN';
@@ -160,4 +160,4 @@ export type AiJobDTO = {
   resultPhoto?: PhotoDTO;
 };
 
-export type ApiErrorBody = { error: { code: string; message: string } };
+export type ApiErrorBody = { error: { code: string; message: string; details?: Record<string, unknown> } };

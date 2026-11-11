@@ -130,7 +130,7 @@ export const createOrderRequestSchema = z.object({
 export const orderSchema = z.object({
   id: z.string(),
   number: z.string(),
-  projectId: z.string(),
+  projectId: z.string().nullable(),
   status: orderStatusSchema,
   totalKop: kop,
   currency: z.literal('BYN'),
@@ -163,5 +163,5 @@ export const aiJobSchema = z.object({
 });
 
 export const apiErrorBodySchema = z.object({
-  error: z.object({ code: z.string(), message: z.string() }),
+  error: z.object({ code: z.string(), message: z.string(), details: z.record(z.unknown()).optional() }),
 });

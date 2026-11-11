@@ -6,14 +6,15 @@ export class AppError extends Error {
     public readonly status: number,
     public readonly code: string,
     message: string,
+    public readonly details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'AppError';
   }
 }
 
-function body(code: string, message: string): ApiErrorBody {
-  return { error: { code, message } };
+function body(code: string, message: string, details?: Record<string, unknown>): ApiErrorBody {
+  return { error: { code, message, ...(details ? { details } : {}) } };
 }
 
 const HTTP_ERRORS: Record<number, [string, string]> = {
@@ -30,7 +31,7 @@ export function registerErrorHandling(app: FastifyInstance): void {
   });
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof AppError) {
-      return reply.status(err.status).send(body(err.code, err.message));
+      return reply.status(err.status).send(body(err.code, err.message, err.details));
     }
     const status = (err as { statusCode?: number }).statusCode;
     if (typeof status === 'number' && status >= 400 && status < 500) {
