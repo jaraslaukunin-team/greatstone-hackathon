@@ -165,3 +165,13 @@ export const aiJobSchema = z.object({
 export const apiErrorBodySchema = z.object({
   error: z.object({ code: z.string(), message: z.string(), details: z.record(z.unknown()).optional() }),
 });
+
+export const auditEntrySchema = z.object({
+  id: z.string(),
+  userId: z.string().nullable(),
+  at: iso,
+  action: z.string(),
+  objectType: z.string().nullable(),
+  objectId: z.string().nullable(),
+  result: z.enum(['ok', 'denied', 'error']),
+});

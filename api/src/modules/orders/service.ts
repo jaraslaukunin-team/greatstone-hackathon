@@ -8,6 +8,7 @@ import {
   type Layout,
   type OrderAddress,
   type OrderDTO,
+  type OrderStatus,
   type PhotoMeta,
 } from '@picpac/shared';
 import { audit } from '../../audit.js';
@@ -49,31 +50,59 @@ export function hashOrderRequest(req: CreateOrderRequest): string {
 const formatAddress = (a: OrderAddress): string =>
   `${a.postalCode ? `${a.postalCode}, ` : ''}${a.city}, ${a.street}; тел. ${a.phone}`;
 
-export async function toOrderDTO(db: Db, row: OrderRow): Promise<OrderDTO> {
+// Историю и обращения грузим одним запросом на весь список, а не по запросу на заказ.
+export async function toOrderDTOs(db: Db, rows: OrderRow[]): Promise<OrderDTO[]> {
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
   const [history, links] = await Promise.all([
     db
       .select()
       .from(orderStatusHistory)
-      .where(eq(orderStatusHistory.orderId, row.id))
+      .where(inArray(orderStatusHistory.orderId, ids))
       .orderBy(asc(orderStatusHistory.changedAt)),
-    db.select({ id: interactions.id }).from(interactions).where(eq(interactions.orderId, row.id)),
+    db.select({ id: interactions.id, orderId: interactions.orderId }).from(interactions).where(inArray(interactions.orderId, ids)),
   ]);
-  return {
+  return rows.map((row) => ({
     id: row.id,
     number: row.number,
     projectId: row.projectId,
     status: row.status,
     totalKop: row.total,
-    currency: 'BYN',
+    currency: 'BYN' as const,
     delivery: row.deliveryMethod,
     createdAt: row.createdAt.toISOString(),
-    history: history.map((h) => ({
-      status: h.status,
-      at: h.changedAt.toISOString(),
-      ...(h.comment ? { note: h.comment } : {}),
-    })),
-    interactionIds: links.map((l) => l.id),
-  };
+    history: history
+      .filter((h) => h.orderId === row.id)
+      .map((h) => ({ status: h.status, at: h.changedAt.toISOString(), ...(h.comment ? { note: h.comment } : {}) })),
+    interactionIds: links.filter((l) => l.orderId === row.id).map((l) => l.id),
+  }));
+}
+
+export async function toOrderDTO(db: Db, row: OrderRow): Promise<OrderDTO> {
+  return (await toOrderDTOs(db, [row]))[0]!;
+}
+
+// Единственное место, где меняется статус заказа: защита от гонки по текущему статусу,
+// запись в историю, а при отмене проект возвращается в черновик.
+export async function transitionOrder(
+  db: Db,
+  t: { orderId: string; from: OrderStatus; to: OrderStatus; actorId: string; comment: string | null; now: Date },
+): Promise<OrderRow | null> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(orders)
+      .set({ status: t.to })
+      .where(and(eq(orders.id, t.orderId), eq(orders.status, t.from)))
+      .returning();
+    if (!row) return null;
+    await tx
+      .insert(orderStatusHistory)
+      .values({ orderId: row.id, status: t.to, changedBy: t.actorId, comment: t.comment });
+    if (t.to === 'cancelled' && row.projectId) {
+      await tx.update(projects).set({ status: 'draft', updatedAt: t.now }).where(eq(projects.id, row.projectId));
+    }
+    return row;
+  });
 }
 
 function sameRequestOrThrow(existing: OrderRow, hash: string): { row: OrderRow; created: false } {
@@ -195,7 +224,7 @@ export async function createOrder(
 
 export async function listOrders(db: Db, user: AuthUser): Promise<OrderDTO[]> {
   const rows = await db.select().from(orders).where(eq(orders.customerId, user.id)).orderBy(desc(orders.createdAt));
-  return Promise.all(rows.map((r) => toOrderDTO(db, r)));
+  return toOrderDTOs(db, rows);
 }
 
 async function loadOrder(db: Db, user: AuthUser, id: string, opts: { operatorMay: boolean }): Promise<OrderRow> {
@@ -211,21 +240,16 @@ export async function getOrder(db: Db, user: AuthUser, id: string): Promise<Orde
   return toOrderDTO(db, await loadOrder(db, user, id, { operatorMay: true }));
 }
 
-// Отмена возможна только в статусе accepted; проект возвращается в черновик для правок.
+// Клиент отменяет только в статусе accepted; проект возвращается в черновик для правок.
 export async function cancelOrder(db: Db, user: AuthUser, id: string, now: Date): Promise<OrderDTO> {
   const order = await loadOrder(db, user, id, { operatorMay: false });
-  const cancelled = await db.transaction(async (tx) => {
-    const [row] = await tx
-      .update(orders)
-      .set({ status: 'cancelled' })
-      .where(and(eq(orders.id, order.id), eq(orders.status, 'accepted')))
-      .returning();
-    if (!row) return null;
-    await tx.insert(orderStatusHistory).values({ orderId: row.id, status: 'cancelled', changedBy: user.id });
-    if (row.projectId) {
-      await tx.update(projects).set({ status: 'draft', updatedAt: now }).where(eq(projects.id, row.projectId));
-    }
-    return row;
+  const cancelled = await transitionOrder(db, {
+    orderId: order.id,
+    from: 'accepted',
+    to: 'cancelled',
+    actorId: user.id,
+    comment: null,
+    now,
   });
   if (!cancelled) throw new AppError(409, 'CANNOT_CANCEL', 'Заказ уже передан в работу, отменить его нельзя');
   await audit(db, { userId: user.id, action: 'order.cancel', objectType: 'order', objectId: id, result: 'ok' });

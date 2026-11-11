@@ -161,3 +161,13 @@ export type AiJobDTO = {
 };
 
 export type ApiErrorBody = { error: { code: string; message: string; details?: Record<string, unknown> } };
+
+export type AuditEntryDTO = {
+  id: string;
+  userId: string | null;
+  at: string;
+  action: string;
+  objectType: string | null;
+  objectId: string | null;
+  result: 'ok' | 'denied' | 'error';
+};
