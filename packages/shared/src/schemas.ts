@@ -30,7 +30,8 @@ export const pageSchema = z.object({
   cells: z.array(cellSchema),
   copies: z.number().int().positive().optional(),
 });
-export const layoutSchema = z.object({ pages: z.array(pageSchema) });
+export const themeIdSchema = z.enum(['minimal', 'film', 'travel', 'holiday', 'graduation']);
+export const layoutSchema = z.object({ pages: z.array(pageSchema), themeId: themeIdSchema.optional() });
 
 export const userSchema = z.object({
   id: z.string(),

@@ -1,4 +1,5 @@
 import type { Kopecks } from './money';
+import type { ThemeId } from './themes';
 
 export type Role = 'customer' | 'operator';
 export type PaymentMethod = 'card' | 'erip' | 'courier';
@@ -16,7 +17,7 @@ export type Rotation = 0 | 90 | 180 | 270;
 export type Crop = { x: number; y: number; scale: number; rotation: Rotation };
 export type Cell = { photoId: string | null; crop: Crop; fit?: 'contain' | 'cover' };
 export type Page = { template: Template; cells: Cell[]; copies?: number };
-export type Layout = { pages: Page[] };
+export type Layout = { pages: Page[]; themeId?: ThemeId };
 
 export type UserDTO = {
   id: string;
