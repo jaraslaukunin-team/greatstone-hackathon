@@ -29,7 +29,8 @@ export const pageSchema = z.object({
   cells: z.array(cellSchema),
   copies: z.number().int().positive().optional(),
 });
-export const layoutSchema = z.object({ pages: z.array(pageSchema) });
+// themeId необязателен: старые макеты без него рисуются в теме по умолчанию.
+export const layoutSchema = z.object({ pages: z.array(pageSchema), themeId: z.string().optional() });
 
 export const userSchema = z.object({
   id: z.string(),

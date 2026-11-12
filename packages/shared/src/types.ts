@@ -15,7 +15,7 @@ export type Rotation = 0 | 90 | 180 | 270;
 export type Crop = { x: number; y: number; scale: number; rotation: Rotation };
 export type Cell = { photoId: string | null; crop: Crop; fit?: 'contain' | 'cover' };
 export type Page = { template: Template; cells: Cell[]; copies?: number };
-export type Layout = { pages: Page[] };
+export type Layout = { pages: Page[]; themeId?: string };
 
 export type UserDTO = {
   id: string;
