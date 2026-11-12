@@ -22,7 +22,7 @@ export default function HomeScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Wordmark height={40} />
+        <Wordmark height={64} />
         <Text style={styles.slogan}>{t.home.slogan}</Text>
       </View>
 
@@ -88,8 +88,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg },
   content: { padding: space[4], gap: space[3], paddingBottom: space[7] },
-  header: { marginTop: space[5], marginBottom: space[2], gap: 2 },
-  slogan: { ...typography.caption, color: lightColors.textSecondary },
+  header: { marginTop: space[5], marginBottom: space[2], gap: space[2] },
+  slogan: {
+    ...typography.body,
+    color: lightColors.textSecondary,
+    letterSpacing: 0.8,
+  },
   continueEyebrow: { ...typography.label, color: lightColors.textSecondary },
   hero: {
     flexDirection: 'row',
