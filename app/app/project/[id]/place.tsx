@@ -1,6 +1,6 @@
 import { themeById } from '@picpac/shared';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import { cellRects } from '../../../src/book/cellRects';
@@ -28,7 +28,8 @@ const BACKGROUNDS = [lightColors.surface, lightColors.fillRose, lightColors.fill
 const THUMB = 76;
 
 export default function PlaceScreen() {
-  const { id, spread: spreadParam } = useLocalSearchParams<{ id: string; spread?: string }>();
+  const { id, spread: spreadParam, albumId } = useLocalSearchParams<{ id: string; spread?: string; albumId?: string }>();
+  const navigation = useNavigation();
   const client = useApiClient();
   const { width: winW } = useWindowDimensions();
   const draft = useProjectStore((s) => s.draft);
@@ -38,8 +39,13 @@ export default function PlaceScreen() {
   const [cell, setCell] = useState<{ pageIndex: number; cellIndex: number } | null>(null);
   const [photoId, setPhotoId] = useState<string | null>(null);
   const [gapPreview, setGapPreview] = useState<number | null>(null);
+  const graduationAlbumId = albumId ?? draft?.project.sourceProjectId ?? null;
   // Автосохранение: если книга открыта под этим экраном, она и сохраняет; при прямой ссылке — этот экран.
   useDebouncedSync(client, id, !!draft && draft.project.id === id);
+
+  useEffect(() => {
+    navigation.setOptions({ title: graduationAlbumId ? 'Выпускной альбом' : 'Фотокнига' });
+  }, [navigation, graduationAlbumId]);
 
   const layout = draft && draft.project.id === id ? draft.layout : null;
   // Выбранная ячейка могла пропасть после смены шаблона.
@@ -56,7 +62,11 @@ export default function PlaceScreen() {
     return (
       <View style={styles.stub}>
         <Text style={styles.sub}>Откройте книгу, затем выберите разворот для правки.</Text>
-        <Button title="К книге" onPress={() => router.dismissTo(`/project/${id}/overview`)} />
+        {graduationAlbumId ? (
+          <Button title="К пожеланию" onPress={() => router.replace(`/album/me?projectId=${graduationAlbumId}`)} />
+        ) : (
+          <Button title="К книге" onPress={() => router.dismissTo(`/project/${id}/overview`)} />
+        )}
       </View>
     );
   }
@@ -232,12 +242,25 @@ export default function PlaceScreen() {
 
       <Button title="Разместить фото" disabled={ordered || !cellValid || !photoId} onPress={place} />
       <Text style={styles.hint}>{cellValid && photoId ? 'В выделенную ячейку · выбрано 1 фото' : 'Выберите ячейку и фото'}</Text>
-      <Button
-        title="Подробная правка страницы"
-        variant="secondary"
-        disabled={ordered}
-        onPress={() => router.dismissTo({ pathname: '/project/[id]/overview', params: { id: String(id), page: String(rightIndex ?? leftIndex) } })}
-      />
+      {graduationAlbumId ? (
+        <Button
+          title="Далее: пожелание"
+          variant="secondary"
+          onPress={() => router.replace(`/album/me?projectId=${graduationAlbumId}`)}
+        />
+      ) : (
+        <Button
+          title="Подробная правка страницы"
+          variant="secondary"
+          disabled={ordered}
+          onPress={() =>
+            router.dismissTo({
+              pathname: '/project/[id]/overview',
+              params: { id: String(id), page: String(rightIndex ?? leftIndex) },
+            })
+          }
+        />
+      )}
     </ScrollView>
   );
 }

@@ -9,6 +9,7 @@ import {
   createProject,
   deleteProject,
   duplicateProject,
+  createMemberSpread,
   forkPoolProject,
   listProjects,
   renameProject,
@@ -86,6 +87,12 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     const { id } = req.params as { id: string };
     reply.code(201);
     return forkPoolProject(req.server, req.user!, id);
+  });
+
+  app.post('/projects/:id/member-spread', auth, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    reply.code(201);
+    return createMemberSpread(req.server, req.user!, id);
   });
 
   app.post('/projects/:id/sync', auth, async (req) => {

@@ -4,10 +4,12 @@ import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { doneRoute } from '../../../src/album/doneRoute';
+import { ApiRequestError } from '../../../src/api/client';
 import { useApiClient } from '../../../src/api/hooks';
 import { useAuth } from '../../../src/auth/AuthProvider';
 import { pickPhotos } from '../../../src/photos/pickPhotos';
 import { UploadQueue } from '../../../src/photos/UploadQueue';
+import { useProjectStore } from '../../../src/project/projectStore';
 import { Button } from '../../../src/ui/Button';
 import { lightColors, radius, space, typography } from '../../../src/theme/theme';
 
@@ -28,8 +30,11 @@ export default function PhotosScreen() {
   const [pending, setPending] = useState(0);
   const [failed, setFailed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [finishing, setFinishing] = useState(false);
+  const setDraft = useProjectStore((s) => s.setDraft);
 
   const graduation = isGraduation(project);
+  const isMember = graduation && !!user && project?.ownerId !== user.id;
 
   const queue = useMemo(
     () =>
@@ -95,8 +100,30 @@ export default function PhotosScreen() {
   }
 
   const canDone = graduation
-    ? photos.length >= GRAD_MIN && photos.length <= GRAD_MAX && pending === 0
-    : photos.length > 0 && pending === 0;
+    ? photos.length >= GRAD_MIN && photos.length <= GRAD_MAX && pending === 0 && !finishing
+    : photos.length > 0 && pending === 0 && !finishing;
+
+  async function onDone() {
+    if (!canDone || !project) return;
+    if (isMember) {
+      setFinishing(true);
+      setError(null);
+      try {
+        const book = await client.post<ProjectDTO>(`/projects/${project.id}/member-spread`);
+        setDraft(book);
+        router.replace({
+          pathname: '/project/[id]/place',
+          params: { id: book.id, spread: '1', albumId: project.id },
+        });
+      } catch (e) {
+        setError(e instanceof ApiRequestError ? e.message : 'Не удалось открыть разворот');
+      } finally {
+        setFinishing(false);
+      }
+      return;
+    }
+    router.replace(doneRoute(project, user?.id) ?? `/project/${id}/overview`);
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -123,10 +150,10 @@ export default function PhotosScreen() {
         disabled={graduation && photos.length >= GRAD_MAX}
       />
       <Button
-        title={`Готово · ${photos.length} фото`}
+        title={finishing ? 'Открываем разворот…' : `Готово · ${photos.length} фото`}
         variant="secondary"
         disabled={!canDone}
-        onPress={() => router.replace(doneRoute(project, user?.id) ?? `/project/${id}/overview`)}
+        onPress={() => void onDone()}
       />
     </ScrollView>
   );

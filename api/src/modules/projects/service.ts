@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { personalizeLayout, type Layout, type ProjectDTO } from '@picpac/shared';
+import { autoLayout, personalizeLayout, type Layout, type ProjectDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import { hashPassword } from '../../auth/password.js';
 import type { AuthUser } from '../../auth/plugin.js';
@@ -431,6 +431,118 @@ export async function forkPoolProject(app: FastifyInstance, user: AuthUser, pool
   }
 
   await audit(db, { userId: user.id, action: 'project.fork', objectType: 'project', objectId: newProjectId, result: 'ok' });
+  return toProjectDTO(newProject);
+}
+
+/**
+ * Личный разворот ученика выпускного альбома: копия своих фото + макет на 2 страницы.
+ * Повторный вызов возвращает ту же книгу (правки макета сохраняются).
+ */
+export async function createMemberSpread(
+  app: FastifyInstance,
+  user: AuthUser,
+  albumId: string,
+): Promise<ProjectDTO> {
+  const db = app.db;
+  const storage = app.storage;
+  const album = await assertProjectAccess(db, user, albumId, 'read');
+  if (!album.isShared || album.isPool) {
+    throw new AppError(409, 'NOT_GRADUATION', 'Личный разворот доступен только в выпускном альбоме');
+  }
+  if (album.ownerId === user.id) {
+    throw new AppError(409, 'OWNER_HAS_ALBUM', 'Организатор собирает общий альбом, а не личный разворот');
+  }
+
+  const [existing] = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.ownerId, user.id), eq(projects.sourceProjectId, album.id)));
+  if (existing) return toProjectDTO(existing);
+
+  const ownPhotos = await db
+    .select()
+    .from(projectPhotos)
+    .where(and(eq(projectPhotos.projectId, album.id), eq(projectPhotos.uploadedBy, user.id)))
+    .orderBy(asc(projectPhotos.position), asc(projectPhotos.createdAt));
+  if (ownPhotos.length < 2) {
+    throw new AppError(422, 'PHOTOS_REQUIRED', 'Загрузите от 2 до 8 фото для своего разворота');
+  }
+
+  const newProjectId = randomUUID();
+  const copies: Array<{ newId: string; key: string; src: (typeof ownPhotos)[number] }> = [];
+  try {
+    for (const photo of ownPhotos.slice(0, 8)) {
+      let data: Buffer;
+      try {
+        data = await storage.get(photo.storagePath);
+      } catch {
+        throw new AppError(422, 'PHOTO_FILE_MISSING', `Файл фото ${photo.id} не найден в хранилище`);
+      }
+      const newId = randomUUID();
+      const key = storageKey(newProjectId, newId);
+      await storage.put(key, data);
+      copies.push({ newId, key, src: photo });
+    }
+  } catch (e) {
+    await Promise.allSettled(copies.map((c) => storage.remove(c.key)));
+    throw e;
+  }
+
+  const metas = copies.map((c) => ({
+    id: c.newId,
+    width: c.src.width,
+    height: c.src.height,
+    takenAt: c.src.takenAt ? c.src.takenAt.toISOString() : null,
+  }));
+  // 3 страницы → развороты [—,0] и [1,2]: place открывает spread=1 как полный разворот.
+  const layout = autoLayout(metas, { pagesMin: 3, pagesMax: 3 });
+
+  let newProject: typeof projects.$inferSelect;
+  try {
+    const [inserted] = await db
+      .insert(projects)
+      .values({
+        id: newProjectId,
+        ownerId: user.id,
+        variantId: album.variantId,
+        title: album.title,
+        isShared: false,
+        isPool: false,
+        sourceProjectId: album.id,
+        expectedMembers: null,
+        joinPasswordHash: null,
+        status: 'draft',
+        layout,
+      })
+      .returning();
+    newProject = inserted!;
+    await db.insert(projectPhotos).values(
+      copies.map((c, i) => ({
+        id: c.newId,
+        projectId: newProjectId,
+        uploadedBy: user.id,
+        storagePath: c.key,
+        position: i,
+        width: c.src.width,
+        height: c.src.height,
+        takenAt: c.src.takenAt,
+        source: c.src.source,
+        sourcePhotoId: c.src.id,
+      })),
+    );
+  } catch (e) {
+    await Promise.allSettled(copies.map((c) => storage.remove(c.key)));
+    await db.delete(projects).where(eq(projects.id, newProjectId)).catch(() => undefined);
+    throw e;
+  }
+
+  await audit(db, {
+    userId: user.id,
+    action: 'project.member_spread',
+    objectType: 'project',
+    objectId: newProjectId,
+    result: 'ok',
+  });
   return toProjectDTO(newProject);
 }
 

@@ -138,4 +138,43 @@ describe('пожелания участников и именная копия',
       expect((await call(outsider, 'POST', `/projects/${projectId}/duplicate`, { personal: true })).statusCode).toBe(404);
     });
   });
+
+  describe('личный разворот участника', () => {
+    async function putOwn(userId: string, n: number): Promise<void> {
+      for (let i = 0; i < n; i++) {
+        const photoId = randomUUID();
+        const key = `projects/${projectId}/${photoId}`;
+        await db.insert(projectPhotos).values({
+          id: photoId,
+          projectId,
+          uploadedBy: userId,
+          storagePath: key,
+          position: i,
+          width: 1200,
+          height: 1600,
+        });
+        await app.storage.put(key, Buffer.from(`jpeg-${i}`));
+      }
+    }
+
+    it('создаёт личную книгу с 3 страницами (разворот) из своих фото; повтор — тот же id', async () => {
+      await putOwn(bob.id, 3);
+      const first = await call(bob, 'POST', `/projects/${projectId}/member-spread`);
+      expect(first.statusCode).toBe(201);
+      const book = projectSchema.parse(first.json());
+      expect(book.sourceProjectId).toBe(projectId);
+      expect(book.isShared).toBe(false);
+      expect(book.ownerId).toBe(bob.id);
+      expect(book.layout.pages.length).toBe(3);
+
+      const again = projectSchema.parse((await call(bob, 'POST', `/projects/${projectId}/member-spread`)).json());
+      expect(again.id).toBe(book.id);
+    });
+
+    it('без двух фото — 422; организатор и пул — 409; чужой — 404', async () => {
+      expect((await call(bob, 'POST', `/projects/${projectId}/member-spread`)).statusCode).toBe(422);
+      expect((await call(alice, 'POST', `/projects/${projectId}/member-spread`)).statusCode).toBe(409);
+      expect((await call(outsider, 'POST', `/projects/${projectId}/member-spread`)).statusCode).toBe(404);
+    });
+  });
 });
