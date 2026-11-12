@@ -13,7 +13,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -34,7 +33,8 @@ import {
   updatePageText,
   type CellRef,
 } from '../editor/editorActions';
-import { Slider } from '../ui/Slider';
+import { TextEditorPanel } from './TextEditorPanel';
+import { TextLayer } from './TextLayer';
 import { lightColors, radius, space, typography } from '../theme/theme';
 import { cellRects } from './cellRects';
 import { clampCrop } from './cropMath';
@@ -97,6 +97,8 @@ export function PageEditor(props: Props) {
   const target = { x: (winW - size) / 2, y: 92, size };
 
   const [selected, setSelected] = useState<number | null>(null);
+  // Выбранная надпись: двигается перетаскиванием на странице, правится в панели под ней.
+  const [selectedText, setSelectedText] = useState<number | null>(null);
   const [showPhotos, setShowPhotos] = useState(false);
   const [live, setLive] = useState<Live | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -113,6 +115,7 @@ export function PageEditor(props: Props) {
   if (previousPage !== pageIndex) {
     setPreviousPage(pageIndex);
     setSelected(null);
+    setSelectedText(null);
     setShowPhotos(false);
     setLive(null);
   }
@@ -242,6 +245,7 @@ export function PageEditor(props: Props) {
 
   function select(i: number) {
     buzz();
+    setSelectedText(null);
     setSelected(i);
     setShowPhotos(!page!.cells[i]?.photoId);
   }
@@ -309,6 +313,18 @@ export function PageEditor(props: Props) {
               );
             })}
           </View>
+          <TextLayer
+            texts={viewPage.texts ?? []}
+            width={size}
+            height={size}
+            selected={selectedText}
+            onSelect={(i) => {
+              setSelected(null);
+              setShowPhotos(false);
+              setSelectedText(i);
+            }}
+            onMove={(i, x, y) => onChange(updatePageText(layout, pageIndex, i, { x, y }))}
+          />
           {live ? (
             // Пока двигаем кадр, показываем, что обрежут при печати и что уйдёт в сгиб у корешка.
             <View pointerEvents="none" style={StyleSheet.absoluteFill as never}>
@@ -355,36 +371,30 @@ export function PageEditor(props: Props) {
               <Chip
                 key={id}
                 label={`+ ${TEXT_STYLES[id].label}`}
-                onPress={() => onChange(addPageText(layout, pageIndex, { text: TEXT_STYLES[id].sample, x: 0.5, y: 0.88, style: id }))}
+                onPress={() => {
+                  // Новая надпись появляется в центре и сразу выбрана: правьте текст и тащите её куда нужно.
+                  const at = page.texts?.length ?? 0;
+                  onChange(addPageText(layout, pageIndex, { text: TEXT_STYLES[id].sample, x: 0.5, y: 0.5, style: id }));
+                  setSelected(null);
+                  setShowPhotos(false);
+                  setSelectedText(at);
+                }}
                 disabled={(page.texts?.length ?? 0) >= MAX_PAGE_TEXTS}
               />
             ))}
           </View>
-          {(page.texts ?? []).map((t, i) => (
-            <View key={`${i}-${t.style}`} style={styles.textRow}>
-              <TextInput
-                defaultValue={t.text}
-                onEndEditing={(e) => {
-                  const text = e.nativeEvent.text.trim();
-                  if (text && text !== t.text) onChange(updatePageText(layout, pageIndex, i, { text }));
-                }}
-                maxLength={120}
-                style={styles.input}
-                accessibilityLabel={`Текст подписи ${i + 1}`}
-              />
-              <Slider
-                label="Выше / ниже"
-                value={Math.round(t.y * 100)}
-                min={5}
-                max={95}
-                step={1}
-                format={(v) => `${v}%`}
-                onChange={() => undefined}
-                onCommit={(v) => onChange(updatePageText(layout, pageIndex, i, { y: v / 100 }))}
-              />
-              <Chip label="Удалить подпись" onPress={() => onChange(removePageText(layout, pageIndex, i))} />
-            </View>
-          ))}
+          {selectedText !== null && page.texts?.[selectedText] ? (
+            <TextEditorPanel
+              text={page.texts[selectedText]!}
+              onChange={(patch) => onChange(updatePageText(layout, pageIndex, selectedText, patch))}
+              onDelete={() => {
+                onChange(removePageText(layout, pageIndex, selectedText));
+                setSelectedText(null);
+              }}
+            />
+          ) : (page.texts?.length ?? 0) > 0 ? (
+            <Text style={styles.hint}>Нажмите на надпись на странице, чтобы изменить текст или перетащить её.</Text>
+          ) : null}
 
           {cell && cellRef ? (
             <>

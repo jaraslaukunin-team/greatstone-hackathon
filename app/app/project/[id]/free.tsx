@@ -22,7 +22,8 @@ import {
 import { LayersPanel } from '../../../src/book/LayersPanel';
 import { spreadRange } from '../../../src/book/spreadInfo';
 import { TEXT_STYLES, TEXT_STYLE_IDS } from '../../../src/book/textStyles';
-import { setPageBg } from '../../../src/editor/editorActions';
+import { setPageBg, updatePageText } from '../../../src/editor/editorActions';
+import { TextEditorPanel } from '../../../src/book/TextEditorPanel';
 import { useDebouncedSync } from '../../../src/project/useDebouncedSync';
 import { useProjectStore } from '../../../src/project/projectStore';
 import { useProjectPhotos } from '../../../src/project/useProjectPhotos';
@@ -207,6 +208,18 @@ export default function FreeScreen() {
             setSelected(null);
           }}
           onClose={() => setPanel('none')}
+        />
+      ) : null}
+
+      {selected && selected.kind === 'text' && layout.pages[selected.pageIndex]?.texts?.[selected.index] ? (
+        <TextEditorPanel
+          text={layout.pages[selected.pageIndex]!.texts![selected.index]!}
+          disabled={ordered}
+          onChange={(patch) => apply(updatePageText(layout, selected.pageIndex, selected.index, patch))}
+          onDelete={() => {
+            apply(removeLayer(layout, selected));
+            setSelected(null);
+          }}
         />
       ) : null}
 
