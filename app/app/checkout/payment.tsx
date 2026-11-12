@@ -1,28 +1,28 @@
+import type { DeliveryMethodId } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { PAYMENT_LABELS, paymentOptions } from '../../src/checkout/paymentOptions';
 import { Button } from '../../src/ui/Button';
 import { Card } from '../../src/ui/Card';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function PaymentScreen() {
-  const { delivery } = useLocalSearchParams<{ delivery: string }>();
-  const [method, setMethod] = useState<'card' | 'erip' | 'courier'>('card');
+  const { delivery, promoCode } = useLocalSearchParams<{ delivery: DeliveryMethodId; promoCode?: string }>();
+  const options = paymentOptions((delivery ?? 'belpost') as DeliveryMethodId);
+  const [method, setMethod] = useState<(typeof options)[number]>(options[0]!);
 
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>Оплата</Text>
       <Text style={styles.hint}>Тестовый режим · деньги не списываются</Text>
-      {(['card', 'erip', 'courier'] as const).map((id) => (
+      {options.map((id) => (
         <Card key={id}>
-          <Text style={styles.cardTitle}>
-            {id === 'card' ? 'Карта' : id === 'erip' ? 'ЕРИП' : 'Курьеру при получении'}
-          </Text>
+          <Text style={styles.cardTitle}>{PAYMENT_LABELS[id]}</Text>
           <Button
             title={method === id ? 'Выбрано' : 'Выбрать'}
             variant={method === id ? 'primary' : 'secondary'}
             onPress={() => setMethod(id)}
-            disabled={id === 'courier' && delivery !== 'courier_minsk'}
           />
         </Card>
       ))}
@@ -31,7 +31,7 @@ export default function PaymentScreen() {
         onPress={() =>
           router.push({
             pathname: '/checkout/confirm',
-            params: { delivery, payment: method },
+            params: { delivery, payment: method, promoCode: promoCode ?? '' },
           })
         }
       />
