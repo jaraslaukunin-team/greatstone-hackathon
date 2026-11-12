@@ -2,12 +2,18 @@ import { DEFAULT_THEME_ID, formatByn, themeById, type CatalogDTO, type PhotoDTO,
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { BookTabs, type BookTab } from '../../../src/book/BookTabs';
+import { CoverColors } from '../../../src/book/CoverColors';
+import { CoverView } from '../../../src/book/CoverView';
+import { coverPage, coverTitle } from '../../../src/book/cover';
+import { spreadsOf } from '../../../src/book/flip';
+import { PagesGrid } from '../../../src/book/PagesGrid';
+import { spreadPhotoCount, spreadRange } from '../../../src/book/spreadInfo';
 import { useApiClient } from '../../../src/api/hooks';
 import { hasContent, markSeen, reconcileLayout } from '../../../src/editor/reconcileLayout';
-import { moveSpreadBy, replacePhoto, setTheme, type CellRef } from '../../../src/editor/editorActions';
+import { addSpread, moveSpreadBy, replacePhoto, setCover, setTheme, type CellRef } from '../../../src/editor/editorActions';
 import { useVariantPrice } from '../../../src/catalog/useCatalog';
 import { spreadIssues } from '../../../src/book/spreadIssues';
-import { SpreadStrip } from '../../../src/book/SpreadStrip';
 import { useAuth } from '../../../src/auth/AuthProvider';
 import { useEditResult } from '../../../src/photoEditor/editResultStore';
 import { useProjectStore } from '../../../src/project/projectStore';
@@ -32,6 +38,8 @@ export default function OverviewScreen() {
   const [message, setMessage] = useState('Собираем вашу книгу…');
   const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
   const [notice, setNotice] = useState<string | null>(null);
+  // Вкладка книги: «Разворот» открыта по умолчанию, как раньше открывалась листалка.
+  const [tab, setTab] = useState<BookTab>('spread');
   const [showThemes, setShowThemes] = useState(false);
   const [editingCover, setEditingCover] = useState(false);
   const [editing, setEditing] = useState<{ pageIndex: number; rect: Rect } | null>(null);
@@ -39,6 +47,14 @@ export default function OverviewScreen() {
   const [viewIndex, setViewIndex] = useState(0);
   const [jump, setJump] = useState<{ index: number; key: number } | undefined>(undefined);
   const [paramHandled, setParamHandled] = useState(false);
+  const goTab = useCallback(
+    (next: BookTab) => {
+      setTab(next);
+      // Листалка не размонтируется, но после скрытия возвращаем её на текущий разворот.
+      if (next === 'spread') setJump({ index: viewIndex, key: Date.now() });
+    },
+    [viewIndex],
+  );
   const { user } = useAuth();
   // Фоторедактор открывается отдельным экраном: помним, какую ячейку правили, и вернём правку страницы по возвращении.
   const pendingEdit = useRef<{ requestId: string; ref: CellRef } | null>(null);
@@ -170,51 +186,125 @@ export default function OverviewScreen() {
       </Text>
       {ordered ? <Text style={styles.sub}>Проект уже заказан, редактирование недоступно.</Text> : null}
       {notice ? <Text style={styles.sub}>{notice}</Text> : null}
-      {draft?.layout?.pages?.length ? (
-        <BookViewer
-          title={draft.project.title}
-          layout={draft.layout}
-          sourceOf={sourceOf}
-          theme={themeById(draft.layout.themeId)}
-          onOpenPage={ordered ? undefined : (pageIndex, rect) => setEditing({ pageIndex, rect })}
-          onIndexChange={onIndexChange}
-          jumpTo={jump}
-        />
+      {draft?.layout?.pages?.length ? <BookTabs value={tab} onChange={goTab} /> : null}
+      {draft?.layout?.pages?.length && tab === 'cover' ? (
+        <View style={styles.coverTab}>
+          <CoverView
+            title={coverTitle(draft.layout, draft.project.title)}
+            subtitle={draft.layout.cover?.subtitle}
+            page={coverPage(draft.layout)}
+            sourceOf={sourceOf}
+            theme={themeById(draft.layout.themeId)}
+            color={draft.layout.cover?.color}
+            width={Math.min(winW - space[4] * 2, 280)}
+            height={Math.min(winW - space[4] * 2, 280)}
+          />
+          <Text style={styles.cardTitle}>Обложка альбома</Text>
+          {!ordered ? (
+            <>
+              <CoverColors
+                value={draft.layout.cover?.color}
+                onChange={(color) => setLayout(setCover(draft.layout, { color }, draft.project.title))}
+              />
+              <Button title="Редактировать обложку" onPress={() => setEditingCover(true)} />
+              <Button title={showThemes ? 'Скрыть оформление' : 'Оформление'} variant="secondary" onPress={() => setShowThemes((v) => !v)} />
+              {showThemes ? (
+                <ThemePicker
+                  value={themeById(draft.layout.themeId).id}
+                  onChange={(themeId) => setLayout(setTheme(draft.layout, themeId))}
+                />
+              ) : null}
+            </>
+          ) : null}
+        </View>
       ) : null}
       {draft?.layout?.pages?.length ? (
-        <SpreadStrip
-          layout={draft.layout}
-          sourceOf={sourceOf}
-          theme={themeById(draft.layout.themeId)}
-          issues={issues}
-          currentIndex={viewIndex}
-          onSelect={(index) => setJump({ index, key: Date.now() })}
-          onMove={(index, dir) => {
-            if (ordered) return;
-            setLayout(moveSpreadBy(draft.layout, index, dir));
-            // Книга показывает тот же разворот на новом месте.
-            setJump({ index: index + dir, key: Date.now() });
-          }}
-        />
+        <View style={tab === 'spread' ? styles.spreadTab : styles.hidden}>
+          <BookViewer
+            title={draft.project.title}
+            layout={draft.layout}
+            sourceOf={sourceOf}
+            theme={themeById(draft.layout.themeId)}
+            onOpenPage={ordered ? undefined : (pageIndex, rect) => setEditing({ pageIndex, rect })}
+            onIndexChange={onIndexChange}
+            jumpTo={jump}
+          />
+          <Text style={styles.cardTitle}>
+            {viewIndex === 0 ? 'Первая страница' : `Разворот ${spreadRange(viewIndex, pageCount)}`} · {spreadPhotoCount(draft.layout, viewIndex)} фото
+          </Text>
+          <Text style={styles.hint}>Листайте свайпом или стрелками. Нажмите на страницу, чтобы править её.</Text>
+          {!ordered ? (
+            <>
+              <Button
+                title="Редактировать разворот"
+                onPress={() => {
+                  const [l, r] = spreadsOf(pageCount)[viewIndex] ?? [null, null];
+                  const pageIndex = r ?? l ?? 0;
+                  setEditing({ pageIndex, rect: { x: winW / 2 - 80, y: winH / 2 - 80, width: 160, height: 160 } });
+                }}
+              />
+              {viewIndex >= 1 ? (
+                <View style={styles.moveRow}>
+                  <Button
+                    title="◀ Раньше"
+                    variant="secondary"
+                    style={styles.moveBtn}
+                    disabled={viewIndex <= 1}
+                    onPress={() => {
+                      setLayout(moveSpreadBy(draft.layout, viewIndex, -1));
+                      setJump({ index: viewIndex - 1, key: Date.now() });
+                    }}
+                  />
+                  <Button
+                    title="Позже ▶"
+                    variant="secondary"
+                    style={styles.moveBtn}
+                    disabled={viewIndex >= spreadsOf(pageCount).length - 1}
+                    onPress={() => {
+                      setLayout(moveSpreadBy(draft.layout, viewIndex, 1));
+                      setJump({ index: viewIndex + 1, key: Date.now() });
+                    }}
+                  />
+                </View>
+              ) : null}
+            </>
+          ) : null}
+        </View>
       ) : null}
-      <Text style={styles.hint}>Листайте свайпом или стрелками. Нажмите на страницу, чтобы править её.</Text>
-      {draft?.layout?.pages?.length && !ordered ? (
-        <>
-          <Button title="Обложка" variant="secondary" onPress={() => setEditingCover(true)} />
-          <Button title={showThemes ? 'Скрыть оформление' : 'Оформление'} variant="secondary" onPress={() => setShowThemes((v) => !v)} />
-          {showThemes ? (
-            <ThemePicker
-              value={themeById(draft.layout.themeId).id}
-              onChange={(themeId) => setLayout(setTheme(draft.layout, themeId))}
+      {draft?.layout?.pages?.length && tab === 'pages' ? (
+        <View style={styles.pagesTab}>
+          <PagesGrid
+            layout={draft.layout}
+            projectTitle={draft.project.title}
+            sourceOf={sourceOf}
+            theme={themeById(draft.layout.themeId)}
+            issues={issues}
+            currentIndex={viewIndex}
+            onSelect={(index, kind) => {
+              if (kind === 'cover') {
+                setTab('cover');
+                return;
+              }
+              setViewIndex(index);
+              setJump({ index, key: Date.now() });
+              setTab('spread');
+            }}
+          />
+          <Text style={styles.cardTitle}>
+            {issues.some((list) => list.length > 0) ? 'Есть что поправить' : 'Всё на своих местах'}
+          </Text>
+          <Text style={styles.hint}>
+            {pageCount} стр. · {photoMap.size} фото
+          </Text>
+          {!ordered ? (
+            <Button
+              title="+ Добавить разворот"
+              variant="secondary"
+              disabled={pageCount + 2 > limits.max}
+              onPress={() => setLayout(addSpread(draft.layout, limits.max))}
             />
           ) : null}
-        </>
-      ) : null}
-      {pageCount > 0 ? (
-        <Text style={styles.price}>
-          {pageCount} стр.{quote.data ? ` · ${formatByn(quote.data.totalKop)}` : ''}
-          {quote.stale ? ' · цена обновляется' : ''}
-        </Text>
+        </View>
       ) : null}
       <Button
         title="Смотреть результат"
@@ -222,7 +312,16 @@ export default function OverviewScreen() {
         disabled={busy || !draft?.layout?.pages?.length}
         onPress={() => router.push({ pathname: '/project/[id]/preview', params: { id: String(id) } })}
       />
-      <Button title="Проверить перед заказом" disabled={busy} onPress={() => router.push(`/project/${id}/review`)} />
+      <Button
+        title={`Проверить${pageCount > 0 && quote.data ? ` · ${formatByn(quote.data.totalKop)}` : ''}`}
+        disabled={busy}
+        onPress={() => router.push(`/project/${id}/review`)}
+      />
+      {pageCount > 0 ? (
+        <Text style={styles.hint}>
+          {pageCount} стр.{quote.stale ? ' · цена обновляется' : ''}
+        </Text>
+      ) : null}
       {editingCover && draft?.layout ? (
         <CoverEditor
           layout={draft.layout}
@@ -271,5 +370,11 @@ const styles = StyleSheet.create({
   hint: { ...typography.caption, color: lightColors.textSecondary },
   price: { ...typography.price, color: lightColors.text },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
+  coverTab: { gap: space[3], alignItems: 'center' },
+  spreadTab: { gap: space[3] },
+  pagesTab: { gap: space[3] },
+  hidden: { display: 'none' },
+  moveRow: { flexDirection: 'row', gap: space[2] },
+  moveBtn: { flex: 1 },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginVertical: space[2] },
 });

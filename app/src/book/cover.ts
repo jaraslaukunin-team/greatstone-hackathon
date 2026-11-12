@@ -1,5 +1,8 @@
 import type { Layout, Page } from '@picpac/shared';
 
+/** Четыре цвета ткани обложки (кружки в макете); выбранный хранится в Cover.color. */
+export const COVER_COLORS: readonly string[] = ['#F6EFE6', '#EDD5D5', '#CFE0DB', '#364C49'];
+
 /** Текст на корешке возможен, только если книга достаточно толстая. */
 export const SPINE_MIN_PAGES = 40;
 
