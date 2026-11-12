@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { lightColors } from '../theme/theme';
 import { cellRects } from './cellRects';
 import { frameRect } from './layers';
+import { QrCode } from './QrCode';
 import type { SourceOf } from './imageSource';
 import { TEXT_STYLES } from './textStyles';
 
@@ -87,6 +88,14 @@ export function PageView({ page, sourceOf, width, height, theme }: Props) {
         const rect = rects[i];
         return rect ? <CellView key={i} cell={cell} rect={rect} sourceOf={sourceOf} theme={theme} /> : null;
       })}
+      {page?.qr ? (
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', left: (page.qr.x - page.qr.size / 2) * width, top: (page.qr.y - page.qr.size / 2) * height }}
+        >
+          <QrCode url={page.qr.url} size={page.qr.size * width} />
+        </View>
+      ) : null}
       {page?.texts?.map((t, i) => {
         const style = TEXT_STYLES[t.style];
         if (!style || t.hidden) return null;
