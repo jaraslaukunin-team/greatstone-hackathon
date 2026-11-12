@@ -1,4 +1,5 @@
 import { installRuntimeTranslate, tr } from '../src/i18n/runtimeTranslate';
+import { RouteTransition } from '../src/ui/RouteTransition';
 import { useSettingsStore } from '../src/settings/settingsStore';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
@@ -101,7 +102,8 @@ export default function RootLayout() {
         <ApiBridge>
           <DeepLinkBridge>
             <WebPhoneShell>
-              <Stack key={lang} screenOptions={{ headerShown: false }}>
+              <RouteTransition>
+              <Stack key={lang} screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="(tabs)" />
@@ -123,6 +125,7 @@ export default function RootLayout() {
                   options={{ presentation: 'modal', headerShown: false, animation: 'fade' }}
                 />
               </Stack>
+              </RouteTransition>
             </WebPhoneShell>
           </DeepLinkBridge>
         </ApiBridge>

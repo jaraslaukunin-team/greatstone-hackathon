@@ -104,7 +104,7 @@ export default function TabsLayout() {
       <View style={styles.tabs}>
         <Tabs
           tabBar={(props) => <TabBar {...props} />}
-          screenOptions={{ headerShown: false }}
+          screenOptions={{ headerShown: false, animation: 'fade' }}
         >
           {barTabNames.map((name) => (
             <Tabs.Screen

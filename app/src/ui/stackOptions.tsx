@@ -5,6 +5,7 @@ import { BackButton } from './BackButton';
 /** Единая шапка для всех стеков: фон бренда, заголовок Futura, иконка «назад» из набора брендбука. */
 export const stackOptions = {
   headerShown: true,
+  animation: 'slide_from_right' as const,
   headerShadowVisible: false,
   headerBackground: HeaderBackground,
   headerStyle: { backgroundColor: lightColors.bg },
