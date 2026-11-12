@@ -10,11 +10,15 @@ export type OrderStatus =
   | 'cancelled';
 export type DeliveryMethodId = 'courier_minsk' | 'ems' | 'belpost';
 
-export type Template = 'one' | 'two' | 'four' | 'spread-one';
+// three — одно большое фото слева и два справа; spread-one — одно фото во всю страницу без полей.
+export type Template = 'one' | 'two' | 'three' | 'four' | 'spread-one';
 export type Rotation = 0 | 90 | 180 | 270;
 export type Crop = { x: number; y: number; scale: number; rotation: Rotation };
 export type Cell = { photoId: string | null; crop: Crop; fit?: 'contain' | 'cover' };
-export type Page = { template: Template; cells: Cell[]; copies?: number };
+export type PageTextStyle = 'title' | 'caption' | 'date' | 'quote';
+/** Подпись на странице: x, y — центр текста в долях страницы (0..1). */
+export type PageText = { text: string; x: number; y: number; style: PageTextStyle };
+export type Page = { template: Template; cells: Cell[]; copies?: number; bg?: string; texts?: PageText[] };
 export type Layout = { pages: Page[]; themeId?: string };
 
 export type UserDTO = {

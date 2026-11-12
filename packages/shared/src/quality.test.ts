@@ -11,7 +11,7 @@ const layoutWith = (photoId: string | null, scale = 1): Layout => ({
 
 describe('CELL_WIDTH_FRACTION', () => {
   it('has the agreed fractions', () => {
-    expect(CELL_WIDTH_FRACTION).toEqual({ one: 1, two: 1, four: 0.5, 'spread-one': 2 });
+    expect(CELL_WIDTH_FRACTION).toEqual({ one: 1, two: 1, three: 0.5, four: 0.5, 'spread-one': 1 });
   });
 });
 
@@ -47,6 +47,13 @@ describe('checkQuality', () => {
   it('four template halves the cell width', () => {
     const layout: Layout = {
       pages: [{ template: 'four', cells: [{ photoId: 'a', crop: { x: 0, y: 0, scale: 1, rotation: 0 } }] }],
+    };
+    expect(checkQuality(layout, { a: photo(1000) }, variant)).toEqual([]);
+  });
+
+  it('three template halves the cell width like four', () => {
+    const layout: Layout = {
+      pages: [{ template: 'three', cells: [{ photoId: 'a', crop: { x: 0, y: 0, scale: 1, rotation: 0 } }] }],
     };
     expect(checkQuality(layout, { a: photo(1000) }, variant)).toEqual([]);
   });

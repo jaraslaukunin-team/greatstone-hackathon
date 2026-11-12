@@ -12,25 +12,35 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import {
+  addPageText,
   applyTemplate,
   clearPhoto,
   insertPage,
+  MAX_PAGE_TEXTS,
   removePage,
+  removePageText,
   replacePhoto,
   setCrop,
   setFit,
+  setPageBg,
   swapCells,
+  updatePageText,
   type CellRef,
 } from '../editor/editorActions';
+import { Slider } from '../ui/Slider';
 import { lightColors, radius, space, typography } from '../theme/theme';
 import { cellRects } from './cellRects';
 import { clampCrop } from './cropMath';
 import type { SourceOf } from './imageSource';
 import { PageView } from './PageView';
+import { bleedRect, foldBandWidth } from './safeZones';
+import { TEXT_STYLES, TEXT_STYLE_IDS } from './textStyles';
 
 type Props = {
   pageIndex: number;
@@ -43,6 +53,8 @@ type Props = {
   originRect: Rect;
   pagesMin: number;
   pagesMax: number;
+  /** Ширина страницы в см: по ней считаются зоны обреза и сгиба. */
+  pageWidthCm: number;
   onChange(layout: Layout): void;
   /** Открыть фоторедактор для фото ячейки; кнопка скрыта, если обработчика нет. */
   onOpenPhotoEditor?(photoId: string, ref: CellRef): void;
@@ -55,8 +67,17 @@ type Props = {
 const TEMPLATES: { id: Page['template']; label: string }[] = [
   { id: 'one', label: '1 фото' },
   { id: 'two', label: '2 фото' },
+  { id: 'three', label: '3 фото' },
   { id: 'four', label: '4 фото' },
+  { id: 'spread-one', label: 'Во всю страницу' },
 ];
+// Фоны страницы: оттенки из палитры брендбука; «Как в теме» возвращает цвет темы.
+const PAGE_BACKGROUNDS = [lightColors.surface, lightColors.fillRose, lightColors.fillSand, lightColors.fillMint, lightColors.fillSky, lightColors.fillLilac];
+
+/** Короткий отклик при захвате и обмене фото; на вебе и там, где вибрации нет, молча ничего не делает. */
+function buzz() {
+  void Haptics.selectionAsync().catch(() => undefined);
+}
 const OPEN_MS = 280;
 const ZOOM_STEP = 0.25;
 
@@ -151,7 +172,12 @@ export function PageEditor(props: Props) {
             proposal = { ...g0.start, x: g0.start.x + g.dx / rect.width, y: g0.start.y + g.dy / rect.height };
           }
           const clamped = cropFor(s.selected, proposal);
-          if (clamped) setLive({ cellIndex: s.selected, crop: clamped });
+          if (clamped) {
+            setLive((prev) => {
+              if (!prev) buzz(); // кадр «взяли»: короткий отклик
+              return { cellIndex: s.selected!, crop: clamped };
+            });
+          }
         },
         onPanResponderRelease: () => finishGesture(),
         onPanResponderTerminate: () => finishGesture(),
@@ -198,6 +224,8 @@ export function PageEditor(props: Props) {
     ? { ...page, cells: page.cells.map((c, i) => (i === live.cellIndex ? { ...c, crop: live.crop } : c)) }
     : page;
 
+  const bleed = bleedRect(size, size, props.pageWidthCm);
+  const foldBand = foldBandWidth(size, props.pageWidthCm);
   const s0 = Math.max(0.2, originRect.width / size);
   const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [originRect.x + originRect.width / 2 - (target.x + size / 2), 0] });
   const translateY = progress.interpolate({ inputRange: [0, 1], outputRange: [originRect.y + originRect.height / 2 - (target.y + size / 2), 0] });
@@ -209,6 +237,7 @@ export function PageEditor(props: Props) {
   }
 
   function select(i: number) {
+    buzz();
     setSelected(i);
     setShowPhotos(!page!.cells[i]?.photoId);
   }
@@ -263,7 +292,10 @@ export function PageEditor(props: Props) {
                   accessibilityLabel={c.photoId ? `Фото ${i + 1}` : `Пустая ячейка ${i + 1}`}
                   onPress={() => select(i)}
                   onLongPress={() => {
-                    if (selected !== null && selected !== i) onChange(swapCells(layout, { pageIndex, cellIndex: selected }, { pageIndex, cellIndex: i }));
+                    if (selected !== null && selected !== i) {
+                      buzz();
+                      onChange(swapCells(layout, { pageIndex, cellIndex: selected }, { pageIndex, cellIndex: i }));
+                    }
                   }}
                   style={[{ position: 'absolute', left: r.x, top: r.y, width: r.width, height: r.height }, selected === i && styles.cellSelected]}
                 >
@@ -272,6 +304,13 @@ export function PageEditor(props: Props) {
               );
             })}
           </View>
+          {live ? (
+            // Пока двигаем кадр, показываем, что обрежут при печати и что уйдёт в сгиб у корешка.
+            <View pointerEvents="none" style={StyleSheet.absoluteFill as never}>
+              <View style={[styles.bleed, { left: bleed.x, top: bleed.y, width: bleed.width, height: bleed.height }]} />
+              <View style={[styles.fold, { width: foldBand }, pageIndex % 2 === 1 ? { right: 0 } : { left: 0 }]} />
+            </View>
+          ) : null}
         </Animated.View>
 
         <ScrollView style={[styles.panel, { top: target.y + size + space[3] }]} contentContainerStyle={styles.panelContent}>
@@ -289,6 +328,58 @@ export function PageEditor(props: Props) {
               </Pressable>
             ))}
           </View>
+
+          <Text style={styles.label}>Фон страницы</Text>
+          <View style={styles.row}>
+            {PAGE_BACKGROUNDS.map((c) => (
+              <Pressable
+                key={c}
+                accessibilityRole="button"
+                accessibilityLabel={`Фон ${c}`}
+                accessibilityState={{ selected: page.bg === c }}
+                onPress={() => onChange(setPageBg(layout, pageIndex, c))}
+                style={[styles.swatch, { backgroundColor: c }, page.bg === c && styles.swatchOn]}
+              />
+            ))}
+            <Chip label="Как в теме" onPress={() => onChange(setPageBg(layout, pageIndex, null))} disabled={page.bg === undefined} />
+          </View>
+
+          <Text style={styles.label}>Подписи</Text>
+          <View style={styles.row}>
+            {TEXT_STYLE_IDS.map((id) => (
+              <Chip
+                key={id}
+                label={`+ ${TEXT_STYLES[id].label}`}
+                onPress={() => onChange(addPageText(layout, pageIndex, { text: TEXT_STYLES[id].sample, x: 0.5, y: 0.88, style: id }))}
+                disabled={(page.texts?.length ?? 0) >= MAX_PAGE_TEXTS}
+              />
+            ))}
+          </View>
+          {(page.texts ?? []).map((t, i) => (
+            <View key={`${i}-${t.style}`} style={styles.textRow}>
+              <TextInput
+                defaultValue={t.text}
+                onEndEditing={(e) => {
+                  const text = e.nativeEvent.text.trim();
+                  if (text && text !== t.text) onChange(updatePageText(layout, pageIndex, i, { text }));
+                }}
+                maxLength={120}
+                style={styles.input}
+                accessibilityLabel={`Текст подписи ${i + 1}`}
+              />
+              <Slider
+                label="Выше / ниже"
+                value={Math.round(t.y * 100)}
+                min={5}
+                max={95}
+                step={1}
+                format={(v) => `${v}%`}
+                onChange={() => undefined}
+                onCommit={(v) => onChange(updatePageText(layout, pageIndex, i, { y: v / 100 }))}
+              />
+              <Chip label="Удалить подпись" onPress={() => onChange(removePageText(layout, pageIndex, i))} />
+            </View>
+          ))}
 
           {cell && cellRef ? (
             <>
@@ -374,6 +465,12 @@ const styles = StyleSheet.create({
   chipText: { ...typography.bodyStrong, color: lightColors.text },
   chipTextOn: { color: '#FFFFFF' },
   hint: { ...typography.caption, color: lightColors.textSecondary },
+  swatch: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: lightColors.borderStrong },
+  swatchOn: { borderColor: lightColors.accent, borderWidth: 3 },
+  textRow: { gap: space[1], padding: space[2], borderRadius: radius.input, backgroundColor: lightColors.surfaceMuted },
+  input: { minHeight: 44, paddingHorizontal: space[3], borderRadius: radius.input, borderWidth: 1.5, borderColor: lightColors.borderStrong, backgroundColor: lightColors.surface, color: lightColors.text, ...typography.body },
+  bleed: { position: 'absolute', borderWidth: 1, borderStyle: 'dashed', borderColor: lightColors.danger },
+  fold: { position: 'absolute', top: 0, bottom: 0, backgroundColor: 'rgba(221, 87, 87, 0.18)' },
   strip: { gap: space[2], paddingVertical: space[1] },
   thumb: { width: 64, height: 64, borderRadius: radius.photo, backgroundColor: lightColors.border },
   thumbOn: { borderWidth: 2, borderColor: lightColors.accent },

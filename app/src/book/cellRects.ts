@@ -6,11 +6,22 @@ import type { BookTheme, Page, Rect } from '@picpac/shared';
  * Если ячеек меньше, чем нужно шаблону, рисуется одна.
  */
 export function cellRects(template: Page['template'], width: number, height: number, count: number, theme: BookTheme): Rect[] {
+  // Фото во всю страницу: без полей и рамки темы, до самого края.
+  if (template === 'spread-one') return [{ x: 0, y: 0, width, height }];
   const m = theme.marginPct * width;
   const g = theme.gapPct * width;
   if (template === 'two' && count >= 2) {
     const w = (width - m * 2 - g) / 2;
     return [0, 1].map((i) => ({ x: m + i * (w + g), y: m, width: w, height: height - m * 2 }));
+  }
+  if (template === 'three' && count >= 3) {
+    const w = (width - m * 2 - g) / 2;
+    const h = (height - m * 2 - g) / 2;
+    return [
+      { x: m, y: m, width: w, height: height - m * 2 },
+      { x: m + w + g, y: m, width: w, height: h },
+      { x: m + w + g, y: m + h + g, width: w, height: h },
+    ];
   }
   if (template === 'four' && count >= 4) {
     const w = (width - m * 2 - g) / 2;

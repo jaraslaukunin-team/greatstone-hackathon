@@ -32,6 +32,30 @@ describe('layoutSchema', () => {
     });
     expect(r.success).toBe(true);
   });
+  const cell = { photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 } };
+  it('принимает шаблон three, фон и тексты страницы', () => {
+    const r = layoutSchema.safeParse({
+      pages: [
+        {
+          template: 'three',
+          bg: '#EDD5D5',
+          cells: [cell, cell, cell],
+          texts: [{ text: 'Лето 2026', x: 0.5, y: 0.9, style: 'caption' }],
+        },
+      ],
+    });
+    expect(r.success).toBe(true);
+  });
+  it('отклоняет неизвестный стиль текста и точку за пределами страницы', () => {
+    const page = (text: object) => ({ pages: [{ template: 'one', cells: [cell], texts: [text] }] });
+    expect(layoutSchema.safeParse(page({ text: 'a', x: 0.5, y: 0.5, style: 'bold' })).success).toBe(false);
+    expect(layoutSchema.safeParse(page({ text: 'a', x: 1.5, y: 0.5, style: 'title' })).success).toBe(false);
+    expect(layoutSchema.safeParse(page({ text: 'a', x: 0.5, y: -0.1, style: 'title' })).success).toBe(false);
+  });
+  it('отклоняет слишком длинный текст', () => {
+    const long = 'я'.repeat(201);
+    expect(layoutSchema.safeParse({ pages: [{ template: 'one', cells: [cell], texts: [{ text: long, x: 0.5, y: 0.5, style: 'title' }] }] }).success).toBe(false);
+  });
   it('сохраняет themeId, а макет без него остаётся валидным', () => {
     const pages = [{ template: 'one', cells: [{ photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 } }] }];
     expect(layoutSchema.parse({ pages, themeId: 'film' }).themeId).toBe('film');

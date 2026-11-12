@@ -1,8 +1,9 @@
 import { fitRect, type BookTheme, type Cell, type Page, type Rect } from '@picpac/shared';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { lightColors } from '../theme/theme';
 import { cellRects } from './cellRects';
 import type { SourceOf } from './imageSource';
+import { TEXT_STYLES } from './textStyles';
 
 type Props = {
   page: Page | null;
@@ -51,14 +52,41 @@ function CellView({ cell, rect, sourceOf, theme }: { cell: Cell; rect: Rect; sou
   );
 }
 
-/** Одна страница книги: лист цвета темы с фото по шаблону. Без страницы (null) рисуется пустая подложка. */
+/** Одна страница книги: лист (цвет темы или свой фон) с фото по шаблону и подписями. Без страницы (null) рисуется пустая подложка. */
 export function PageView({ page, sourceOf, width, height, theme }: Props) {
   const rects = page ? cellRects(page.template, width, height, page.cells.length, theme) : [];
   return (
-    <View style={[styles.sheet, { width, height, backgroundColor: theme.pageBg }]}>
+    <View style={[styles.sheet, { width, height, backgroundColor: page?.bg ?? theme.pageBg }]}>
       {page?.cells.map((cell, i) => {
         const rect = rects[i];
         return rect ? <CellView key={i} cell={cell} rect={rect} sourceOf={sourceOf} theme={theme} /> : null;
+      })}
+      {page?.texts?.map((t, i) => {
+        const style = TEXT_STYLES[t.style];
+        if (!style) return null;
+        const size = style.size * width;
+        const boxW = width * 0.8;
+        // x, y — центр подписи: блок шире текста, поэтому центрируем его и сам текст.
+        return (
+          <Text
+            key={`t${i}`}
+            pointerEvents="none"
+            numberOfLines={3}
+            style={{
+              position: 'absolute',
+              left: Math.min(width - boxW, Math.max(0, t.x * width - boxW / 2)),
+              top: Math.max(0, t.y * height - size * 0.7),
+              width: boxW,
+              textAlign: 'center',
+              fontFamily: style.font,
+              fontSize: size,
+              lineHeight: size * 1.25,
+              color: lightColors.text,
+            }}
+          >
+            {t.text}
+          </Text>
+        );
       })}
     </View>
   );

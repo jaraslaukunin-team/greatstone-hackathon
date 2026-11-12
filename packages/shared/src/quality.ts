@@ -4,8 +4,10 @@ import type { Layout, Page } from './types';
 export const CELL_WIDTH_FRACTION: Record<Page['template'], number> = {
   one: 1,
   two: 1,
+  three: 0.5,
   four: 0.5,
-  'spread-one': 2,
+  // Одно фото во всю страницу, а не через разворот, поэтому как «one».
+  'spread-one': 1,
 };
 
 const LOW_DPI = 150;
