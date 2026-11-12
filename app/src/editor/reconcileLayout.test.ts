@@ -17,6 +17,11 @@ describe('reconcileLayout', () => {
     expect(r.seen?.sort()).toEqual(['a', 'b']);
   });
 
+  it('сохраняет пустой выбранный шаблон, когда новые фото добавлены в лоток', () => {
+    const previous: Layout = { pages: [{ template: 'two', cells: [page(null).cells[0]!, page(null).cells[0]!] }], seen: ['a'] };
+    expect(reconcileLayout(previous, [photo('a')], limits)).toBe(previous);
+  });
+
   it('убранное пользователем фото не возвращается, правки остаются', () => {
     const previous: Layout = { pages: [page('a'), page(null)], seen: ['a', 'b'] };
     const r = reconcileLayout(previous, [photo('a'), photo('b')], limits);

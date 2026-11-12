@@ -1,6 +1,6 @@
 import type { ProjectDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { ApiRequestError } from '../../src/api/client';
@@ -23,7 +23,7 @@ export default function InviteScreen() {
   const [needsPassword, setNeedsPassword] = useState(true);
   const token = params.token ?? parseInviteUrl(String(params.url ?? '')) ?? null;
 
-  async function accept(opts?: { password?: string; childName?: string }) {
+  const accept = useCallback(async (opts?: { password?: string; childName?: string }) => {
     if (!token) {
       setState('failed');
       setMessage('Ссылка недействительна');
@@ -55,11 +55,13 @@ export default function InviteScreen() {
     } finally {
       setBusy(false);
     }
-  }
+  }, [client, token]);
 
   useEffect(() => {
-    void accept();
-  }, [client, token]);
+    let active = true;
+    void Promise.resolve().then(() => { if (active) void accept(); });
+    return () => { active = false; };
+  }, [accept]);
 
   const canJoin =
     childName.trim().length > 0 && (!needsPassword || password.length > 0) && !busy;

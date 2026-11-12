@@ -10,9 +10,9 @@ import { useT } from '../../src/i18n/useT';
 
 /** Вкладки в нижнем баре (без профиля — он в шапке). */
 const barTabNames = ['index', 'designs', 'editor', 'cart', 'orders'] as const;
-const allTabNames = [...barTabNames, 'profile'] as const;
+type TabName = (typeof barTabNames)[number] | 'profile';
 
-const tabIcons: Record<(typeof allTabNames)[number], IconName> = {
+const tabIcons: Record<TabName, IconName> = {
   index: 'home',
   designs: 'folder',
   editor: 'pencil',
@@ -21,7 +21,7 @@ const tabIcons: Record<(typeof allTabNames)[number], IconName> = {
   profile: 'user',
 };
 
-const tabHrefs: Record<(typeof allTabNames)[number], Href> = {
+const tabHrefs: Record<TabName, Href> = {
   index: '/(tabs)',
   designs: '/(tabs)/designs',
   editor: '/(tabs)/editor',
@@ -49,7 +49,7 @@ function TabBar({ state, descriptors }: TabBarProps) {
             : typeof options.title === 'string'
               ? options.title
               : route.name;
-        const name = route.name as (typeof allTabNames)[number];
+        const name = route.name as TabName;
         const icon = tabIcons[name] ?? 'home';
         const color = focused ? lightColors.accent : lightColors.textSecondary;
 
@@ -82,7 +82,7 @@ function TabBar({ state, descriptors }: TabBarProps) {
 export default function TabsLayout() {
   const t = useT();
 
-  const tabTitles: Record<(typeof allTabNames)[number], string> = {
+  const tabTitles: Record<TabName, string> = {
     index: t.tabs.home,
     designs: t.tabs.designs,
     editor: t.tabs.editor,

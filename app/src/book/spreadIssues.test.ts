@@ -5,7 +5,7 @@ const crop = { x: 0, y: 0, scale: 1, rotation: 0 as const };
 const meta = (id: string, width: number): PhotoMeta => ({ id, width, height: Math.round(width * 0.67), takenAt: null });
 const variant = { pageWidthCm: 20 };
 
-function layoutOf(photoIds: Array<string | null>): Layout {
+function layoutOf(photoIds: (string | null)[]): Layout {
   return { pages: photoIds.map((photoId) => ({ template: 'one' as const, cells: [{ photoId, crop: { ...crop } }] })) };
 }
 

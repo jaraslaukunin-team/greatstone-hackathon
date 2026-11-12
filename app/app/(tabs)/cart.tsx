@@ -31,8 +31,11 @@ export default function CartScreen() {
       ? freeDeliveryHint(goodsKop, delivery.freeFromKop)
       : null;
 
+  const appliedPromo = promoApplied ? promoCode.trim() : undefined;
+
   useEffect(() => {
     if (!draft) return;
+    let active = true;
     ensureIdempotencyKey(draft, setIdempotencyKey);
     void client
       .post<QuoteResponse>('/price-quote', {
@@ -40,9 +43,10 @@ export default function CartScreen() {
         pages: billablePages(draft.layout),
         quantity: 1,
         delivery: 'belpost',
-        promoCode: promoApplied ? promoCode.trim() : undefined,
+        promoCode: appliedPromo,
       })
       .then((q) => {
+        if (!active) return;
         setQuote(q);
         if (promoApplied && !q.promoApplied) {
           setPromoError('Промокод не применён');
@@ -50,8 +54,9 @@ export default function CartScreen() {
           setPromoError(null);
         }
       })
-      .catch(() => setQuote(null));
-  }, [client, draft, setIdempotencyKey, promoApplied]);
+       .catch(() => { if (active) setQuote(null); });
+    return () => { active = false; };
+  }, [client, draft, setIdempotencyKey, promoApplied, appliedPromo]);
 
   function applyPromo() {
     if (!promoCode.trim()) return;

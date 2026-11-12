@@ -1,3 +1,4 @@
+import { HeaderBackground } from '../../src/ui/HeaderEdge';
 import { Redirect, Tabs, router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../src/auth/AuthProvider';
@@ -7,7 +8,7 @@ import { Button } from '../../src/ui/Button';
 import { Icon, type IconName } from '../../src/ui/Icon';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
-const items: ReadonlyArray<{ name: string; title: string; icon: IconName }> = [
+const items: readonly { name: string; title: string; icon: IconName }[] = [
   { name: 'index', title: 'Заказы', icon: 'doc' },
   { name: 'inbox', title: 'Обращения', icon: 'info' },
   { name: 'audit', title: 'Журнал', icon: 'lock' },
@@ -50,6 +51,8 @@ export default function StaffLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
+        headerBackground: HeaderBackground,
+        headerShadowVisible: false,
         headerStyle: { backgroundColor: lightColors.bg },
         headerTitleStyle: { ...typography.h2, color: lightColors.text },
         tabBarActiveTintColor: lightColors.text,

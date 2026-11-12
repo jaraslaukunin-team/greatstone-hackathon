@@ -38,6 +38,8 @@ export function reconcileLayout(
 ): Layout {
   const ids = photos.map((p) => p.id);
   if (!hasContent(previous)) {
+    const seen = new Set(previous.seen);
+    if (previous.pages.length && ids.length && ids.every((id) => seen.has(id))) return previous;
     return { ...autoLayoutLocal(photos, limits), seen: ids };
   }
   if (!previous.seen) return markSeen(previous, ids);

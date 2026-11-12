@@ -1,5 +1,5 @@
 import type { CreateOrderRequest, OrderDTO, QuoteResponse } from '@picpac/shared';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ApiRequestError, NetworkError, type ApiClient } from '../api/client';
 import { ensureIdempotencyKey } from './idempotency';
 import type { ProjectDraft } from '../project/projectStore';
@@ -75,23 +75,22 @@ export function createCheckoutController(opts: Options) {
 }
 
 export function useCheckout(opts: Options) {
-  const controllerRef = useRef(createCheckoutController(opts));
-  controllerRef.current = createCheckoutController(opts);
+  const controller = createCheckoutController(opts);
   const [error, setError] = useState<string | null>(null);
 
   const submit = useCallback(async () => {
     setError(null);
     try {
-      return await controllerRef.current.submit();
+      return await controller.submit();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка оформления');
       throw e;
     }
-  }, []);
+  }, [controller]);
 
   return {
-    ensureIdempotencyKey: () => controllerRef.current.ensureKey(),
-    quote: () => controllerRef.current.quote(),
+    ensureIdempotencyKey: () => controller.ensureKey(),
+    quote: () => controller.quote(),
     submit,
     error,
   };

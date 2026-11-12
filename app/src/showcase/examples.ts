@@ -5,7 +5,7 @@ export type ExamplePhoto = {
   /** Stable id referenced in the layout cells. */
   id: string;
   /** React Native image asset (static require). */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   asset: any;
   width: number;
   height: number;
@@ -109,7 +109,7 @@ const GRADUATION_LAYOUT: Layout = {
 // Photo registries (static require — resolved at bundle time)
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+
 const FILM_PHOTOS: ExamplePhoto[] = [
   { id: 'film_1', asset: require('../../assets/showcase/film_1.jpg'), width: 400, height: 400 },
   { id: 'film_2', asset: require('../../assets/showcase/film_2.jpg'), width: 400, height: 400 },
@@ -133,7 +133,7 @@ const GRADUATION_PHOTOS: ExamplePhoto[] = [
   { id: 'graduation_2', asset: require('../../assets/showcase/graduation_2.jpg'), width: 400, height: 400 },
   { id: 'graduation_3', asset: require('../../assets/showcase/graduation_3.jpg'), width: 400, height: 400 },
 ];
-/* eslint-enable @typescript-eslint/no-require-imports */
+
 
 // ---------------------------------------------------------------------------
 // Exported EXAMPLES

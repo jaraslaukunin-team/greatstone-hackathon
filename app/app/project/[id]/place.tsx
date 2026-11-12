@@ -1,3 +1,4 @@
+import { AddProjectPhotos } from '../../../src/photos/AddProjectPhotos';
 import { themeById } from '@picpac/shared';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -34,7 +35,7 @@ export default function PlaceScreen() {
   const { width: winW } = useWindowDimensions();
   const draft = useProjectStore((s) => s.draft);
   const setLayout = useProjectStore((s) => s.setLayout);
-  const { photoList, sourceOf } = useProjectPhotos(client, id);
+  const { photoList, sourceOf, addPhoto } = useProjectPhotos(client, id);
   const [tab, setTab] = useState<Tab>('template');
   const [cell, setCell] = useState<{ pageIndex: number; cellIndex: number } | null>(null);
   const [photoId, setPhotoId] = useState<string | null>(null);
@@ -235,16 +236,7 @@ export default function PlaceScreen() {
           );
         })}
       </ScrollView>
-      {!ordered ? (
-        <Button
-          title="Загрузить с телефона"
-          variant="secondary"
-          onPress={() => router.push({
-            pathname: '/project/[id]/photos',
-            params: { id, returnToPlace: '1' },
-          })}
-        />
-      ) : null}
+      {!ordered && id ? <AddProjectPhotos projectId={id} onAdded={addPhoto} /> : null}
 
       <Button title="Разместить фото" disabled={ordered || !cellValid || !photoId} onPress={place} />
       <Text style={styles.hint}>{cellValid && photoId ? 'В выделенную ячейку · выбрано 1 фото' : 'Выберите ячейку и фото'}</Text>

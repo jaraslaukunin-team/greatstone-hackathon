@@ -61,7 +61,7 @@ export type Strings = {
   };
   faq: {
     title: string;
-    items: Array<{ q: string; a: string }>;
+    items: { q: string; a: string }[];
   };
   about: {
     title: string;

@@ -1,5 +1,5 @@
 import type { BookTheme, Layout } from '@picpac/shared';
-import { useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { PanResponder, Pressable, StyleSheet, View } from 'react-native';
 import { lightColors } from '../theme/theme';
 import type { SourceOf } from './imageSource';
@@ -51,7 +51,7 @@ const isLockedRef = (layout: Layout, ref: LayerRef) => {
 /** Разворот со свободными слоями: тап выбирает слой, перетаскивание двигает, угловой маркер меняет размер. */
 export function FreeCanvas({ layout, pageIndexes, selected, onSelect, onChange, sourceOf, theme, pageW, pageWidthCm, disabled }: Props) {
   const latest = useRef({ layout, selected, pageIndexes, pageW, onSelect, onChange, disabled });
-  latest.current = { layout, selected, pageIndexes, pageW, onSelect, onChange, disabled };
+  useLayoutEffect(() => { latest.current = { layout, selected, pageIndexes, pageW, onSelect, onChange, disabled }; });
   const start = useRef<{ layout: Layout; ref: LayerRef; x: number; y: number; w: number } | null>(null);
 
   const grab = () => {
@@ -72,6 +72,7 @@ export function FreeCanvas({ layout, pageIndexes, selected, onSelect, onChange, 
 
   const drag = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- PanResponder.create registers these callbacks and reads the refs only during gestures.
       PanResponder.create({
         onStartShouldSetPanResponder: () => canEdit(),
         onMoveShouldSetPanResponder: () => canEdit(),
@@ -100,12 +101,13 @@ export function FreeCanvas({ layout, pageIndexes, selected, onSelect, onChange, 
         },
       }),
     // Обработчики читают свежие значения из latest.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [],
   );
 
   const resize = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- PanResponder.create registers these callbacks and reads the refs only during gestures.
       PanResponder.create({
         onStartShouldSetPanResponder: () => canEdit(),
         onMoveShouldSetPanResponder: () => canEdit(),
@@ -121,7 +123,7 @@ export function FreeCanvas({ layout, pageIndexes, selected, onSelect, onChange, 
           start.current = null;
         },
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [],
   );
 

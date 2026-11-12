@@ -1,5 +1,5 @@
 import type { Layout } from '@picpac/shared';
-import { useEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useEffect, useMemo, useRef } from 'react';
 import type { ApiClient } from '../api/client';
 import { createDebouncedSaver } from './debouncedSaver';
 import { useProjectStore } from './projectStore';
@@ -20,7 +20,7 @@ export function useDebouncedSync(
   onRejected?: (code: 'PROJECT_ORDERED' | 'LAYOUT_INVALID') => void,
 ) {
   const rejectedRef = useRef(onRejected);
-  rejectedRef.current = onRejected;
+  useLayoutEffect(() => { rejectedRef.current = onRejected; });
   const layout = useProjectStore((s) => s.draft?.layout);
   const setSyncState = useProjectStore((s) => s.setSyncState);
   const baseline = useRef<Layout | undefined>(undefined);
@@ -60,6 +60,7 @@ export function useDebouncedSync(
         },
       });
     }
+    // eslint-disable-next-line react-hooks/refs -- The debouncer invokes save only after a layout is scheduled.
     return createDebouncedSaver<Layout>((next) => save(next), DELAY_MS);
   }, [client, projectId, setSyncState]);
 

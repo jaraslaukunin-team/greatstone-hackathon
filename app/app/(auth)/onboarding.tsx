@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -14,8 +14,6 @@ import { PrintStack } from '../../src/ui/PrintStack';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-
-const ICONS = ['heart', 'camera', 'image'] as const;
 
 function OnboardingCard({ title, body, index }: { title: string; body: string; index: number }) {
   return (
@@ -49,14 +47,15 @@ export default function OnboardingScreen() {
     }
   }
 
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ index?: number | null; item: unknown }> }) => {
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: { index?: number | null; item: unknown }[] }) => {
       const first = viewableItems[0];
       if (first != null && first.index != null) {
         setCurrent(first.index);
       }
     },
-  ).current;
+    [],
+  );
 
   const isLast = current === cards.length - 1;
 

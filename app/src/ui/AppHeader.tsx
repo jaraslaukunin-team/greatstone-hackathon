@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useT } from '../i18n/useT';
 import { lightColors, space } from '../theme/theme';
+import { HeaderEdge } from './HeaderEdge';
 import { Wordmark } from './Wordmark';
 
 const LOGO_H = 38;
@@ -43,6 +44,7 @@ export function AppHeader() {
           </View>
         </Pressable>
       </View>
+      <HeaderEdge />
     </View>
   );
 }

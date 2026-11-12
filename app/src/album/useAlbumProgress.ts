@@ -3,14 +3,14 @@ import type { ApiClient } from '../api/client';
 
 export type AlbumProgress = {
   expected: number | null;
-  members: Array<{
+  members: {
     userId: string;
     childName: string | null;
     photosCount: number;
     wish?: string | null;
     videoUrl?: string | null;
     displayName?: string | null;
-  }>;
+  }[];
 };
 
 export function useAlbumProgress(client: ApiClient, albumId: string | null) {
@@ -18,10 +18,7 @@ export function useAlbumProgress(client: ApiClient, albumId: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!albumId) {
-      setProgress(null);
-      return;
-    }
+    if (!albumId) return;
     let cancelled = false;
     const load = async () => {
       try {
@@ -42,5 +39,5 @@ export function useAlbumProgress(client: ApiClient, albumId: string | null) {
     };
   }, [albumId, client]);
 
-  return { progress, error };
+  return { progress: albumId ? progress : null, error: albumId ? error : null };
 }

@@ -1,3 +1,4 @@
+import { AddProjectPhotos } from '../../../src/photos/AddProjectPhotos';
 import { DEFAULT_THEME_ID, formatByn, themeById, type CatalogDTO, type PhotoDTO, type ProjectDTO, type Rect } from '@picpac/shared';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -61,10 +62,17 @@ export default function OverviewScreen() {
   const resume = useRef<{ pageIndex: number; rect: Rect } | null>(null);
   const editResults = useEditResult((s) => s.results);
   const sourceOf = useMemo(() => projectSource(photoMap, client.resolveUrl), [photoMap, client.resolveUrl]);
+  function addPhoto(photo: PhotoDTO) {
+    setPhotoMap((map) => new Map(map).set(photo.id, photo));
+  }
+  const photoUpload = draft?.project.status === 'draft' && id
+    ? <AddProjectPhotos projectId={id} onAdded={addPhoto} />
+    : undefined;
   const photoList = useMemo(() => Array.from(photoMap.values()), [photoMap]);
+  const layoutForIssues = draft?.layout;
   const issues = useMemo(
-    () => (draft?.layout ? spreadIssues(draft.layout, Object.fromEntries(photoMap), { pageWidthCm: limits.widthCm }) : []),
-    [draft?.layout, photoMap, limits.widthCm],
+    () => layoutForIssues ? spreadIssues(layoutForIssues, Object.fromEntries(photoMap), { pageWidthCm: limits.widthCm }) : [],
+    [layoutForIssues, photoMap, limits.widthCm],
   );
   const pageCount = draft?.layout?.pages.length ?? 0;
   const quote = useVariantPrice(draft?.project.variantId ?? null, Math.max(1, pageCount));
@@ -106,7 +114,7 @@ export default function OverviewScreen() {
 
   // Ссылка вида ?page=N (в том числе пришедшая с экрана расстановки фото) открывает правку этой страницы.
   // Параметр сбрасывается после обработки, чтобы тот же номер можно было открыть ещё раз; заказанный проект не правится.
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (pageParam === undefined) {
       handledParam.current = undefined;
       return;
@@ -118,7 +126,7 @@ export default function OverviewScreen() {
       setEditing({ pageIndex: n, rect: { x: winW / 2 - 80, y: winH / 2 - 80, width: 160, height: 160 } });
     }
     router.setParams({ page: undefined });
-  }, [busy, pageParam, draft, ordered, winW, winH]);
+  }, [busy, pageParam, draft, ordered, winW, winH]));
 
   useEffect(() => {
     let cancelled = false;
@@ -345,6 +353,7 @@ export default function OverviewScreen() {
           layout={draft.layout}
           projectTitle={draft.project.title}
           photos={photoList}
+          photoUpload={photoUpload}
           sourceOf={sourceOf}
           theme={themeById(draft.layout.themeId)}
           onChange={setLayout}
@@ -362,6 +371,7 @@ export default function OverviewScreen() {
           pagesMin={limits.min}
           pagesMax={limits.max}
           pageWidthCm={limits.widthCm}
+          photoUpload={photoUpload}
           onChange={setLayout}
           canEditPhoto={(p) => draft.project.ownerId === user?.id || p.uploadedBy === user?.id}
           onOpenPhotoEditor={(photoId, ref) => {

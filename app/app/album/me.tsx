@@ -33,7 +33,6 @@ export default function MyWishScreen() {
 
   useEffect(() => {
     if (!projectId || !user) return;
-    setLoadError(false);
     void Promise.all([
       client.get<AlbumProgressDTO>(`/projects/${projectId}/progress`),
       client.get<PhotoDTO[]>(`/projects/${projectId}/photos`),
@@ -46,6 +45,7 @@ export default function MyWishScreen() {
           setVideoUrl(me.videoUrl ?? '');
         }
         setPhotos(photoList);
+        setLoadError(false);
         setLoaded(true);
       })
       // Не удалось загрузить сохранённое: форму не открываем, иначе «Сохранить» перезапишет пожелание пустым.

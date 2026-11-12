@@ -1,4 +1,6 @@
 // Mock AsyncStorage before importing the store (which uses it via zustand/persist)
+import { useSettingsStore } from './settingsStore';
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
@@ -13,8 +15,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     multiRemove: jest.fn(() => Promise.resolve()),
   },
 }));
-
-import { useSettingsStore } from './settingsStore';
 
 // Reset store to defaults between tests
 beforeEach(() => {

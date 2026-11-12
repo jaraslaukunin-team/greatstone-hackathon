@@ -1,3 +1,6 @@
+import { createOrderPoller } from './useOrderPolling';
+import type { OrderDTO } from '@picpac/shared';
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
@@ -6,9 +9,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     removeItem: jest.fn(() => Promise.resolve()),
   },
 }));
-
-import { createOrderPoller } from './useOrderPolling';
-import type { OrderDTO } from '@picpac/shared';
 
 function order(status: OrderDTO['status']): OrderDTO {
   return {
@@ -31,7 +31,7 @@ describe('createOrderPoller', () => {
   it('обновляет статус и останавливается на финальном', async () => {
     const statuses: OrderDTO['status'][] = ['accepted', 'moderation', 'completed'];
     let i = 0;
-    const timers: Array<() => void> = [];
+    const timers: (() => void)[] = [];
     const poller = createOrderPoller({
       getOrder: async () => order(statuses[Math.min(i++, statuses.length - 1)]!),
       intervalMs: 10,

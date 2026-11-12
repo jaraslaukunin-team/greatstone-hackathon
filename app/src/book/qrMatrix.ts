@@ -1,5 +1,5 @@
 import { httpsUrlSchema } from '@picpac/shared';
-import qrcode from 'qrcode-generator';
+import createQr from 'qrcode-generator';
 
 /**
  * Матрица QR-кода (true — тёмный модуль) для https-ссылки. Другие схемы (javascript:, http:, ftp:) и не-ссылки
@@ -7,7 +7,7 @@ import qrcode from 'qrcode-generator';
  */
 export function qrMatrix(url: string): boolean[][] | null {
   if (!httpsUrlSchema.safeParse(url).success) return null;
-  const qr = qrcode(0, 'M');
+  const qr = createQr(0, 'M');
   qr.addData(url);
   qr.make();
   const n = qr.getModuleCount();

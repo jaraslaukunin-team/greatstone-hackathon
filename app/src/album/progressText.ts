@@ -1,7 +1,7 @@
-export type ProgressLike = { expected: number | null; members: Array<{ photosCount: number }> } | null;
+export type ProgressLike = { expected: number | null; members: { photosCount: number }[] } | null;
 
 /** Сколько человек уже добавили фото (участник без фото не считается). */
-export function addedCount(members: Array<{ photosCount: number }>): number {
+export function addedCount(members: { photosCount: number }[]): number {
   return members.filter((m) => m.photosCount > 0).length;
 }
 

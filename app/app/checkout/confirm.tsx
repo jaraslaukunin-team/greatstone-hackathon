@@ -1,4 +1,4 @@
-import type { DeliveryMethodId, OrderDTO, PaymentMethod, QuoteResponse } from '@picpac/shared';
+import type { DeliveryMethodId, PaymentMethod, QuoteResponse } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';

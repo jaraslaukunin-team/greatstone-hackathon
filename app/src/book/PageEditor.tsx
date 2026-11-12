@@ -1,5 +1,6 @@
+import { HeaderEdge } from '../ui/HeaderEdge';
 import type { BookTheme, Cell, Layout, Page, PhotoDTO, Rect } from '@picpac/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -48,6 +49,7 @@ type Props = {
   /** Все фото проекта: из них выбирается замена. */
   photos: PhotoDTO[];
   sourceOf: SourceOf;
+  photoUpload?: React.ReactNode;
   theme: BookTheme;
   /** Прямоугольник страницы в окне: правка «вырастает» из него. */
   originRect: Rect;
@@ -98,7 +100,7 @@ export function PageEditor(props: Props) {
   const [showPhotos, setShowPhotos] = useState(false);
   const [live, setLive] = useState<Live | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => undefined);
@@ -107,12 +109,13 @@ export function PageEditor(props: Props) {
     if (reduceMotion) progress.setValue(1);
     else Animated.timing(progress, { toValue: 1, duration: OPEN_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
   }, [progress, reduceMotion]);
-  // При переходе на другую страницу выбор ячейки сбрасывается.
-  useEffect(() => {
+  const [previousPage, setPreviousPage] = useState(pageIndex);
+  if (previousPage !== pageIndex) {
+    setPreviousPage(pageIndex);
     setSelected(null);
     setShowPhotos(false);
     setLive(null);
-  }, [pageIndex]);
+  }
 
   const rects = useMemo(
     () => (page ? cellRects(page.template, size, size, page.cells.length, theme, page.gap) : []),
@@ -121,7 +124,7 @@ export function PageEditor(props: Props) {
 
   // Актуальное состояние для обработчиков жестов (PanResponder создаётся один раз).
   const state = useRef({ page, selected, rects, layout, pageIndex, sourceOf, onChange });
-  state.current = { page, selected, rects, layout, pageIndex, sourceOf, onChange };
+  useLayoutEffect(() => { state.current = { page, selected, rects, layout, pageIndex, sourceOf, onChange }; });
   const gesture = useRef<{ start: Cell['crop']; startDist: number | null; startScale: number } | null>(null);
 
   function cropFor(cellIndex: number, proposal: Cell['crop']): Cell['crop'] | null {
@@ -142,6 +145,7 @@ export function PageEditor(props: Props) {
 
   const pan = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- PanResponder.create registers these callbacks and reads the refs only during gestures.
       PanResponder.create({
         // Тап проходит к кнопке ячейки; жест начинается, только когда палец пошёл.
         onMoveShouldSetPanResponder: (_e, g) => {
@@ -187,7 +191,7 @@ export function PageEditor(props: Props) {
   );
 
   const liveRef = useRef<Live | null>(null);
-  liveRef.current = live;
+  useLayoutEffect(() => { liveRef.current = live; });
   function finishGesture() {
     const l = liveRef.current;
     gesture.current = null;
@@ -263,6 +267,7 @@ export function PageEditor(props: Props) {
     <Modal transparent animationType="none" onRequestClose={close} statusBarTranslucent>
       <View style={styles.backdrop}>
         <View style={styles.header}>
+          <HeaderEdge inside />
           <Pressable accessibilityRole="button" accessibilityLabel="Предыдущая страница" disabled={pageIndex === 0} onPress={() => onGoto(pageIndex - 1)} style={[styles.round, pageIndex === 0 && styles.off]}>
             <Text style={styles.roundText}>‹</Text>
           </Pressable>
@@ -410,6 +415,8 @@ export function PageEditor(props: Props) {
                 <Text style={styles.hint}>Чтобы поменять фото местами, удерживайте другую ячейку.</Text>
               ) : null}
               {showPhotos ? (
+                <>
+                {props.photoUpload}
                 <ScrollView horizontal contentContainerStyle={styles.strip}>
                   {photos.map((p) => {
                     const info = sourceOf(p.id);
@@ -420,6 +427,7 @@ export function PageEditor(props: Props) {
                     );
                   })}
                 </ScrollView>
+                </>
               ) : null}
             </>
           ) : (

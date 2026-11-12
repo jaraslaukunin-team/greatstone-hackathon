@@ -9,7 +9,7 @@ import { Card } from '../../src/ui/Card';
 import { EmptyState } from '../../src/ui/EmptyState';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
-const FILTERS: Array<{ id: OrderStatus | 'all'; title: string }> = [
+const FILTERS: { id: OrderStatus | 'all'; title: string }[] = [
   { id: 'all', title: 'Все' },
   { id: 'accepted', title: 'Принятые' },
   { id: 'moderation', title: 'Проверка' },
@@ -24,13 +24,17 @@ export default function StaffOrdersScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setOrders(null);
-    setError(null);
+    let active = true;
     const path = filter === 'all' ? '/operator/orders' : `/operator/orders?status=${filter}`;
     void client
       .get<OrderDTO[]>(path)
-      .then(setOrders)
-      .catch(() => setError('Не удалось загрузить заказы'));
+      .then((next) => {
+        if (active) setOrders(next);
+      })
+      .catch(() => {
+        if (active) setError('Не удалось загрузить заказы');
+      });
+    return () => { active = false; };
   }, [client, filter]);
 
   return (
@@ -41,7 +45,12 @@ export default function StaffOrdersScreen() {
             key={f.id}
             title={f.title}
             variant={f.id === filter ? 'primary' : 'secondary'}
-            onPress={() => setFilter(f.id)}
+            onPress={() => {
+              if (f.id === filter) return;
+              setOrders(null);
+              setError(null);
+              setFilter(f.id);
+            }}
           />
         ))}
       </View>

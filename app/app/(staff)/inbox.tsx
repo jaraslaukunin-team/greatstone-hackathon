@@ -21,10 +21,12 @@ export default function StaffInboxScreen() {
   const [error, setError] = useState<string | null>(null);
 
   function load() {
-    setError(null);
     void client
       .get<InteractionDTO[]>('/interactions')
-      .then(setItems)
+      .then((items) => {
+        setItems(items);
+        setError(null);
+      })
       .catch(() => setError('Не удалось загрузить обращения'));
   }
   useEffect(load, [client]);

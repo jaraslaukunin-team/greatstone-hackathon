@@ -1,3 +1,4 @@
+import { AddProjectPhotos } from '../../../src/photos/AddProjectPhotos';
 import { themeById, type Layout } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -37,7 +38,7 @@ export default function FreeScreen() {
   const { width: winW } = useWindowDimensions();
   const draft = useProjectStore((s) => s.draft);
   const setLayout = useProjectStore((s) => s.setLayout);
-  const { photoList, photoMap, sourceOf } = useProjectPhotos(client, id);
+  const { photoList, photoMap, sourceOf, addPhoto } = useProjectPhotos(client, id);
   useDebouncedSync(client, id, !!draft && draft.project.id === id);
   const [selected, setSelected] = useState<LayerRef | null>(null);
   const [panel, setPanel] = useState<Panel>('none');
@@ -119,6 +120,8 @@ export default function FreeScreen() {
       </View>
 
       {panel === 'photos' ? (
+        <>
+        {!ordered && id ? <AddProjectPhotos projectId={id} onAdded={addPhoto} /> : null}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tray}>
           {photoList.map((p) => {
             const info = sourceOf(p.id);
@@ -140,6 +143,7 @@ export default function FreeScreen() {
             );
           })}
         </ScrollView>
+        </>
       ) : null}
       {panel === 'text' ? (
         <View style={styles.chips}>

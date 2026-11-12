@@ -22,7 +22,7 @@ import type { Layout } from '@picpac/shared';
 
 const crop = { x: 0, y: 0, scale: 1, rotation: 0 as const };
 
-function layoutWith(photos: Array<string | null>): Layout {
+function layoutWith(photos: (string | null)[]): Layout {
   return {
     pages: photos.map((photoId) => ({
       template: 'one' as const,

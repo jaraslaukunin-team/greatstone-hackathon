@@ -1,56 +1,52 @@
-import type { AiJobDTO, PhotoDTO } from '@picpac/shared';
-import type { AspectRatio } from '@picpac/shared';
+import type { AiJobDTO, PhotoDTO, AspectRatio } from '@picpac/shared';
 import { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../api/client';
 
 type Status = 'idle' | 'pending' | 'done' | 'failed';
 
 export function useAiJob(client: ApiClient, jobId: string | null) {
-  const [status, setStatus] = useState<Status>(jobId ? 'pending' : 'idle');
-  const [result, setResult] = useState<PhotoDTO | undefined>();
-  const [reason, setReason] = useState<string | undefined>();
-  const cancelled = useRef(false);
+  const [snapshot, setSnapshot] = useState<{
+    jobId: string | null;
+    status: Status;
+    result?: PhotoDTO;
+    reason?: string;
+  }>();
+  const stopPolling = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    cancelled.current = false;
-    if (!jobId) {
-      setStatus('idle');
-      return;
-    }
-    setStatus('pending');
-    const timer = setInterval(() => {
-      void (async () => {
-        if (cancelled.current) return;
-        try {
-          const job = await client.get<AiJobDTO>(`/ai/jobs/${jobId}`);
-          if (cancelled.current) return;
-          if (job.status === 'done') {
-            setStatus('done');
-            setResult(job.resultPhoto);
-            clearInterval(timer);
-          } else if (job.status === 'failed') {
-            setStatus('failed');
-            setReason(job.reason);
-            clearInterval(timer);
-          }
-        } catch {
-          // keep polling
+    if (!jobId) return;
+    let cancelled = false;
+    const timer = setInterval(async () => {
+      try {
+        const job = await client.get<AiJobDTO>(`/ai/jobs/${jobId}`);
+        if (cancelled) return;
+        if (job.status === 'done') {
+          setSnapshot({ jobId, status: 'done', result: job.resultPhoto });
+          stop();
+        } else if (job.status === 'failed') {
+          setSnapshot({ jobId, status: 'failed', reason: job.reason });
+          stop();
         }
-      })();
+      } catch {
+        // keep polling
+      }
     }, 1000);
-    return () => {
-      cancelled.current = true;
+    function stop() {
+      cancelled = true;
       clearInterval(timer);
-    };
+    }
+    stopPolling.current = stop;
+    return stop;
   }, [client, jobId]);
 
+  const current = snapshot?.jobId === jobId ? snapshot : undefined;
   return {
-    status,
-    result,
-    reason,
+    status: current?.status ?? (jobId ? 'pending' : 'idle'),
+    result: current?.result,
+    reason: current?.reason,
     cancel() {
-      cancelled.current = true;
-      setStatus('idle');
+      stopPolling.current?.();
+      setSnapshot({ jobId, status: 'idle' });
     },
   };
 }

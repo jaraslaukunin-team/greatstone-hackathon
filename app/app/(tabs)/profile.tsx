@@ -8,26 +8,6 @@ import { useSettingsStore } from '../../src/settings/settingsStore';
 import { Button } from '../../src/ui/Button';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
-function SectionRow({
-  label,
-  onPress,
-  right,
-}: {
-  label: string;
-  onPress?: () => void;
-  right?: React.ReactNode;
-}) {
-  return (
-    <Button
-      title={label}
-      variant="secondary"
-      onPress={onPress ?? (() => undefined)}
-      icon="chevronRight"
-      style={{ justifyContent: 'space-between' }}
-    />
-  );
-}
-
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const client = useApiClient();

@@ -1,5 +1,5 @@
 import type { ProjectDTO } from '@picpac/shared';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import { lightColors, radius, space, typography } from '../theme/theme';
 import { Icon } from '../ui/Icon';
 

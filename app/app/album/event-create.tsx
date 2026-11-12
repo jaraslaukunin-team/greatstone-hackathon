@@ -1,6 +1,6 @@
 import type { ProjectDTO, ThemeId } from '@picpac/shared';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiRequestError } from '../../src/api/client';
 import { useApiClient } from '../../src/api/hooks';
@@ -18,15 +18,13 @@ export default function CreateEventAlbumScreen() {
   const [title, setTitle] = useState('Наша поездка');
   const [password, setPassword] = useState('');
   const [themeId, setThemeId] = useState<ThemeId>('travel');
-  const [variantId, setVariantId] = useState<string | null>(null);
+  const [selectedVariant, setVariantId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const books = catalog.data?.products.find((p) => p.kind === 'photobook');
   const variants = books?.variants ?? [];
 
-  useEffect(() => {
-    if (!variantId && variants[0]) setVariantId(variants[0].id);
-  }, [variantId, variants]);
+  const variantId = selectedVariant ?? variants[0]?.id;
 
   async function create() {
     if (!variantId) return;

@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { lightColors, radius, space, typography } from '../theme/theme';
 
@@ -24,10 +24,10 @@ export function Slider({ label, value, min, max, step = 1, onChange, onCommit, f
   const track = useRef<Measurable | null>(null);
   const box = useRef({ left: 0, width: 1 });
   const latest = useRef(value);
-  latest.current = value;
+  useLayoutEffect(() => { latest.current = value; });
   // Обработчики жеста создаются один раз, поэтому свежие значения берут из ref.
   const cfg = useRef({ min, max, step, onChange, onCommit });
-  cfg.current = { min, max, step, onChange, onCommit };
+  useLayoutEffect(() => { cfg.current = { min, max, step, onChange, onCommit }; });
 
   const pan = useMemo(() => {
     const valueAt = (pageX: number) => {
@@ -42,6 +42,7 @@ export function Slider({ label, value, min, max, step = 1, onChange, onCommit, f
         cfg.current.onChange(v);
       }
     };
+    // eslint-disable-next-line react-hooks/refs -- PanResponder.create registers these callbacks and reads the refs only during gestures.
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,

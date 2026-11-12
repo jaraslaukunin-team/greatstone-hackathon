@@ -1,7 +1,8 @@
+import { HeaderEdge } from '../ui/HeaderEdge';
 import type { CatalogDTO, PhotoDTO, ProjectDTO } from '@picpac/shared';
 import { Canvas, useTypeface } from '@shopify/react-native-skia';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useLayoutEffect, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { ApiRequestError } from '../api/client';
 import { useApiClient } from '../api/hooks';
@@ -70,13 +71,15 @@ export default function EditorScreen() {
   useEffect(() => {
     if (!projectId || !photoId) return;
     let cancelled = false;
-    setLoadError(null);
     client
       .get<PhotoDTO[]>(`/projects/${projectId}/photos`)
       .then((list) => {
         if (cancelled) return;
         const found = list.find((p) => p.id === photoId);
-        if (found) setPhoto(found);
+        if (found) {
+          setPhoto(found);
+          setLoadError(null);
+        }
         else setLoadError('Фото не найдено');
       })
       .catch(() => !cancelled && setLoadError('Не удалось загрузить фото'));
@@ -159,9 +162,10 @@ export default function EditorScreen() {
     texts: null as TextItem[] | null,
   });
   const ctx = useRef({ tab, state, brush, selectedText, pw, ph });
-  ctx.current = { tab, state, brush, selectedText, pw, ph };
+  useLayoutEffect(() => { ctx.current = { tab, state, brush, selectedText, pw, ph }; });
   const pan = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- PanResponder.create registers these callbacks and reads the refs only during gestures.
       PanResponder.create({
         onStartShouldSetPanResponder: () => {
           const c = ctx.current;
@@ -288,6 +292,7 @@ export default function EditorScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
+          <HeaderEdge inside />
         <Pressable accessibilityRole="button" onPress={() => void cancel()} style={styles.headBtn}>
           <Text style={styles.headText}>Отмена</Text>
         </Pressable>

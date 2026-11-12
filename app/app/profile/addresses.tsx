@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useAddressStore } from '../../src/checkout/addressStore';
 import { useT } from '../../src/i18n/useT';
 import { Button } from '../../src/ui/Button';

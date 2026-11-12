@@ -1,3 +1,4 @@
+import { HeaderEdge } from '../ui/HeaderEdge';
 import type { BookTheme, Layout, PhotoDTO } from '@picpac/shared';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { setCover } from '../editor/editorActions';
@@ -11,6 +12,7 @@ type Props = {
   projectTitle: string;
   photos: PhotoDTO[];
   sourceOf: SourceOf;
+  photoUpload?: React.ReactNode;
   theme: BookTheme;
   onChange(layout: Layout): void;
   onClose(): void;
@@ -22,7 +24,7 @@ const SPINE_W = 22;
  * Редактор обложки: развёртка (задняя сторона, корешок, передняя), фото, название, подзаголовок и текст на корешке.
  * Текст на корешке доступен от 40 страниц: на тонкой книге он не поместится.
  */
-export function CoverEditor({ layout, projectTitle, photos, sourceOf, theme, onChange, onClose }: Props) {
+export function CoverEditor({ layout, projectTitle, photos, sourceOf, photoUpload, theme, onChange, onClose }: Props) {
   const { width: winW } = useWindowDimensions();
   const cover = layout.cover;
   const canSpine = spineAllowed(layout.pages.length);
@@ -34,6 +36,7 @@ export function CoverEditor({ layout, projectTitle, photos, sourceOf, theme, onC
     <Modal transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.backdrop}>
         <View style={styles.header}>
+          <HeaderEdge inside />
           <Text style={styles.title}>Обложка</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Готово" onPress={onClose} style={styles.done}>
             <Text style={styles.doneText}>Готово</Text>
@@ -65,6 +68,7 @@ export function CoverEditor({ layout, projectTitle, photos, sourceOf, theme, onC
           </View>
 
           <Text style={styles.label}>Фото обложки</Text>
+          {photoUpload}
           <ScrollView horizontal contentContainerStyle={styles.strip} showsHorizontalScrollIndicator={false}>
             <Pressable
               accessibilityRole="button"

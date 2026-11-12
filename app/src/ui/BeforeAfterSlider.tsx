@@ -25,6 +25,7 @@ export function BeforeAfterSlider({ beforeUri, afterUri, aspect }: Props) {
 
   const responder = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- PanResponder.create registers these callbacks and reads the refs only during gestures.
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,

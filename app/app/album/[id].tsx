@@ -1,3 +1,4 @@
+import { AddProjectPhotos } from '../../src/photos/AddProjectPhotos';
 import {
   buildAlbumLayout,
   buildEventLayout,
@@ -81,11 +82,12 @@ export default function AlbumScreen() {
       .get<PhotoDTO[]>(`/projects/${id}/photos`)
       .then(setPhotos)
       .catch(() => setPhotos([]));
-    void refreshFork();
+    void Promise.resolve().then(refreshFork);
   }, [client, id, isPool, refreshFork]);
 
+  const projectStatus = project?.status;
   useEffect(() => {
-    if (!id || !project || project.status === 'ordered') return;
+    if (!id || !projectStatus || projectStatus === 'ordered') return;
     let cancelled = false;
     void client
       .post<{ token: string; url: string }>(`/projects/${id}/invites`)
@@ -96,7 +98,7 @@ export default function AlbumScreen() {
     return () => {
       cancelled = true;
     };
-  }, [client, id, project?.status]);
+  }, [client, id, projectStatus]);
 
   async function ensureInviteUrl(): Promise<string | null> {
     if (inviteUrl) return inviteUrl;
@@ -311,7 +313,9 @@ export default function AlbumScreen() {
         <Text style={styles.title}>{project?.title ?? 'Общий альбом'}</Text>
         <Text style={styles.sub}>Общий пул фото. У каждого участника — своя книга.</Text>
 
-        <Button title="Загрузить фото" onPress={() => router.push(`/project/${id}/photos`)} />
+        {!ordered && id ? (
+          <AddProjectPhotos projectId={id} onAdded={(photo) => setPhotos((list) => [...list, photo])} />
+        ) : null}
 
         {photos.length > 0 ? (
           <View style={styles.poolStrip}>

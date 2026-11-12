@@ -1,6 +1,6 @@
 import { formatByn, type FitMode, type PhotoDTO, type ProjectDTO, type Size } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { useCatalog, useVariantPrice } from '../../src/catalog/useCatalog';
@@ -37,12 +37,12 @@ export default function PrintFramesScreen() {
   const total = frames.reduce((sum, f) => sum + f.copies, 0);
   const quote = useVariantPrice(total > 0 ? (variantId ?? null) : null, Math.max(1, total));
 
-  async function ensureProject(): Promise<ProjectDTO> {
+  const ensureProject = useCallback(async (): Promise<ProjectDTO> => {
     if (!project.current) {
       project.current = await client.post<ProjectDTO>('/projects', { variantId, title: 'Печать фото', isShared: false });
     }
     return project.current;
-  }
+  }, [client, variantId]);
 
   // Фото из AI-редактора уже есть на сервере: копируем его в проект печати, выбирать заново не нужно.
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function PrintFramesScreen() {
         setBusy(false);
       }
     })();
-  }, [photoId]);
+  }, [client, ensureProject, photoId]);
 
   async function addPhotos() {
     setError(null);

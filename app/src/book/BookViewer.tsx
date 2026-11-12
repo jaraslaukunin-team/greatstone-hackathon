@@ -1,5 +1,5 @@
 import type { BookTheme, Layout, Rect } from '@picpac/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { lightColors, radius, space, typography } from '../theme/theme';
 import { coverPage, coverTitle } from './cover';
@@ -31,11 +31,19 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndex
   const spreads = useMemo(() => spreadsOf(layout.pages.length), [layout.pages.length]);
   // Типы View в RN 0.88 не знают measureInWindow через ref, поэтому описываем нужный кусок сами.
   const bookRef = useRef<{ measureInWindow(cb: (x: number, y: number, w: number, h: number) => void): void } | null>(null);
-  const [index, setIndex] = useState(0);
+  const [storedIndex, setIndex] = useState(0);
+  const [lastJumpKey, setLastJumpKey] = useState<number>();
+  const index = Math.min(storedIndex, spreads.length - 1);
+  if (jumpTo?.key !== lastJumpKey) {
+    setLastJumpKey(jumpTo?.key);
+    if (jumpTo) setIndex(Math.min(spreads.length - 1, Math.max(0, jumpTo.index)));
+  } else if (storedIndex !== index) {
+    setIndex(index);
+  }
   const [flip, setFlip] = useState<{ from: number; to: number } | null>(null);
   const [boxWidth, setBoxWidth] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   const busy = useRef(false);
 
   useEffect(() => {
@@ -44,16 +52,6 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndex
   useEffect(() => {
     onIndexChange?.(index, spreads.length);
   }, [index, spreads.length, onIndexChange]);
-  // Переход по тапу на миниатюру: без переворота, сразу к нужному развороту.
-  useEffect(() => {
-    if (jumpTo) setIndex(Math.min(spreads.length - 1, Math.max(0, jumpTo.index)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jumpTo?.key]);
-  // Если страниц стало меньше (удалили страницу), индекс не должен выйти за книгу.
-  useEffect(() => {
-    setIndex((i) => Math.min(i, spreads.length - 1));
-  }, [spreads.length]);
-
   const pageW = boxWidth / 2;
   const pageH = pageW; // страницы квадратные: форматы книги в каталоге близки к квадрату
 
@@ -76,9 +74,10 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndex
   }
 
   const goRef = useRef(go);
-  goRef.current = go;
+  useLayoutEffect(() => { goRef.current = go; });
   const pan = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- PanResponder.create registers these callbacks and reads the refs only during gestures.
       PanResponder.create({
         onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
         onPanResponderRelease: (_e, g) => {

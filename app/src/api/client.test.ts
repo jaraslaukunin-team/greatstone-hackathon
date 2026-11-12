@@ -2,7 +2,7 @@ import { ApiRequestError, NetworkError, createApiClient } from './client';
 
 describe('createApiClient', () => {
   it('подставляет Authorization: Bearer', async () => {
-    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const calls: { url: string; init?: RequestInit }[] = [];
     const fetchImpl: typeof fetch = async (input, init) => {
       calls.push({ url: String(input), init });
       return new Response(JSON.stringify({ ok: true }), {
@@ -61,7 +61,7 @@ describe('createApiClient', () => {
   });
 
   it('upload шлёт multipart без JSON-заголовка и дополняет относительные адреса', async () => {
-    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const calls: { url: string; init?: RequestInit }[] = [];
     const fetchImpl: typeof fetch = async (input, init) => {
       calls.push({ url: String(input), init });
       return new Response(JSON.stringify({ id: 'p1' }), { status: 201, headers: { 'Content-Type': 'application/json' } });

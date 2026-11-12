@@ -17,6 +17,10 @@ const SLIDE_MS = 4000;
 export default function StoryViewerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const storyId = typeof id === 'string' ? id : '';
+  return <StoryViewer key={storyId} storyId={storyId} />;
+}
+
+function StoryViewer({ storyId }: { storyId: string }) {
   const story = storyById(storyId);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -56,13 +60,6 @@ export default function StoryViewerScreen() {
     }
     router.back();
   }, []);
-
-  useEffect(() => {
-    slideIndexRef.current = 0;
-    progressRef.current = 0;
-    setSlideIndex(0);
-    setProgress(0);
-  }, [storyId]);
 
   useEffect(() => {
     if (!story) return;

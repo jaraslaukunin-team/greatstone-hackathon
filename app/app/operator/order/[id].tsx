@@ -26,7 +26,7 @@ export default function OperatorOrderScreen() {
   }, [client, id]);
 
   useEffect(() => {
-    void reload().catch(() => setOrder(null));
+    void Promise.resolve().then(reload).catch(() => setOrder(null));
   }, [reload]);
 
   async function advance() {
