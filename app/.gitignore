@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# движок Skia для браузера копируется скриптом scripts/copy-canvaskit.mjs
+public/assets/canvaskit.wasm

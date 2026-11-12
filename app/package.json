@@ -4,11 +4,12 @@
   "private": true,
   "main": "entry.js",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "web:build": "expo export -p web",
+    "copy:canvaskit": "node scripts/copy-canvaskit.mjs",
+    "start": "node scripts/copy-canvaskit.mjs && expo start",
+    "android": "node scripts/copy-canvaskit.mjs && expo start --android",
+    "ios": "node scripts/copy-canvaskit.mjs && expo start --ios",
+    "web": "node scripts/copy-canvaskit.mjs && expo start --web",
+    "web:build": "node scripts/copy-canvaskit.mjs && expo export -p web",
     "test": "jest"
   },
   "dependencies": {
