@@ -7,7 +7,7 @@ import {
 } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { useCatalog } from '../../src/catalog/useCatalog';
@@ -47,6 +47,9 @@ export default function AlbumScreen() {
   const [busyFork, setBusyFork] = useState(false);
   const [busySync, setBusySync] = useState(false);
   const [omitted, setOmitted] = useState(0);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
+  const [hoveredPhotoId, setHoveredPhotoId] = useState<string | null>(null);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
   const isPool = !!project?.isPool;
 
@@ -216,6 +219,27 @@ export default function AlbumScreen() {
     return m?.childName?.trim() || m?.displayName?.trim() || 'Участник';
   }
 
+  function canRemovePoolPhoto(photo: PhotoDTO): boolean {
+    if (ordered || !user) return false;
+    return photo.uploadedBy === user.id || project?.ownerId === user.id;
+  }
+
+  async function removePoolPhoto(photoId: string) {
+    if (deletingPhotoId) return;
+    setDeletingPhotoId(photoId);
+    setError(null);
+    try {
+      await client.delete(`/photos/${photoId}`);
+      setPhotos((list) => list.filter((p) => p.id !== photoId));
+      setSelectedPhotoId(null);
+      setHoveredPhotoId((cur) => (cur === photoId ? null : cur));
+    } catch (e) {
+      setError(e instanceof ApiRequestError ? e.message : 'Не удалось удалить фото');
+    } finally {
+      setDeletingPhotoId(null);
+    }
+  }
+
   async function openMyBook() {
     if (!id || !catalog.data) return;
     setBusyFork(true);
@@ -325,14 +349,55 @@ export default function AlbumScreen() {
           <View style={styles.poolStrip}>
             <Text style={styles.section}>Фото пула · {photos.length}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbs}>
-              {photos.map((p) => (
-                <View key={p.id} style={styles.thumb}>
-                  <Image source={{ uri: client.resolveUrl(p.url) }} style={styles.thumbImg} />
-                  <Text style={styles.thumbAuthor} numberOfLines={1}>
-                    {authorLabel(p.uploadedBy)}
-                  </Text>
-                </View>
-              ))}
+              {photos.map((p) => {
+                const selected = selectedPhotoId === p.id;
+                const hovered = hoveredPhotoId === p.id;
+                const canRemove = canRemovePoolPhoto(p);
+                const showRemove = canRemove && (selected || hovered || deletingPhotoId === p.id);
+                const deleting = deletingPhotoId === p.id;
+                return (
+                  <View key={p.id} style={styles.thumb}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showRemove ? 'Фото выбрано, можно удалить' : 'Выбрать фото'
+                      }
+                      onPress={() => setSelectedPhotoId((cur) => (cur === p.id ? null : p.id))}
+                      onHoverIn={() => setHoveredPhotoId(p.id)}
+                      onHoverOut={() =>
+                        setHoveredPhotoId((cur) => (cur === p.id && deletingPhotoId !== p.id ? null : cur))
+                      }
+                      style={styles.thumbHit}
+                    >
+                      <Image source={{ uri: client.resolveUrl(p.url) }} style={styles.thumbImg} />
+                      {showRemove ? (
+                        <View style={styles.thumbOverlay} pointerEvents="box-none">
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Удалить фото из пула"
+                            hitSlop={8}
+                            disabled={deleting}
+                            onPress={(e) => {
+                              e.stopPropagation?.();
+                              void removePoolPhoto(p.id);
+                            }}
+                            style={styles.thumbRemove}
+                          >
+                            {deleting ? (
+                              <ActivityIndicator size="small" color={lightColors.textOnAccent} />
+                            ) : (
+                              <Icon name="close" size={16} color={lightColors.textOnAccent} />
+                            )}
+                          </Pressable>
+                        </View>
+                      ) : null}
+                    </Pressable>
+                    <Text style={styles.thumbAuthor} numberOfLines={1}>
+                      {authorLabel(p.uploadedBy)}
+                    </Text>
+                  </View>
+                );
+              })}
             </ScrollView>
           </View>
         ) : (
@@ -581,6 +646,22 @@ const styles = StyleSheet.create({
   poolStrip: { gap: space[2] },
   thumbs: { gap: space[2], paddingVertical: space[1] },
   thumb: { width: 88, gap: 4 },
+  thumbHit: { position: 'relative', width: 88, height: 88 },
   thumbImg: { width: 88, height: 88, borderRadius: 8, backgroundColor: lightColors.surface },
+  thumbOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbRemove: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: lightColors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   thumbAuthor: { ...typography.caption, color: lightColors.textSecondary },
 });

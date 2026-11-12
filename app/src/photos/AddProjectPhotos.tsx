@@ -17,7 +17,7 @@ export function AddProjectPhotos({
   onAdded,
 }: {
   projectId: string;
-  /** Уже известные фото проекта — для предупреждения о дублях. */
+  /** Актуальный список фото проекта — от него же считается предупреждение о дублях. */
   existingPhotos?: PhotoDTO[];
   onAdded(photo: PhotoDTO): void;
 }) {
@@ -25,31 +25,22 @@ export function AddProjectPhotos({
   const pending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [duplicateWarn, setDuplicateWarn] = useState(false);
-  const known = useRef<PhotoDTO[]>(existingPhotos);
 
-  // Родитель мог подгрузить список позже — подтягиваем в ref при каждом рендере.
-  known.current = [
-    ...existingPhotos,
-    ...known.current.filter((k) => !existingPhotos.some((e) => e.id === k.id)),
-  ];
+  const hasDuplicates = findDuplicatePhotoGroups(existingPhotos).length > 0;
 
   async function add() {
     if (pending.current) return;
     pending.current = true;
     setBusy(true);
     setError(null);
-    setDuplicateWarn(false);
     try {
       const picked = await pickPhotos();
       for (const photo of picked) {
         const uploaded = await client.upload<PhotoDTO>(`/projects/${projectId}/photos`, { uri: photo.uri });
-        known.current = [...known.current, uploaded];
         onAdded(uploaded);
         const { draft, setLayout } = useProjectStore.getState();
         if (draft?.project.id === projectId) setLayout(markSeen(draft.layout, [uploaded.id]));
       }
-      if (findDuplicatePhotoGroups(known.current).length > 0) setDuplicateWarn(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось загрузить фото');
     } finally {
@@ -67,7 +58,7 @@ export function AddProjectPhotos({
         disabled={busy}
         onPress={() => void add()}
       />
-      {duplicateWarn ? (
+      {hasDuplicates ? (
         <Text accessibilityRole="alert" style={styles.warn}>
           {DUPLICATE_WARN}
         </Text>
