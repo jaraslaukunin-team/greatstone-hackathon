@@ -1,17 +1,22 @@
-import { httpsUrlSchema, type AlbumProgressDTO, type UpdateMyMemberRequest } from '@picpac/shared';
+import {
+  httpsUrlSchema,
+  type AlbumProgressDTO,
+  type PhotoDTO,
+  type UpdateMyMemberRequest,
+} from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiRequestError } from '../../src/api/client';
 import { useApiClient } from '../../src/api/hooks';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
-import { lightColors, space, typography } from '../../src/theme/theme';
+import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
 const WISH_MAX = 120;
 
-/** «Моё пожелание»: имя ученика, пожелание классу и ссылка на видео; всё это печатается на его развороте альбома. */
+/** «Мой разворот»: превью фото, пожелание и ссылка на видео → QR на странице альбома. */
 export default function MyWishScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const client = useApiClient();
@@ -19,6 +24,7 @@ export default function MyWishScreen() {
   const [childName, setChildName] = useState('');
   const [wish, setWish] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [photos, setPhotos] = useState<PhotoDTO[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -28,15 +34,18 @@ export default function MyWishScreen() {
   useEffect(() => {
     if (!projectId || !user) return;
     setLoadError(false);
-    void client
-      .get<AlbumProgressDTO>(`/projects/${projectId}/progress`)
-      .then((p) => {
-        const me = p.members.find((m) => m.userId === user.id);
+    void Promise.all([
+      client.get<AlbumProgressDTO>(`/projects/${projectId}/progress`),
+      client.get<PhotoDTO[]>(`/projects/${projectId}/photos`),
+    ])
+      .then(([progress, photoList]) => {
+        const me = progress.members.find((m) => m.userId === user.id);
         if (me) {
           setChildName(me.childName ?? '');
           setWish(me.wish ?? '');
           setVideoUrl(me.videoUrl ?? '');
         }
+        setPhotos(photoList);
         setLoaded(true);
       })
       // Не удалось загрузить сохранённое: форму не открываем, иначе «Сохранить» перезапишет пожелание пустым.
@@ -68,8 +77,21 @@ export default function MyWishScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Моё пожелание</Text>
-      <Text style={styles.sub}>Оно попадёт на ваш разворот в выпускном альбоме, а ссылка на видео станет QR-кодом на странице.</Text>
+      <Text style={styles.title}>Мой разворот</Text>
+      <Text style={styles.sub}>
+        Пожелание попадёт на ваш разворот в выпускном альбоме, а ссылка на видео станет QR-кодом на странице.
+      </Text>
+
+      {photos.length > 0 ? (
+        <View style={styles.preview}>
+          <Text style={styles.label}>Ваши фото · {photos.length}</Text>
+          <View style={styles.grid}>
+            {photos.map((p) => (
+              <Image key={p.id} source={{ uri: client.resolveUrl(p.url) }} style={styles.thumb} />
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       <Text style={styles.label}>Имя ученика</Text>
       <Input value={childName} onChangeText={setChildName} placeholder="Имя и фамилия" maxLength={100} editable={loaded} />
@@ -117,9 +139,12 @@ const styles = StyleSheet.create({
   content: { padding: space[4], gap: space[2] },
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary, marginBottom: space[2] },
+  preview: { gap: space[2], marginBottom: space[2] },
   label: { ...typography.bodyStrong, color: lightColors.text, marginTop: space[2] },
   hint: { ...typography.caption, color: lightColors.textSecondary, textAlign: 'right' },
   error: { ...typography.caption, color: lightColors.danger },
   wish: { minHeight: 96, textAlignVertical: 'top' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  thumb: { width: 76, height: 76, borderRadius: radius.photo, backgroundColor: lightColors.border },
   actions: { gap: space[2], marginTop: space[3] },
 });

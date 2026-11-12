@@ -1,6 +1,6 @@
 import type { PhotoDTO, ProjectDTO } from '@picpac/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { doneRoute } from '../../../src/album/doneRoute';
@@ -11,8 +11,16 @@ import { UploadQueue } from '../../../src/photos/UploadQueue';
 import { Button } from '../../../src/ui/Button';
 import { lightColors, radius, space, typography } from '../../../src/theme/theme';
 
+const GRAD_MIN = 2;
+const GRAD_MAX = 8;
+
+function isGraduation(project: ProjectDTO | null): boolean {
+  return !!project?.isShared && !project.isPool;
+}
+
 export default function PhotosScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const navigation = useNavigation();
   const client = useApiClient();
   const { user } = useAuth();
   const [project, setProject] = useState<ProjectDTO | null>(null);
@@ -20,6 +28,8 @@ export default function PhotosScreen() {
   const [pending, setPending] = useState(0);
   const [failed, setFailed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const graduation = isGraduation(project);
 
   const queue = useMemo(
     () =>
@@ -41,6 +51,10 @@ export default function PhotosScreen() {
       .then(setProject)
       .catch(() => undefined);
   }, [client, id]);
+
+  useEffect(() => {
+    navigation.setOptions({ title: graduation ? 'Выпускной альбом' : 'Фотокнига' });
+  }, [navigation, graduation]);
 
   useEffect(() => {
     // Фото, загруженные раньше, показываем сразу: можно вернуться на этот экран и добавить ещё.
@@ -66,7 +80,12 @@ export default function PhotosScreen() {
     setError(null);
     try {
       const picked = await pickPhotos();
-      for (const photo of picked) {
+      const room = graduation ? Math.max(0, GRAD_MAX - photos.length) : picked.length;
+      const toAdd = graduation ? picked.slice(0, room) : picked;
+      if (graduation && picked.length > room) {
+        setError(`Для разворота нужно не больше ${GRAD_MAX} фото`);
+      }
+      for (const photo of toAdd) {
         queue.enqueue({ localId: photo.localId, projectId: String(id), uri: photo.uri });
       }
       await queue.resume();
@@ -75,12 +94,18 @@ export default function PhotosScreen() {
     }
   }
 
+  const canDone = graduation
+    ? photos.length >= GRAD_MIN && photos.length <= GRAD_MAX && pending === 0
+    : photos.length > 0 && pending === 0;
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Выберите фото</Text>
-      <Text style={styles.sub}>Лучше всего получаются книги из 30–60 фото</Text>
+      <Text style={styles.title}>{graduation ? 'Выпускной альбом' : 'Выберите фото'}</Text>
+      <Text style={styles.sub}>
+        {graduation ? 'Выберите 2–8 фото для своего разворота' : 'Лучше всего получаются книги из 30–60 фото'}
+      </Text>
       <Text style={styles.progress}>
-        В книге: {photos.length}
+        {graduation ? `Выбрано: ${photos.length} из ${GRAD_MAX}` : `В книге: ${photos.length}`}
         {pending > 0 ? ` · загружается ещё ${pending}` : ''}
         {failed > 0 ? ` · не удалось загрузить ${failed}` : ''}
       </Text>
@@ -92,11 +117,15 @@ export default function PhotosScreen() {
           ))}
         </View>
       ) : null}
-      <Button title="Выбрать из галереи" onPress={() => void onPick()} />
+      <Button
+        title="Выбрать из галереи"
+        onPress={() => void onPick()}
+        disabled={graduation && photos.length >= GRAD_MAX}
+      />
       <Button
         title={`Готово · ${photos.length} фото`}
         variant="secondary"
-        disabled={photos.length === 0 || pending > 0}
+        disabled={!canDone}
         onPress={() => router.replace(doneRoute(project, user?.id) ?? `/project/${id}/overview`)}
       />
     </ScrollView>
