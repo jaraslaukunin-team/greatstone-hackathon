@@ -4,7 +4,7 @@ import { useFonts } from 'expo-font';
 import { ErrorBoundary as RouterErrorBoundary, Stack, router, type ErrorBoundaryProps } from 'expo-router';
 import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Platform, View } from 'react-native';
 import { futuraFonts } from '../src/theme/fonts';
 import { ApiClientContext } from '../src/api/hooks';
@@ -41,17 +41,15 @@ void SplashScreen.preventAutoHideAsync();
 
 function ApiBridge({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
-  const tokenRef = useRef(token);
-  tokenRef.current = token;
 
   const client = useMemo(
     () =>
       createApiClient({
         baseUrl: API_URL,
-        getToken: () => tokenRef.current,
+        getToken: () => token,
         shouldFailNetwork: () => networkFailureRef.current,
       }),
-    [],
+    [token],
   );
 
   return <ApiClientContext.Provider value={client}>{children}</ApiClientContext.Provider>;

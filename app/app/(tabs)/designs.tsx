@@ -1,6 +1,6 @@
 import type { ProjectDTO } from '@picpac/shared';
-import { Link, router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Link, router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import { useApiClient } from '../../src/api/hooks';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { useCatalog } from '../../src/catalog/useCatalog';
 import { ProjectMenu, type ProjectMenuAction } from '../../src/designs/ProjectMenu';
+import { OrderList } from '../../src/orders/OrderList';
 import { projectKind, projectKindLabel } from '../../src/project/projectKind';
 import { useProjectStore } from '../../src/project/projectStore';
 import { Button } from '../../src/ui/Button';
@@ -31,6 +32,7 @@ export default function DesignsScreen() {
   const { ready, token } = useAuth();
   const catalog = useCatalog();
   const { draft, syncState, setDraft } = useProjectStore();
+  const [tab, setTab] = useState<'projects' | 'favorites'>('projects');
   const [items, setItems] = useState<ProjectDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export default function DesignsScreen() {
   const [renameValue, setRenameValue] = useState('');
   const [busy, setBusy] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -51,12 +53,11 @@ export default function DesignsScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [client]);
 
-  useEffect(() => {
-    if (!ready || !token) return;
-    void load();
-  }, [client, ready, token]);
+  useFocusEffect(useCallback(() => {
+    if (ready && token && tab === 'projects') void load();
+  }, [load, ready, token, tab]));
 
   function openProject(project: ProjectDTO) {
     setDraft(project);
@@ -141,50 +142,60 @@ export default function DesignsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Мои дизайны</Text>
-      {syncState === 'local-only' && draft ? (
-        <StateBanner title="Черновик только на телефоне" message={draft.project.title} tone="warning" />
-      ) : null}
-      {loading ? <ActivityIndicator color={lightColors.accent} /> : null}
-      {error ? (
-        <StateBanner title={error} actionLabel="Повторить" onAction={() => void load()} tone="danger" />
-      ) : null}
-      {!loading && !error && items.length === 0 ? (
-        <EmptyState icon="folder" title="Черновиков пока нет" message="Соберите фотокнигу — она сохранится здесь">
-          <Link href="/catalog/books" asChild>
-            <Button title="Выбрать фотокнигу" icon="plus" />
-          </Link>
-        </EmptyState>
-      ) : null}
+      <View style={styles.tabs}>
+        <Button title="Дизайны" accessibilityRole="tab" accessibilityState={{ selected: tab === 'projects' }}
+          variant={tab === 'projects' ? 'dark' : 'secondary'} style={styles.tab} onPress={() => setTab('projects')} />
+        <Button title="Избранное" accessibilityRole="tab" accessibilityState={{ selected: tab === 'favorites' }}
+          variant={tab === 'favorites' ? 'dark' : 'secondary'} style={styles.tab} onPress={() => setTab('favorites')} />
+      </View>
+      {tab === 'favorites' ? <OrderList favoritesOnly /> : (
+        <>
+          {syncState === 'local-only' && draft ? (
+            <StateBanner title="Черновик только на телефоне" message={draft.project.title} tone="warning" />
+          ) : null}
+          {loading ? <ActivityIndicator color={lightColors.accent} /> : null}
+          {error ? (
+            <StateBanner title={error} actionLabel="Повторить" onAction={() => void load()} tone="danger" />
+          ) : null}
+          {!loading && !error && items.length === 0 ? (
+            <EmptyState icon="folder" title="Черновиков пока нет" message="Соберите фотокнигу — она сохранится здесь">
+              <Link href="/catalog/books" asChild>
+                <Button title="Выбрать фотокнигу" icon="plus" />
+              </Link>
+            </EmptyState>
+          ) : null}
 
-      {items.map((project) => {
-        const kind = projectKindLabel(projectKind(project, catalog.data));
-        return (
-          <View key={project.id} style={styles.row}>
-            <Pressable
-              style={styles.cardPress}
-              onPress={() => openProject(project)}
-              accessibilityRole="link"
-              accessibilityLabel={project.title}
-            >
-              <Card chevron style={styles.card}>
-                <Text style={styles.cardTitle}>{project.title}</Text>
-                <Text style={styles.cardSub}>
-                  {kind} · {project.status === 'draft' ? 'Черновик' : 'В заказе'} · v{project.version}
-                </Text>
-              </Card>
-            </Pressable>
-            <Pressable
-              style={styles.menuBtn}
-              onPress={() => setMenuProject(project)}
-              accessibilityRole="button"
-              accessibilityLabel="Меню проекта"
-              disabled={busy}
-            >
-              <Text style={styles.menuDots}>⋯</Text>
-            </Pressable>
-          </View>
-        );
-      })}
+          {items.map((project) => {
+            const kind = projectKindLabel(projectKind(project, catalog.data));
+            return (
+              <View key={project.id} style={styles.row}>
+                <Pressable
+                  style={styles.cardPress}
+                  onPress={() => openProject(project)}
+                  accessibilityRole="link"
+                  accessibilityLabel={project.title}
+                >
+                  <Card chevron style={styles.card}>
+                    <Text style={styles.cardTitle}>{project.title}</Text>
+                    <Text style={styles.cardSub}>
+                      {kind} · {project.status === 'draft' ? 'Черновик' : 'В заказе'} · v{project.version}
+                    </Text>
+                  </Card>
+                </Pressable>
+                <Pressable
+                  style={styles.menuBtn}
+                  onPress={() => setMenuProject(project)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Меню проекта"
+                  disabled={busy}
+                >
+                  <Text style={styles.menuDots}>⋯</Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </>
+      )}
 
       <ProjectMenu
         visible={!!menuProject}
@@ -234,6 +245,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg },
   content: { padding: space[4], gap: space[3], paddingTop: space[7], paddingBottom: space[7] },
   title: { ...typography.h1, color: lightColors.text },
+  tabs: { flexDirection: 'row', gap: space[2] },
+  tab: { flex: 1, paddingHorizontal: space[2] },
   row: { position: 'relative' },
   cardPress: { flex: 1 },
   // Место справа: меню (44) + зазор + шеврон Card (~28) + отступ
