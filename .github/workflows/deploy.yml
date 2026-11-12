@@ -61,7 +61,16 @@ jobs:
           $SSH 'set -e
             cd /opt/picpac
             tar xzf src.tgz --exclude=.env
-            cd web && find . -mindepth 1 -delete && tar xzf ../web.tgz && cd ..
+            # Старые вкладки продолжают загружать модули по хэшам прошлых сборок.
+            # Сначала публикуем ресурсы, затем одним переименованием переключаем HTML.
+            staging=$(mktemp -d)
+            trap "rm -rf -- $staging" EXIT
+            tar xzf web.tgz -C "$staging"
+            test -s "$staging/index.html"
+            mkdir -p web
+            tar xzf web.tgz -C web --exclude=./index.html
+            install -m 644 "$staging/index.html" web/.index.html.new
+            mv -f web/.index.html.new web/index.html
             docker compose up -d --build api
             # Caddyfile на bind-mount: без recreate контейнер часто не подхватывает правки (inotify)
             docker compose up -d --force-recreate caddy'

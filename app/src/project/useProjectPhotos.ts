@@ -1,14 +1,15 @@
 import type { PhotoDTO } from '@picpac/shared';
-import { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import type { ApiClient } from '../api/client';
 import { projectSource, type SourceOf } from '../book/imageSource';
 
-/** Фото проекта: карта по id, список и источник картинок для PageView. Грузится один раз при открытии экрана. */
+/** Фото проекта: карта по id, список и источник картинок для PageView. Обновляется при возврате на экран. */
 export function useProjectPhotos(client: ApiClient, projectId: string | undefined) {
   const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!projectId) return;
     let cancelled = false;
     setLoading(true);
@@ -24,7 +25,7 @@ export function useProjectPhotos(client: ApiClient, projectId: string | undefine
     return () => {
       cancelled = true;
     };
-  }, [client, projectId]);
+  }, [client, projectId]));
 
   const sourceOf: SourceOf = useMemo(() => projectSource(photoMap, client.resolveUrl), [photoMap, client.resolveUrl]);
   const photoList = useMemo(() => Array.from(photoMap.values()), [photoMap]);

@@ -234,11 +234,17 @@ export default function PlaceScreen() {
             </Pressable>
           );
         })}
-        <Pressable accessibilityRole="button" accessibilityLabel="Загрузить фото" onPress={() => router.push(`/project/${id}/photos`)} style={[styles.thumb, styles.upload]}>
-          <Text style={styles.plus}>+</Text>
-          <Text style={styles.hint}>Загрузить</Text>
-        </Pressable>
       </ScrollView>
+      {!ordered ? (
+        <Button
+          title="Загрузить с телефона"
+          variant="secondary"
+          onPress={() => router.push({
+            pathname: '/project/[id]/photos',
+            params: { id, returnToPlace: '1' },
+          })}
+        />
+      ) : null}
 
       <Button title="Разместить фото" disabled={ordered || !cellValid || !photoId} onPress={place} />
       <Text style={styles.hint}>{cellValid && photoId ? 'В выделенную ячейку · выбрано 1 фото' : 'Выберите ячейку и фото'}</Text>
@@ -276,7 +282,6 @@ const styles = StyleSheet.create({
   spreadBox: { flexDirection: 'row', justifyContent: 'center', gap: 2, padding: space[3], backgroundColor: lightColors.surface, borderRadius: radius.photo * 2 },
   hit: { position: 'absolute', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent', borderRadius: 4 },
   hitOn: { borderColor: lightColors.accent, borderStyle: 'dashed', backgroundColor: 'rgba(235,87,87,0.08)' },
-  plus: { ...typography.h2, color: lightColors.accent },
   tabs: { flexDirection: 'row', gap: space[2], flexWrap: 'wrap' },
   tab: { minHeight: 44, paddingHorizontal: space[3], borderRadius: radius.button, backgroundColor: lightColors.surface, alignItems: 'center', justifyContent: 'center' },
   tabOn: { backgroundColor: lightColors.accent },
@@ -289,8 +294,8 @@ const styles = StyleSheet.create({
   tray: { gap: space[2] },
   thumb: { width: THUMB, height: THUMB, borderRadius: radius.photo * 2, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent', backgroundColor: lightColors.surface },
   thumbOn: { borderColor: lightColors.accent },
+  plus: { ...typography.h2, color: lightColors.accent },
   thumbImg: { width: '100%', height: '100%' },
-  upload: { alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', left: 4, right: 4, bottom: 4, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', paddingVertical: 2 },
   badgeText: { ...typography.label, color: lightColors.text },
 });

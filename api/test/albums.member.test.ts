@@ -158,7 +158,8 @@ describe('пожелания участников и именная копия',
     }
 
     it('создаёт личную книгу с 3 страницами (разворот) из своих фото; повтор — тот же id', async () => {
-      await putOwn(bob.id, 3);
+      await putOwn(bob.id, 12);
+      await putOwn(carol.id, 1);
       const first = await call(bob, 'POST', `/projects/${projectId}/member-spread`);
       expect(first.statusCode).toBe(201);
       const book = projectSchema.parse(first.json());
@@ -169,6 +170,14 @@ describe('пожелания участников и именная копия',
 
       const again = projectSchema.parse((await call(bob, 'POST', `/projects/${projectId}/member-spread`)).json());
       expect(again.id).toBe(book.id);
+      const photos = () => call(bob, 'GET', `/projects/${book.id}/photos`);
+      expect((await photos()).json()).toHaveLength(12);
+
+      await putOwn(bob.id, 1);
+      const synced = projectSchema.parse((await call(bob, 'POST', `/projects/${projectId}/member-spread`)).json());
+      expect(synced.id).toBe(book.id);
+      expect(synced.layout).toEqual(book.layout);
+      expect((await photos()).json()).toHaveLength(13);
     });
 
     it('без двух фото — 422; организатор и пул — 409; чужой — 404', async () => {

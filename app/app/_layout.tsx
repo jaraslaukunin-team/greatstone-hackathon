@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { useFonts } from 'expo-font';
-import { Stack, router } from 'expo-router';
+import { ErrorBoundary as RouterErrorBoundary, Stack, router, type ErrorBoundaryProps } from 'expo-router';
 import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useMemo, useRef } from 'react';
+import { Platform, View } from 'react-native';
 import { futuraFonts } from '../src/theme/fonts';
 import { ApiClientContext } from '../src/api/hooks';
 import { createApiClient } from '../src/api/client';
@@ -14,7 +15,25 @@ import { parseInviteUrl } from '../src/album/parseInvite';
 import { networkFailureRef } from '../src/dev/networkFailure';
 import { WebPhoneShell } from '../src/ui/WebPhoneShell';
 
-export { ErrorBoundary } from 'expo-router';
+import { StateBanner } from '../src/ui/StateBanner';
+import { lightColors, space } from '../src/theme/theme';
+
+export function ErrorBoundary(props: ErrorBoundaryProps) {
+  if (Platform.OS !== 'web' || !/Loading (?:module|chunk)|ChunkLoadError|failed to fetch dynamically imported module/i.test(props.error.message)) {
+    return <RouterErrorBoundary {...props} />;
+  }
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', padding: space[4], backgroundColor: lightColors.bg }}>
+      <StateBanner
+        title="Не удалось открыть экран"
+        message="Обновите страницу, чтобы заново загрузить приложение."
+        tone="warning"
+        actionLabel="Обновить страницу"
+        onAction={() => window.location.reload()}
+      />
+    </View>
+  );
+}
 
 const queryClient = new QueryClient();
 

@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 import { convertToJpeg } from './convertToJpeg';
 
 export type PickedPhoto = {
@@ -7,9 +8,9 @@ export type PickedPhoto = {
 };
 
 export async function pickPhotos(): Promise<PickedPhoto[]> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error('Нужен доступ к галерее');
+  if (Platform.OS !== 'web') {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) throw new Error('Нужен доступ к галерее');
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({

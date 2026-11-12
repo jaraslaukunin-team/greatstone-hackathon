@@ -1,7 +1,7 @@
 import { checkQuality, type CatalogDTO, type PhotoDTO, type ProjectDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import {
   canProceed,
@@ -54,7 +54,7 @@ export default function ReviewScreen() {
   const ready = !loading && canProceed(issues, acked);
 
   return (
-    <View style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Проверка перед заказом</Text>
       {loading ? (
         <Text style={styles.sub}>Проверяем макет…</Text>
@@ -96,12 +96,13 @@ export default function ReviewScreen() {
       {!ready && !loading ? (
         <Text style={styles.hint}>Сначала закройте блокеры и подтвердите предупреждения</Text>
       ) : null}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
+  screen: { flex: 1, backgroundColor: lightColors.bg },
+  content: { padding: space[4], paddingBottom: space[7], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text, marginTop: space[5] },
   sub: { ...typography.body, color: lightColors.textSecondary },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },

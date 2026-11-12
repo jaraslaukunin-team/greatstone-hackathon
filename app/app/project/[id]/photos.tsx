@@ -14,14 +14,13 @@ import { Button } from '../../../src/ui/Button';
 import { lightColors, radius, space, typography } from '../../../src/theme/theme';
 
 const GRAD_MIN = 2;
-const GRAD_MAX = 8;
 
 function isGraduation(project: ProjectDTO | null): boolean {
   return !!project?.isShared && !project.isPool;
 }
 
 export default function PhotosScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, returnToPlace } = useLocalSearchParams<{ id: string; returnToPlace?: string }>();
   const navigation = useNavigation();
   const client = useApiClient();
   const { user } = useAuth();
@@ -85,12 +84,7 @@ export default function PhotosScreen() {
     setError(null);
     try {
       const picked = await pickPhotos();
-      const room = graduation ? Math.max(0, GRAD_MAX - photos.length) : picked.length;
-      const toAdd = graduation ? picked.slice(0, room) : picked;
-      if (graduation && picked.length > room) {
-        setError(`Для разворота нужно не больше ${GRAD_MAX} фото`);
-      }
-      for (const photo of toAdd) {
+      for (const photo of picked) {
         queue.enqueue({ localId: photo.localId, projectId: String(id), uri: photo.uri });
       }
       await queue.resume();
@@ -100,7 +94,7 @@ export default function PhotosScreen() {
   }
 
   const canDone = graduation
-    ? photos.length >= GRAD_MIN && photos.length <= GRAD_MAX && pending === 0 && !finishing
+    ? photos.length >= GRAD_MIN && pending === 0 && !finishing
     : photos.length > 0 && pending === 0 && !finishing;
 
   async function onDone() {
@@ -122,6 +116,10 @@ export default function PhotosScreen() {
       }
       return;
     }
+    if (returnToPlace === '1' && router.canGoBack()) {
+      router.back();
+      return;
+    }
     router.replace(doneRoute(project, user?.id) ?? `/project/${id}/overview`);
   }
 
@@ -129,10 +127,10 @@ export default function PhotosScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{graduation ? 'Выпускной альбом' : 'Выберите фото'}</Text>
       <Text style={styles.sub}>
-        {graduation ? 'Выберите 2–8 фото для своего разворота' : 'Лучше всего получаются книги из 30–60 фото'}
+        {graduation ? 'Загрузите минимум 2 фото. Все загруженные фото будут доступны в редакторе.' : 'Лучше всего получаются книги из 30–60 фото'}
       </Text>
       <Text style={styles.progress}>
-        {graduation ? `Выбрано: ${photos.length} из ${GRAD_MAX}` : `В книге: ${photos.length}`}
+        {graduation ? `Загружено: ${photos.length}` : `В книге: ${photos.length}`}
         {pending > 0 ? ` · загружается ещё ${pending}` : ''}
         {failed > 0 ? ` · не удалось загрузить ${failed}` : ''}
       </Text>
@@ -147,7 +145,6 @@ export default function PhotosScreen() {
       <Button
         title="Выбрать из галереи"
         onPress={() => void onPick()}
-        disabled={graduation && photos.length >= GRAD_MAX}
       />
       <Button
         title={finishing ? 'Открываем разворот…' : `Готово · ${photos.length} фото`}

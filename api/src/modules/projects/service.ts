@@ -7,7 +7,7 @@ import { hashPassword } from '../../auth/password.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import type { Db } from '../../db/client.js';
 import type { PhotoDTO } from '@picpac/shared';
-import { orders, products, projectMembers, projectPhotos, projects } from '../../db/schema.js';
+import { orders, products, profiles, projectMembers, projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import type { Storage } from '../../storage/storage.js';
 import { storageKey, toPhotoDTO } from '../photos/service.js';
@@ -459,96 +459,97 @@ export async function createMemberSpread(
     throw new AppError(409, 'OWNER_HAS_ALBUM', 'Организатор собирает общий альбом, а не личный разворот');
   }
 
-  const [existing] = await db
-    .select()
-    .from(projects)
-    .where(and(eq(projects.ownerId, user.id), eq(projects.sourceProjectId, album.id)));
-  if (existing) return toProjectDTO(existing);
-
-  const ownPhotos = await db
-    .select()
-    .from(projectPhotos)
-    .where(and(eq(projectPhotos.projectId, album.id), eq(projectPhotos.uploadedBy, user.id)))
-    .orderBy(asc(projectPhotos.position), asc(projectPhotos.createdAt));
-  if (ownPhotos.length < 2) {
-    throw new AppError(422, 'PHOTOS_REQUIRED', 'Загрузите от 2 до 8 фото для своего разворота');
-  }
-
-  const newProjectId = randomUUID();
-  const copies: Array<{ newId: string; key: string; src: (typeof ownPhotos)[number] }> = [];
+  const written: string[] = [];
+  let newProject: ProjectRow;
   try {
-    for (const photo of ownPhotos.slice(0, 8)) {
-      let data: Buffer;
-      try {
-        data = await storage.get(photo.storagePath);
-      } catch {
-        throw new AppError(422, 'PHOTO_FILE_MISSING', `Файл фото ${photo.id} не найден в хранилище`);
+    newProject = await db.transaction(async (tx) => {
+      // Параллельные запросы на создание или пополнение разворота выполняются по очереди.
+      await tx.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, user.id)).for('no key update');
+      const [existing] = await tx
+        .select()
+        .from(projects)
+        .where(and(eq(projects.ownerId, user.id), eq(projects.sourceProjectId, album.id)))
+        .for('update');
+      if (existing?.status === 'ordered') return existing;
+
+      const ownPhotos = await tx
+        .select()
+        .from(projectPhotos)
+        .where(and(eq(projectPhotos.projectId, album.id), eq(projectPhotos.uploadedBy, user.id)))
+        .orderBy(asc(projectPhotos.position), asc(projectPhotos.createdAt));
+      if (!existing && ownPhotos.length < 2) {
+        throw new AppError(422, 'PHOTOS_REQUIRED', 'Загрузите минимум 2 фото для своего разворота');
       }
-      const newId = randomUUID();
-      const key = storageKey(newProjectId, newId);
-      await storage.put(key, data);
-      copies.push({ newId, key, src: photo });
-    }
+      const current = existing
+        ? await tx.select({ sourcePhotoId: projectPhotos.sourcePhotoId, position: projectPhotos.position })
+            .from(projectPhotos).where(eq(projectPhotos.projectId, existing.id))
+        : [];
+      const have = new Set(current.map((photo) => photo.sourcePhotoId));
+      const missing = ownPhotos.filter((photo) => !have.has(photo.id));
+      const bookId = existing?.id ?? randomUUID();
+      let position = current.reduce((next, photo) => Math.max(next, photo.position + 1), 0);
+      const copies = [];
+      for (const photo of missing) {
+        let data: Buffer;
+        try {
+          data = await storage.get(photo.storagePath);
+        } catch {
+          throw new AppError(422, 'PHOTO_FILE_MISSING', `Файл фото ${photo.id} не найден в хранилище`);
+        }
+        const id = randomUUID();
+        const key = storageKey(bookId, id);
+        await storage.put(key, data);
+        written.push(key);
+        copies.push({
+          id,
+          projectId: bookId,
+          uploadedBy: user.id,
+          storagePath: key,
+          position: position++,
+          width: photo.width,
+          height: photo.height,
+          takenAt: photo.takenAt,
+          source: photo.source,
+          sourcePhotoId: photo.id,
+        });
+      }
+
+      let book = existing;
+      if (!book) {
+        // 3 страницы → развороты [—,0] и [1,2]: редактор открывает второй разворот.
+        const layout = autoLayout(copies.map((photo) => ({
+          id: photo.id,
+          width: photo.width,
+          height: photo.height,
+          takenAt: photo.takenAt?.toISOString() ?? null,
+        })), { pagesMin: 3, pagesMax: 3 });
+        const [inserted] = await tx.insert(projects).values({
+          id: bookId,
+          ownerId: user.id,
+          variantId: album.variantId,
+          title: album.title,
+          sourceProjectId: album.id,
+          layout,
+        }).returning();
+        book = inserted!;
+      }
+      if (copies.length) await tx.insert(projectPhotos).values(copies);
+      return book;
+    });
   } catch (e) {
-    await Promise.allSettled(copies.map((c) => storage.remove(c.key)));
+    await Promise.allSettled(written.map((key) => storage.remove(key)));
     throw e;
   }
 
-  const metas = copies.map((c) => ({
-    id: c.newId,
-    width: c.src.width,
-    height: c.src.height,
-    takenAt: c.src.takenAt ? c.src.takenAt.toISOString() : null,
-  }));
-  // 3 страницы → развороты [—,0] и [1,2]: place открывает spread=1 как полный разворот.
-  const layout = autoLayout(metas, { pagesMin: 3, pagesMax: 3 });
-
-  let newProject: typeof projects.$inferSelect;
-  try {
-    const [inserted] = await db
-      .insert(projects)
-      .values({
-        id: newProjectId,
-        ownerId: user.id,
-        variantId: album.variantId,
-        title: album.title,
-        isShared: false,
-        isPool: false,
-        sourceProjectId: album.id,
-        expectedMembers: null,
-        joinPasswordHash: null,
-        status: 'draft',
-        layout,
-      })
-      .returning();
-    newProject = inserted!;
-    await db.insert(projectPhotos).values(
-      copies.map((c, i) => ({
-        id: c.newId,
-        projectId: newProjectId,
-        uploadedBy: user.id,
-        storagePath: c.key,
-        position: i,
-        width: c.src.width,
-        height: c.src.height,
-        takenAt: c.src.takenAt,
-        source: c.src.source,
-        sourcePhotoId: c.src.id,
-      })),
-    );
-  } catch (e) {
-    await Promise.allSettled(copies.map((c) => storage.remove(c.key)));
-    await db.delete(projects).where(eq(projects.id, newProjectId)).catch(() => undefined);
-    throw e;
+  if (written.length > 0) {
+    await audit(db, {
+      userId: user.id,
+      action: 'project.member_spread',
+      objectType: 'project',
+      objectId: newProject.id,
+      result: 'ok',
+    });
   }
-
-  await audit(db, {
-    userId: user.id,
-    action: 'project.member_spread',
-    objectType: 'project',
-    objectId: newProjectId,
-    result: 'ok',
-  });
   return toProjectDTO(newProject);
 }
 
