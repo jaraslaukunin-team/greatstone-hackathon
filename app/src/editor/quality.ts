@@ -1,10 +1,6 @@
-export type QualityIssue = {
-  kind: 'empty-cell' | 'low-dpi' | 'very-low-dpi';
-  severity: 'blocker' | 'warning';
-  pageIndex: number;
-  cellIndex: number;
-  dpi?: number;
-};
+import type { QualityIssue } from '@picpac/shared';
+
+export type { QualityIssue };
 
 export function groupIssues(issues: QualityIssue[]): {
   blockers: QualityIssue[];
@@ -26,21 +22,39 @@ export function canProceed(issues: QualityIssue[], acknowledged: string[]): bool
   return warnings.every((w) => acknowledged.includes(issueKey(w)));
 }
 
-export function checkQualityFallback(layout: {
-  pages: Array<{ cells: Array<{ photoId: string | null }> }>;
-}): QualityIssue[] {
-  const issues: QualityIssue[] = [];
-  layout.pages.forEach((page, pageIndex) => {
-    page.cells.forEach((cell, cellIndex) => {
-      if (cell.photoId == null) {
-        issues.push({
-          kind: 'empty-cell',
-          severity: 'blocker',
-          pageIndex,
-          cellIndex,
-        });
-      }
-    });
-  });
-  return issues;
+/** Краткий заголовок замечания для экрана проверки перед заказом. */
+export function issueTitle(issue: QualityIssue): string {
+  switch (issue.kind) {
+    case 'empty-cell':
+      return 'Пустая ячейка';
+    case 'missing-photo':
+      return 'Фото отсутствует';
+    case 'low-dpi':
+      return 'Низкое разрешение';
+    case 'very-low-dpi':
+      return 'Очень низкое разрешение';
+  }
+}
+
+/** Пояснение, в чём проблема и что делать. */
+export function issueDetail(issue: QualityIssue): string {
+  const page = issue.pageIndex + 1;
+  switch (issue.kind) {
+    case 'empty-cell':
+      return `На стр. ${page} есть место без фото. Добавьте снимок или уберите пустую ячейку.`;
+    case 'missing-photo':
+      return `На стр. ${page} в макете указано фото, которого нет в проекте. Замените его другим.`;
+    case 'low-dpi': {
+      const dpi = issue.dpi != null ? Math.round(issue.dpi) : null;
+      return dpi != null
+        ? `На стр. ${page} фото может напечататься размытым (~${dpi} dpi). Лучше заменить на снимок крупнее.`
+        : `На стр. ${page} фото может напечататься размытым. Лучше заменить на снимок крупнее.`;
+    }
+    case 'very-low-dpi': {
+      const dpi = issue.dpi != null ? Math.round(issue.dpi) : null;
+      return dpi != null
+        ? `На стр. ${page} разрешение слишком низкое (~${dpi} dpi) — печать будет заметно мыльной. Замените фото.`
+        : `На стр. ${page} разрешение слишком низкое — печать будет заметно мыльной. Замените фото.`;
+    }
+  }
 }
