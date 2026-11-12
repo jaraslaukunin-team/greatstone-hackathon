@@ -49,6 +49,23 @@ export const pageTextSchema = z.object({
   hidden: z.boolean().optional(),
   locked: z.boolean().optional(),
 });
+// Ссылка на видео и QR: только https, чтобы в печатный макет не попадали javascript: и прочие схемы.
+export const httpsUrlSchema = z
+  .string()
+  .max(300)
+  .refine((v) => {
+    try {
+      return new URL(v).protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }, 'Нужна ссылка, начинающаяся с https://');
+export const pageQrSchema = z.object({
+  url: httpsUrlSchema,
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  size: z.number().min(0.1).max(0.5),
+});
 // bg и texts необязательны: старые макеты без них читаются как раньше.
 export const pageSchema = z.object({
   template: z.enum(['one', 'two', 'three', 'four', 'spread-one']),
@@ -58,6 +75,8 @@ export const pageSchema = z.object({
   texts: z.array(pageTextSchema).max(20).optional(),
   // Отступы страницы (доля ширины): заменяют поле и зазор темы.
   gap: z.number().min(0).max(0.12).optional(),
+  memberId: z.string().max(64).optional(),
+  qr: pageQrSchema.optional(),
 });
 export const coverSchema = z.object({
   photoId: z.string().nullable(),
@@ -241,6 +260,13 @@ export const albumMemberSchema = z.object({
   childName: z.string().nullable(),
   role: z.enum(['organizer', 'contributor']),
   photosCount: z.number().int().nonnegative(),
+  wish: z.string().nullable(),
+  videoUrl: z.string().nullable(),
+});
+export const updateMyMemberRequestSchema = z.object({
+  childName: z.string().trim().min(1).max(100).optional(),
+  wish: z.string().trim().max(200).optional(),
+  videoUrl: httpsUrlSchema.nullable().optional(),
 });
 export const albumProgressSchema = z.object({
   expected: z.number().int().nonnegative().nullable(),
