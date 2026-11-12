@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="app/assets/brand/readme-logo-dark.png" alt="PicPac mobile" width="420" />
+  <img src="app/assets/brand/readme-logo.png" alt="PicPac mobile" width="420" />
 </p>
 
 <p align="center">
