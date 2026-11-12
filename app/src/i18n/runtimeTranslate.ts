@@ -1,18 +1,27 @@
 import * as React from 'react';
 import { useSettingsStore } from '../settings/settingsStore';
 import { BE } from './beDict';
+import { EN } from './enDict';
+
+/** Словарь для выбранного языка; для русского его нет. */
+function dictFor(lang: string): Record<string, string> | null {
+  if (lang === 'be') return BE;
+  if (lang === 'en') return EN;
+  return null;
+}
 
 /** Свойства элементов, в которых лежит видимый текст (подписи кнопок, подсказки, доступность). */
 const TEXT_PROPS = ['title', 'label', 'placeholder', 'accessibilityLabel', 'accessibilityHint', 'subtitle', 'caption'] as const;
 
-/** Переводит строку на белорусский, если он выбран и для неё есть перевод; иначе возвращает исходную. */
+/** Переводит строку на выбранный язык (белорусский или английский), если для неё есть перевод; иначе возвращает исходную. */
 export function tr(text: string): string {
-  if (useSettingsStore.getState().lang !== 'be') return text;
-  const exact = BE[text];
+  const dict = dictFor(useSettingsStore.getState().lang);
+  if (!dict) return text;
+  const exact = dict[text];
   if (exact !== undefined) return exact;
   const trimmed = text.trim();
   if (trimmed && trimmed !== text) {
-    const hit = BE[trimmed];
+    const hit = dict[trimmed];
     if (hit !== undefined) return text.replace(trimmed, hit);
   }
   return text;
@@ -34,7 +43,7 @@ function translateChildren(children: unknown): unknown {
 }
 
 function translateProps<P extends Record<string, unknown>>(type: unknown, props: P): P {
-  if (useSettingsStore.getState().lang !== 'be' || !props) return props;
+  if (useSettingsStore.getState().lang === 'ru' || !props) return props;
   // Поле ввода хранит данные пользователя: переводим только подсказку.
   const isInput = typeof type === 'object' || typeof type === 'function' ? /TextInput/i.test(String((type as { displayName?: string; name?: string }).displayName ?? (type as { name?: string }).name ?? '')) : false;
   let next: Record<string, unknown> | null = null;

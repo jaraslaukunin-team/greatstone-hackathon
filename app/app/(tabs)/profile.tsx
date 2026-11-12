@@ -75,6 +75,14 @@ export default function ProfileScreen() {
           >
             {t.profile.langBe}
           </Text>
+          <Text style={styles.langSep}>/</Text>
+          <Text
+            style={[styles.langOption, lang === 'en' && styles.langActive]}
+            onPress={() => setLang('en')}
+            accessibilityRole="button"
+          >
+            {t.profile.langEn}
+          </Text>
         </View>
       </View>
 
@@ -140,7 +148,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   rowLabel: { ...typography.body, color: lightColors.text },
-  langRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  langRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 1, gap: space[2] },
   langOption: { ...typography.body, color: lightColors.textSecondary, minHeight: 44, textAlignVertical: 'center', paddingVertical: 10 },
   langActive: { ...typography.bodyStrong, color: lightColors.accent },
   langSep: { ...typography.body, color: lightColors.textMuted },

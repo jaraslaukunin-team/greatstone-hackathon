@@ -58,6 +58,7 @@ export type Strings = {
     apiLabel: string;
     langRu: string;
     langBe: string;
+    langEn: string;
   };
   faq: {
     title: string;
@@ -156,6 +157,7 @@ export const ru: Strings = {
     apiLabel: 'API:',
     langRu: 'Русский',
     langBe: 'Белорусский',
+    langEn: 'Английский',
   },
   faq: {
     title: 'Вопросы и ответы',
@@ -295,6 +297,7 @@ export const be: Strings = {
     apiLabel: 'API:',
     langRu: 'Руская',
     langBe: 'Беларуская',
+    langEn: 'Англійская',
   },
   faq: {
     title: 'Пытанні і адказы',
@@ -365,4 +368,144 @@ export const be: Strings = {
   },
 };
 
-export const strings: Record<'ru' | 'be', Strings> = { ru, be };
+export const en: Strings = {
+  tabs: {
+    home: 'Home',
+    designs: 'My',
+    editor: 'Editor',
+    cart: 'Cart',
+    orders: 'Orders',
+    profile: 'Profile',
+  },
+  home: {
+    slogan: 'Keep your memories beautiful',
+    heroTitle: 'Build a photo book',
+    heroSub: 'Your stories on paper',
+    printsTitle: 'Print photos',
+    printsSub: 'Your favorite shots in hand',
+    albumTitle: 'Graduation album',
+    albumSub: 'We’ll build it together',
+    aiTitle: 'AI editor',
+    aiSub: 'A fresh take on photos',
+  },
+  welcome: {
+    title: 'Your moments. In a real book.',
+    sub: 'Pick your photos — we’ll lay them out.',
+    next: 'Next',
+    guest: 'Continue as guest',
+  },
+  login: {
+    titleCustomer: 'Glad to see you',
+    titleStaff: 'Staff sign-in',
+    subCustomer: 'Sign in or start without an account',
+    subStaff: 'Sign in with your work e-mail or phone',
+    demoHint: 'Demo: operator@test.local, code 000000',
+    placeholder: 'Phone or e-mail',
+    send: 'Get code',
+    continueGuest: 'Continue as guest',
+  },
+  onboarding: {
+    skip: 'Skip',
+    next: 'Next',
+    start: 'Start',
+    cards: [
+      {
+        title: 'Create photo books',
+        body: 'Upload photos, choose a format, and we’ll lay them out across pages. Your finished book ships to your door.',
+      },
+      {
+        title: 'A graduation album together',
+        body: 'Invite people with a link. Everyone adds their photos, and you watch your shared story come together.',
+      },
+      {
+        title: 'Printing and delivery',
+        body: 'Photo books, prints and posters. Made in Belarus, delivered nationwide.',
+      },
+    ],
+  },
+  profile: {
+    title: 'Profile',
+    data: 'My data',
+    addresses: 'Addresses',
+    notifications: 'Notifications',
+    language: 'Language',
+    support: 'Support',
+    faq: 'FAQ',
+    about: 'About',
+    deleteData: 'Delete my data',
+    logout: 'Sign out',
+    apiLabel: 'API:',
+    langRu: 'Russian',
+    langBe: 'Belarusian',
+    langEn: 'English',
+  },
+  faq: {
+    title: 'FAQ',
+    items: [
+      {
+        q: 'How many photos do I need for a photo book?',
+        a: 'At least 10 photos. More photos make a richer book. We pick the best number of pages for you.',
+      },
+      {
+        q: 'Which photo book formats are available?',
+        a: 'Square 20×20, portrait 20×28 and landscape 28×20 cm. All come with a soft or hard cover.',
+      },
+      {
+        q: 'How long does an order take?',
+        a: 'Production takes 3–5 business days, delivery in Minsk — 1 day, across Belarus — 2–4 days.',
+      },
+      {
+        q: 'Can I edit the layout myself?',
+        a: 'Yes. After auto layout you can move photos, swap pages and edit any spread.',
+      },
+      {
+        q: 'How does the graduation album work?',
+        a: 'The organizer creates the album and sends a link. Everyone uploads photos straight from their phone.',
+      },
+      {
+        q: 'Are my photos safe?',
+        a: 'Photos are stored on a secure server. File links expire in an hour and are visible only to you.',
+      },
+      {
+        q: 'How do I pay for an order?',
+        a: 'Pay via ERIP, by account number or by card through online banking. Payment on delivery isn’t available.',
+      },
+      {
+        q: 'Can I cancel an order?',
+        a: 'You can cancel before the order goes to production. Email us at support@picpac.by or message us on Instagram.',
+      },
+      {
+        q: 'What is the AI editor?',
+        a: 'A built-in helper that improves cropping, color and contrast. It runs on request, with your consent.',
+      },
+      {
+        q: 'Can I use the app without an account?',
+        a: 'Yes, you can browse the catalog and start a project as a guest. You’ll need a phone number or e-mail to place an order.',
+      },
+    ],
+  },
+  about: {
+    title: 'About',
+    version: 'Version',
+    company: 'Company',
+    companyValue: 'Fotoprint LLC',
+    address: 'Address',
+    addressValue: 'Minsk, Primernaya St. 1',
+    email: 'Support',
+    emailValue: 'support@picpac.by',
+    web: 'Website',
+    webValue: 'picpac.by',
+    rights: '© 2025 Fotoprint. All rights reserved.',
+  },
+  addresses: {
+    title: 'Addresses',
+    empty: 'No saved addresses. You’ll enter the delivery address at checkout.',
+    recipientLabel: 'Recipient',
+    phoneLabel: 'Phone',
+    cityLabel: 'City',
+    streetLabel: 'Street and building',
+    clearButton: 'Clear address',
+  },
+};
+
+export const strings: Record<'ru' | 'be' | 'en', Strings> = { ru, be, en };

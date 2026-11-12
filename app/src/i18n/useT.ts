@@ -9,6 +9,6 @@ export function useT(): Strings {
 
 /** Returns translations for a given lang without subscribing to the store.
  *  Useful in pure functions and tests. */
-export function t(lang: 'ru' | 'be'): Strings {
+export function t(lang: 'ru' | 'be' | 'en'): Strings {
   return strings[lang];
 }
