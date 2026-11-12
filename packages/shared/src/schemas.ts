@@ -50,6 +50,8 @@ export const layoutSchema = z.object({
   pages: z.array(pageSchema),
   themeId: z.string().optional(),
   cover: coverSchema.optional(),
+  // Фото, которые раскладка уже учла: новые (ещё не учтённые) добавляются в книгу, а убранные пользователем не возвращаются.
+  seen: z.array(z.string()).max(5000).optional(),
 });
 // Список допустимых id тем (для проверки выбора); сам макет хранит themeId строкой, чтобы старые и будущие темы не ломали чтение.
 export const themeIdSchema = z.enum(['minimal', 'film', 'travel', 'holiday', 'graduation']);

@@ -9,6 +9,8 @@ type Deps = {
   onLocalOnly: () => void;
   onSaved: (saved: { version: number }) => void;
   onConflict: (server: ProjectDTO, localLayout: Layout) => Promise<void>;
+  /** Сервер отклонил сохранение окончательно: проект уже заказан или макет не прошёл проверку. */
+  onRejected?: (code: 'PROJECT_ORDERED' | 'LAYOUT_INVALID') => void;
 };
 
 export async function syncProject(deps: Deps): Promise<void> {
@@ -22,6 +24,10 @@ export async function syncProject(deps: Deps): Promise<void> {
     if (e instanceof ApiRequestError && e.code === 'VERSION_CONFLICT') {
       const server = await deps.client.get<ProjectDTO>(`/projects/${deps.projectId}`);
       await deps.onConflict(server, deps.layout);
+      return;
+    }
+    if (e instanceof ApiRequestError && (e.code === 'PROJECT_ORDERED' || e.code === 'LAYOUT_INVALID') && deps.onRejected) {
+      deps.onRejected(e.code);
       return;
     }
     if (e instanceof ApiRequestError && e.status >= 500) {

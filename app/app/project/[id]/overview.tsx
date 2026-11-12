@@ -3,7 +3,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
-import { autoLayoutLocal, unplacedPhotos } from '../../../src/editor/autoLayoutLocal';
+import { hasContent, markSeen, reconcileLayout } from '../../../src/editor/reconcileLayout';
 import { moveSpreadBy, replacePhoto, setTheme, type CellRef } from '../../../src/editor/editorActions';
 import { useVariantPrice } from '../../../src/catalog/useCatalog';
 import { spreadIssues } from '../../../src/book/spreadIssues';
@@ -31,6 +31,7 @@ export default function OverviewScreen() {
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState('Собираем вашу книгу…');
   const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
+  const [notice, setNotice] = useState<string | null>(null);
   const [showThemes, setShowThemes] = useState(false);
   const [editingCover, setEditingCover] = useState(false);
   const [editing, setEditing] = useState<{ pageIndex: number; rect: Rect } | null>(null);
@@ -54,7 +55,15 @@ export default function OverviewScreen() {
   // Колбэк стабилен: BookViewer зовёт его из эффекта.
   const onIndexChange = useCallback((index: number) => setViewIndex(index), []);
   // Правки уходят на сервер через секунду после последнего изменения, без кнопки «Сохранить».
-  useDebouncedSync(client, id, !busy);
+  useDebouncedSync(client, id, !busy, (code) =>
+    setNotice(
+      code === 'PROJECT_ORDERED'
+        ? 'Проект уже заказан, изменения не сохраняются.'
+        : 'Сервер не принял макет. Проверьте книгу и попробуйте ещё раз.',
+    ),
+  );
+  // Заказанную книгу править нельзя: сервер такие правки отклонит.
+  const ordered = draft?.project.status === 'ordered';
 
   // Готовое фото из редактора ставится в ту же ячейку; оригинал остаётся в проекте.
   useEffect(() => {
@@ -65,7 +74,8 @@ export default function OverviewScreen() {
     pendingEdit.current = null;
     if (!photo) return;
     setPhotoMap((m) => new Map(m).set(photo.id, photo));
-    setLayout(replacePhoto(layout, pending.ref, photo.id));
+    // Результат редактора — не «новое фото»: помечаем его учтённым, чтобы повторная сборка не добавила дубль.
+    setLayout(markSeen(replacePhoto(layout, pending.ref, photo.id), [photo.id]));
   }, [editResults, draft, setLayout]);
 
   useFocusEffect(
@@ -100,24 +110,28 @@ export default function OverviewScreen() {
       // Правки пользователя не затираем: прежний макет (локальный или с сервера) остаётся, пока в нём разложены все фото.
       const stored = useProjectStore.getState().draft;
       const previous = stored?.project.id === project.id ? stored.layout : project.layout;
-      const keep =
-        previous.pages.some((pg) => pg.cells.some((c) => c.photoId)) && unplacedPhotos(previous, photos).length === 0;
       // Тема: уже записанная в макете, иначе выбранная до загрузки фото, иначе по умолчанию. Повторная раскладка тему не теряет.
       const chosen = useThemeChoice.getState().get(project.id) ?? DEFAULT_THEME_ID;
       // В ручном режиме и при пустом макете создаём пустую книгу без автораскладки.
       const buildMode = useThemeChoiceStore.getState().mode;
-      const isEmpty = !previous.pages.some((pg) => pg.cells.some((c) => c.photoId));
-      const laidOut = keep
-        ? previous
-        : buildMode === 'manual' && isEmpty
-          ? blankLayout(variant?.pagesMin ?? 20, chosen)
-          : autoLayoutLocal(photos, { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 60 });
+      const isEmpty = !hasContent(previous);
+      const pageLimits = { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 60 };
+      // Правки не затираются: прежний макет сохраняется, добавляются только новые фото.
+      const laidOut =
+        buildMode === 'manual' && isEmpty
+          ? markSeen(blankLayout(pageLimits.pagesMin, chosen), photos.map((p) => p.id))
+          : reconcileLayout(previous, photos, pageLimits);
       const layout = { ...laidOut, themeId: previous.themeId ?? laidOut.themeId ?? chosen };
       if (cancelled) return;
       setDraft({ ...project, layout });
       setLayout(layout);
       setMessage(`Готово · ${layout.pages.length} страниц`);
       setBusy(false);
+      // Версию обновляем точечно: за время запроса человек мог уже править макет, его правки нельзя затирать.
+      const patchVersion = (version: number) =>
+        useProjectStore.setState((s) =>
+          s.draft?.project.id === project.id ? { draft: { ...s.draft, project: { ...s.draft.project, version } } } : s,
+        );
       await syncProject({
         client,
         projectId: project.id,
@@ -125,13 +139,20 @@ export default function OverviewScreen() {
         version: project.version,
         onLocalOnly: () => setSyncState('local-only'),
         onSaved: ({ version }) => {
-          // Сервер на сохранение отвечает только новой версией; макет остаётся локальным.
-          setDraft({ ...project, layout, version });
+          patchVersion(version);
           setSyncState('saved');
         },
-        onConflict: async (server, localLayout) => {
-          setDraft({ ...server, layout: localLayout, version: server.version });
+        onConflict: async (server) => {
+          patchVersion(server.version);
           setSyncState('local-only');
+        },
+        onRejected: (code) => {
+          setSyncState('local-only');
+          setNotice(
+            code === 'PROJECT_ORDERED'
+              ? 'Проект уже заказан, изменения не сохраняются.'
+              : 'Сервер не принял макет. Проверьте книгу и попробуйте ещё раз.',
+          );
         },
       });
     })();
@@ -147,13 +168,15 @@ export default function OverviewScreen() {
         {message}
         {busy ? '' : ` · ${syncState === 'saving' ? 'Сохраняем…' : syncState === 'saved' ? 'Сохранено' : 'Только на устройстве'}`}
       </Text>
+      {ordered ? <Text style={styles.sub}>Проект уже заказан, редактирование недоступно.</Text> : null}
+      {notice ? <Text style={styles.sub}>{notice}</Text> : null}
       {draft?.layout?.pages?.length ? (
         <BookViewer
           title={draft.project.title}
           layout={draft.layout}
           sourceOf={sourceOf}
           theme={themeById(draft.layout.themeId)}
-          onOpenPage={(pageIndex, rect) => setEditing({ pageIndex, rect })}
+          onOpenPage={ordered ? undefined : (pageIndex, rect) => setEditing({ pageIndex, rect })}
           onIndexChange={onIndexChange}
           jumpTo={jump}
         />
@@ -167,6 +190,7 @@ export default function OverviewScreen() {
           currentIndex={viewIndex}
           onSelect={(index) => setJump({ index, key: Date.now() })}
           onMove={(index, dir) => {
+            if (ordered) return;
             setLayout(moveSpreadBy(draft.layout, index, dir));
             // Книга показывает тот же разворот на новом месте.
             setJump({ index: index + dir, key: Date.now() });
@@ -174,7 +198,7 @@ export default function OverviewScreen() {
         />
       ) : null}
       <Text style={styles.hint}>Листайте свайпом или стрелками. Нажмите на страницу, чтобы править её.</Text>
-      {draft?.layout?.pages?.length ? (
+      {draft?.layout?.pages?.length && !ordered ? (
         <>
           <Button title="Обложка" variant="secondary" onPress={() => setEditingCover(true)} />
           <Button title={showThemes ? 'Скрыть оформление' : 'Оформление'} variant="secondary" onPress={() => setShowThemes((v) => !v)} />

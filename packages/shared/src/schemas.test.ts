@@ -63,6 +63,12 @@ describe('layoutSchema', () => {
     expect(layoutSchema.parse({ pages, cover: { photoId: null, title: '' } }).cover?.photoId).toBeNull();
     expect(layoutSchema.parse({ pages }).cover).toBeUndefined();
   });
+  it('seen — список уже учтённых фото: принимается, а без него макет валиден', () => {
+    const pages = [{ template: 'one', cells: [cell] }];
+    expect(layoutSchema.parse({ pages, seen: ['a', 'b'] }).seen).toEqual(['a', 'b']);
+    expect(layoutSchema.parse({ pages }).seen).toBeUndefined();
+    expect(layoutSchema.safeParse({ pages, seen: [1] }).success).toBe(false);
+  });
   it('отклоняет слишком длинное название обложки', () => {
     const pages = [{ template: 'one', cells: [cell] }];
     expect(layoutSchema.safeParse({ pages, cover: { photoId: null, title: 'я'.repeat(101) } }).success).toBe(false);
