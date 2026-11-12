@@ -13,7 +13,8 @@ import { BackButton } from '../../src/ui/BackButton';
 export default function LoginScreen() {
   const { requestCode, loginAsGuest } = useAuth();
   const staff = useRoleMode((s) => s.mode) === 'staff';
-  const demoHint = process.env.EXPO_PUBLIC_DEMO_HINT === '1';
+  // Подсказка с демо-входом: в режиме разработки (localhost) всегда, в сборке для сайта по флагу EXPO_PUBLIC_DEMO_HINT=1.
+  const demoHint = __DEV__ || process.env.EXPO_PUBLIC_DEMO_HINT === '1';
   const t = useT();
   const [contact, setContact] = useState('');
   const [error, setError] = useState<string | null>(null);
