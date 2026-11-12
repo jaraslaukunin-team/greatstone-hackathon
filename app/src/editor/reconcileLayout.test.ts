@@ -60,4 +60,12 @@ describe('markSeen', () => {
     expect(markSeen(l, ['a'])).toBe(l);
     expect(markSeen(l, ['a', 'b']).seen).toEqual(['a', 'b']);
   });
+
+  it('скрытый слой с фото считается размещённым и не возвращается как новое фото', () => {
+    const hidden = { photoId: 'b', crop, hidden: true, frame: { x: 0.5, y: 0.5, w: 0.4, h: 0.4, rot: 0 } };
+    const previous: Layout = { pages: [page('a'), { template: 'one', cells: [hidden] }], seen: ['a'] };
+    const r = reconcileLayout(previous, [photo('a'), photo('b')], limits);
+    expect(r.pages).toHaveLength(2);
+    expect(r.seen).toEqual(expect.arrayContaining(['a', 'b']));
+  });
 });
