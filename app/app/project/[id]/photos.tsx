@@ -1,6 +1,6 @@
 import type { PhotoDTO, ProjectDTO } from '@picpac/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, type Href, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { doneRoute } from '../../../src/album/doneRoute';
@@ -12,7 +12,7 @@ import { Button } from '../../../src/ui/Button';
 import { lightColors, radius, space, typography } from '../../../src/theme/theme';
 
 export default function PhotosScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, albumMember } = useLocalSearchParams<{ id: string; albumMember?: string }>();
   const client = useApiClient();
   const { user } = useAuth();
   const [project, setProject] = useState<ProjectDTO | null>(null);
@@ -20,6 +20,7 @@ export default function PhotosScreen() {
   const [pending, setPending] = useState(0);
   const [failed, setFailed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const isAlbumMember = albumMember === '1';
 
   const queue = useMemo(
     () =>
@@ -65,7 +66,11 @@ export default function PhotosScreen() {
   async function onPick() {
     setError(null);
     try {
-      const picked = await pickPhotos();
+      const picked = await pickPhotos(isAlbumMember ? { selectionLimit: Math.max(0, 8 - photos.length) } : {});
+      if (isAlbumMember && photos.length + picked.length > 8) {
+        setError('Для выпускного альбома можно выбрать не больше 8 фото');
+        return;
+      }
       for (const photo of picked) {
         queue.enqueue({ localId: photo.localId, projectId: String(id), uri: photo.uri });
       }
@@ -77,10 +82,10 @@ export default function PhotosScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Выберите фото</Text>
-      <Text style={styles.sub}>Лучше всего получаются книги из 30–60 фото</Text>
+      <Text style={styles.title}>{isAlbumMember ? 'Выпускной альбом' : 'Выберите фото'}</Text>
+      <Text style={styles.sub}>{isAlbumMember ? 'Выберите 2–8 фото для своего разворота' : 'Лучше всего получаются книги из 30–60 фото'}</Text>
       <Text style={styles.progress}>
-        В книге: {photos.length}
+        {isAlbumMember ? 'Выбрано' : 'В книге'}: {photos.length}
         {pending > 0 ? ` · загружается ещё ${pending}` : ''}
         {failed > 0 ? ` · не удалось загрузить ${failed}` : ''}
       </Text>
@@ -92,13 +97,18 @@ export default function PhotosScreen() {
           ))}
         </View>
       ) : null}
-      <Button title="Выбрать из галереи" onPress={() => void onPick()} />
+      <Button title={isAlbumMember ? 'Выбрать фото' : 'Выбрать из галереи'} disabled={isAlbumMember && photos.length >= 8} onPress={() => void onPick()} />
       <Button
-        title={`Готово · ${photos.length} фото`}
+        title={isAlbumMember ? 'Перейти к оформлению разворота' : `Готово · ${photos.length} фото`}
         variant="secondary"
-        disabled={photos.length === 0 || pending > 0}
-        onPress={() => router.replace(doneRoute(project, user?.id) ?? `/project/${id}/overview`)}
+        disabled={pending > 0 || (isAlbumMember ? photos.length < 2 || photos.length > 8 : photos.length === 0)}
+        onPress={() =>
+          router.replace(
+            (isAlbumMember ? `/album/me?projectId=${id}` : doneRoute(project, user?.id) ?? `/project/${id}/overview`) as Href,
+          )
+        }
       />
+      {isAlbumMember && photos.length < 2 ? <Text style={styles.sub}>Добавьте ещё {2 - photos.length} фото, чтобы продолжить</Text> : null}
     </ScrollView>
   );
 }
