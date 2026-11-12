@@ -1,6 +1,7 @@
 import type { PhotoDTO, ProjectDTO } from '@picpac/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import type { Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { doneRoute } from '../../../src/album/doneRoute';
@@ -120,7 +121,7 @@ export default function PhotosScreen() {
       router.back();
       return;
     }
-    router.replace(doneRoute(project, user?.id) ?? `/project/${id}/overview`);
+    router.replace((doneRoute(project, user?.id) ?? `/project/${id}/overview`) as Href);
   }
 
   return (

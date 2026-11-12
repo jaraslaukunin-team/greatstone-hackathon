@@ -1,4 +1,3 @@
-import { useT } from '../src/i18n/useT';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { useFonts } from 'expo-font';
@@ -76,7 +75,6 @@ function DeepLinkBridge({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
-  const t = useT();
   const [fontsLoaded, fontError] = useFonts(futuraFonts);
 
   useEffect(() => {
@@ -108,7 +106,7 @@ export default function RootLayout() {
                 <Stack.Screen name="print" />
                 <Stack.Screen name="album" />
                 <Stack.Screen name="invite/[token]" />
-                <Stack.Screen name="photo-editor" options={{ presentation: 'modal', title: t.photoEditor.emptyTitle, headerShown: false }} />
+                <Stack.Screen name="photo-editor" options={{ presentation: 'modal', title: 'Редактор фото', headerShown: false }} />
                 <Stack.Screen name="ai" />
                 <Stack.Screen name="operator" />
                 <Stack.Screen name="profile" />

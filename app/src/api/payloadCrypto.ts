@@ -7,6 +7,12 @@ export type EncryptedBlobV1 = {
   data: string;
 };
 
+/** Expo Go / RN часто без crypto.subtle — тогда шифрование payload пропускаем. */
+export function hasAesGcm(): boolean {
+  const subtle = globalThis.crypto?.subtle;
+  return typeof subtle?.encrypt === 'function' && typeof subtle?.importKey === 'function';
+}
+
 function getSubtle(): SubtleCrypto {
   const subtle = globalThis.crypto?.subtle;
   if (!subtle) {
