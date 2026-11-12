@@ -11,6 +11,7 @@ import {
 import { useApiClient } from '../../src/api/hooks';
 import { useAssistantChat } from '../../src/ai/useAssistantChat';
 import { Button } from '../../src/ui/Button';
+import { FormattedText } from '../../src/ui/FormattedText';
 import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
 export default function ProfileSupportScreen() {
@@ -38,7 +39,7 @@ export default function ProfileSupportScreen() {
               key={`${m.role}-${i}`}
               style={[styles.bubble, m.role === 'user' ? styles.bubbleUser : styles.bubbleBot]}
             >
-              <Text style={styles.bubbleText}>{m.content}</Text>
+              <FormattedText style={styles.bubbleText}>{m.content}</FormattedText>
             </View>
           ))}
         </ScrollView>

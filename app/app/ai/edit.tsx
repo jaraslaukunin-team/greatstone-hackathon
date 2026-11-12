@@ -7,6 +7,7 @@ import { startAiEdit } from '../../src/ai/useAiJob';
 import { ApiRequestError, type ApiClient } from '../../src/api/client';
 import { pickPhotos } from '../../src/photos/pickPhotos';
 import { Button } from '../../src/ui/Button';
+import { FormattedText } from '../../src/ui/FormattedText';
 import { Input } from '../../src/ui/Input';
 import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
@@ -109,7 +110,9 @@ export default function AiEditScreen() {
           <View style={styles.chat}>
             {messages.map((m) => (
               <View key={m.id} style={[styles.bubble, m.role === 'user' ? styles.bubbleUser : styles.bubbleSystem]}>
-                <Text style={m.role === 'user' ? styles.bubbleUserText : styles.bubbleSystemText}>{m.text}</Text>
+                <FormattedText style={m.role === 'user' ? styles.bubbleUserText : styles.bubbleSystemText}>
+                  {m.text}
+                </FormattedText>
               </View>
             ))}
           </View>

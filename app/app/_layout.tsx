@@ -12,6 +12,7 @@ import { API_URL } from '../src/config';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
 import { parseInviteUrl } from '../src/album/parseInvite';
 import { networkFailureRef } from '../src/dev/networkFailure';
+import { WebPhoneShell } from '../src/ui/WebPhoneShell';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -74,28 +75,30 @@ export default function RootLayout() {
       <AuthProvider>
         <ApiBridge>
           <DeepLinkBridge>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(staff)" />
-              <Stack.Screen name="catalog" />
-              <Stack.Screen name="project" />
-              <Stack.Screen name="checkout" />
-              <Stack.Screen name="orders" />
-              <Stack.Screen name="print" />
-              <Stack.Screen name="album" />
-              <Stack.Screen name="invite/[token]" />
-              <Stack.Screen name="photo-editor" options={{ presentation: 'modal', title: 'Редактор фото', headerShown: false }} />
-              <Stack.Screen name="ai" />
-              <Stack.Screen name="operator" />
-              <Stack.Screen name="profile" />
-              <Stack.Screen name="showcase" />
-              <Stack.Screen
-                name="stories"
-                options={{ presentation: 'modal', headerShown: false, animation: 'fade' }}
-              />
-            </Stack>
+            <WebPhoneShell>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="(staff)" />
+                <Stack.Screen name="catalog" />
+                <Stack.Screen name="project" />
+                <Stack.Screen name="checkout" />
+                <Stack.Screen name="orders" />
+                <Stack.Screen name="print" />
+                <Stack.Screen name="album" />
+                <Stack.Screen name="invite/[token]" />
+                <Stack.Screen name="photo-editor" options={{ presentation: 'modal', title: 'Редактор фото', headerShown: false }} />
+                <Stack.Screen name="ai" />
+                <Stack.Screen name="operator" />
+                <Stack.Screen name="profile" />
+                <Stack.Screen name="showcase" />
+                <Stack.Screen
+                  name="stories"
+                  options={{ presentation: 'modal', headerShown: false, animation: 'fade' }}
+                />
+              </Stack>
+            </WebPhoneShell>
           </DeepLinkBridge>
         </ApiBridge>
       </AuthProvider>
