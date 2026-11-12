@@ -32,6 +32,11 @@ describe('layoutSchema', () => {
     });
     expect(r.success).toBe(true);
   });
+  it('сохраняет themeId, а макет без него остаётся валидным', () => {
+    const pages = [{ template: 'one', cells: [{ photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 } }] }];
+    expect(layoutSchema.parse({ pages, themeId: 'film' }).themeId).toBe('film');
+    expect(layoutSchema.parse({ pages }).themeId).toBeUndefined();
+  });
 });
 
 describe('formatByn', () => {
