@@ -109,6 +109,10 @@ export type ProjectDTO = {
   expectedMembers: number | null;
   /** Нужен ли пароль, чтобы вступить в общий альбом. Сам пароль и его хеш наружу не отдаются. */
   hasPassword: boolean;
+  /** Общий пул фото события: участники видят все фото, заказ только из личных книг. */
+  isPool?: boolean;
+  /** Личная книга, собранная из пула (`sourceProjectId` = id пула). */
+  sourceProjectId?: string | null;
   layout: Layout;
   version: number;
   updatedAt: string;
@@ -198,6 +202,8 @@ export type AlbumMemberDTO = {
   /** Пожелание ученика классу и ссылка на видео (https); null — не заполнено. */
   wish: string | null;
   videoUrl: string | null;
+  /** Имя профиля для подписей авторов в общем альбоме. */
+  displayName?: string | null;
 };
 
 /** Что участник может обновить о себе в общем альбоме. */
