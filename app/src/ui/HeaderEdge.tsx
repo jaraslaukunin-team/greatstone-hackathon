@@ -3,21 +3,19 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { lightColors } from '../theme/theme';
 
-const EDGE_H = 44;
+/** Короткая полоска: мягкий стык без «заливки» половины баннера. */
+const EDGE_H = 16;
 
 /** [offset, opacity]. Outside: мягкий fade поверх контента. Inside: вуаль внизу headerBackground. */
 const STOPS_INSIDE: [string, number][] = [
   ['0', 0],
-  ['0.4', 0.25],
-  ['0.75', 0.5],
-  ['1', 0.75],
+  ['0.45', 0.28],
+  ['1', 0.7],
 ];
 const STOPS_OUTSIDE: [string, number][] = [
   ['0', 1],
-  ['0.22', 0.78],
-  ['0.45', 0.48],
-  ['0.7', 0.2],
-  ['0.88', 0.06],
+  ['0.35', 0.55],
+  ['0.7', 0.18],
   ['1', 0],
 ];
 

@@ -24,3 +24,8 @@ coverage/
 
 app/dist-prod/
 app/dist-local/
+
+# Ћокальные архивы ассетов (в git Ч только извлечЄнные файлы)
+readmelogo.zip
+files.zip
+
