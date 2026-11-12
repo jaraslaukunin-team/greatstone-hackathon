@@ -1,4 +1,4 @@
-import type { Cell, Layout, Page, PageText, ThemeId } from '@picpac/shared';
+import type { Cell, Cover, Layout, Page, PageText, ThemeId } from '@picpac/shared';
 import { spreadsOf } from '../book/flip';
 
 export type CellRef = { pageIndex: number; cellIndex: number };
@@ -87,6 +87,24 @@ export function clearPhoto(layout: Layout, ref: CellRef): Layout {
   cell.photoId = null;
   cell.crop = { x: 0, y: 0, scale: 1, rotation: 0 };
   delete cell.fit;
+  return next;
+}
+
+const MAX_COVER_TEXT = 100;
+
+/**
+ * Правка обложки. Первый вызов создаёт её из названия проекта; пустые подзаголовок и корешок не хранятся.
+ */
+export function setCover(layout: Layout, patch: Partial<Cover>, fallbackTitle = ''): Layout {
+  const next = cloneLayout(layout);
+  const merged: Cover = { ...(next.cover ?? { photoId: null, title: fallbackTitle }), ...patch };
+  merged.title = merged.title.slice(0, MAX_COVER_TEXT);
+  for (const key of ['subtitle', 'spine'] as const) {
+    const value = merged[key]?.trim();
+    if (value) merged[key] = value.slice(0, MAX_COVER_TEXT);
+    else delete merged[key];
+  }
+  next.cover = merged;
   return next;
 }
 

@@ -56,6 +56,17 @@ describe('layoutSchema', () => {
     const long = 'я'.repeat(201);
     expect(layoutSchema.safeParse({ pages: [{ template: 'one', cells: [cell], texts: [{ text: long, x: 0.5, y: 0.5, style: 'title' }] }] }).success).toBe(false);
   });
+  it('принимает обложку с фото, названием, подзаголовком и корешком; без неё макет валиден', () => {
+    const pages = [{ template: 'one', cells: [cell] }];
+    const withCover = layoutSchema.parse({ pages, cover: { photoId: 'p1', title: 'Лето', subtitle: '2026', spine: 'Лето' } });
+    expect(withCover.cover).toEqual({ photoId: 'p1', title: 'Лето', subtitle: '2026', spine: 'Лето' });
+    expect(layoutSchema.parse({ pages, cover: { photoId: null, title: '' } }).cover?.photoId).toBeNull();
+    expect(layoutSchema.parse({ pages }).cover).toBeUndefined();
+  });
+  it('отклоняет слишком длинное название обложки', () => {
+    const pages = [{ template: 'one', cells: [cell] }];
+    expect(layoutSchema.safeParse({ pages, cover: { photoId: null, title: 'я'.repeat(101) } }).success).toBe(false);
+  });
   it('сохраняет themeId, а макет без него остаётся валидным', () => {
     const pages = [{ template: 'one', cells: [{ photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 } }] }];
     expect(layoutSchema.parse({ pages, themeId: 'film' }).themeId).toBe('film');

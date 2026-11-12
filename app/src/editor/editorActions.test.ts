@@ -2,6 +2,7 @@ import {
   addPageText,
   applyTemplate,
   clearPhoto,
+  setCover,
   removePageText,
   setPageBg,
   updatePageText,
@@ -27,6 +28,40 @@ function layoutWith(photos: Array<string | null>): Layout {
     })),
   };
 }
+
+describe('setCover', () => {
+  it('первый вызов создаёт обложку из названия проекта и применяет правку', () => {
+    const next = setCover(layoutWith(['a']), { photoId: 'a' }, 'Книга');
+    expect(next.cover).toEqual({ photoId: 'a', title: 'Книга' });
+  });
+
+  it('следующие вызовы меняют только указанное', () => {
+    let l = setCover(layoutWith(['a']), { photoId: 'a', subtitle: '2026' }, 'Книга');
+    l = setCover(l, { title: 'Лето' }, 'Книга');
+    expect(l.cover).toEqual({ photoId: 'a', title: 'Лето', subtitle: '2026' });
+  });
+
+  it('пустой подзаголовок и корешок убираются, а не хранятся пустыми', () => {
+    let l = setCover(layoutWith(['a']), { subtitle: '2026', spine: 'Лето' }, 'Книга');
+    l = setCover(l, { subtitle: '', spine: '  ' }, 'Книга');
+    expect('subtitle' in (l.cover ?? {})).toBe(false);
+    expect('spine' in (l.cover ?? {})).toBe(false);
+  });
+
+  it('названия обрезаются до 100 символов, исходный макет цел', () => {
+    const input = layoutWith(['a']);
+    const next = setCover(input, { title: 'я'.repeat(150) }, 'Книга');
+    expect(next.cover?.title).toHaveLength(100);
+    expect(input.cover).toBeUndefined();
+  });
+
+  it('тема и страницы не меняются', () => {
+    const input = { ...layoutWith(['a', 'b']), themeId: 'film' };
+    const next = setCover(input, { photoId: 'b' }, 'Книга');
+    expect(next.themeId).toBe('film');
+    expect(next.pages).toEqual(input.pages);
+  });
+});
 
 describe('шаблоны three и spread-one', () => {
   it("applyTemplate('three') даёт три ячейки и сохраняет первые фото", () => {

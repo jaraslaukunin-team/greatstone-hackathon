@@ -1,7 +1,9 @@
 import type { BookTheme, Layout, Rect } from '@picpac/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import { fonts, lightColors, radius, space, typography } from '../theme/theme';
+import { lightColors, radius, space, typography } from '../theme/theme';
+import { coverPage, coverTitle } from './cover';
+import { CoverView } from './CoverView';
 import { nextIndex, spreadsOf } from './flip';
 import type { SourceOf } from './imageSource';
 import { PageView } from './PageView';
@@ -103,7 +105,6 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndex
     });
   }
 
-  const titleStyle = { fontFamily: fonts[theme.titleFont], color: theme.titleColor };
   const target = flip ? spreads[flip.to]! : null;
   const forward = flip ? flip.to > flip.from : true;
 
@@ -148,26 +149,15 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndex
           style={[styles.half, { width: pageW, height: pageH }]}
         >
           {isCover ? (
-            <View style={[styles.cover, { width: pageW, height: pageH, backgroundColor: theme.coverBg }]}>
-              {theme.cover === 'full-photo' && curR !== null && page(curR) ? view(curR) : null}
-              {theme.cover === 'framed-photo' && curR !== null && page(curR) ? (
-                <View style={{ position: 'absolute', left: pageW * 0.1, top: pageH * 0.08, width: pageW * 0.8, height: pageH * 0.68 }}>
-                  <PageView page={page(curR)} sourceOf={sourceOf} width={pageW * 0.8} height={pageH * 0.68} theme={theme} />
-                </View>
-              ) : null}
-              <View
-                style={[
-                  styles.coverTitle,
-                  theme.cover === 'full-photo' ? styles.coverShade : null,
-                  theme.cover === 'color-title' ? styles.coverTitleCenter : null,
-                ]}
-                pointerEvents="none"
-              >
-                <Text style={[styles.coverText, titleStyle]} numberOfLines={2}>
-                  {title}
-                </Text>
-              </View>
-            </View>
+            <CoverView
+              title={coverTitle(layout, title)}
+              subtitle={layout.cover?.subtitle}
+              page={coverPage(layout)}
+              sourceOf={sourceOf}
+              theme={theme}
+              width={pageW}
+              height={pageH}
+            />
           ) : (
             rightContent
           )}
@@ -218,11 +208,6 @@ const styles = StyleSheet.create({
   },
   half: { overflow: 'hidden' },
   sheet: { backgroundColor: 'transparent' },
-  cover: { backgroundColor: lightColors.action, overflow: 'hidden', justifyContent: 'flex-end' },
-  coverTitle: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: space[3] },
-  coverShade: { backgroundColor: 'rgba(0,0,0,0.45)' },
-  coverTitleCenter: { top: 0, justifyContent: 'center', alignItems: 'center' },
-  coverText: { ...typography.h2 },
   face: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backfaceVisibility: 'hidden' },
   front: {},
   back: { transform: [{ rotateY: '180deg' }] },

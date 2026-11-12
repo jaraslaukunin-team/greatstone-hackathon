@@ -38,8 +38,18 @@ export const pageSchema = z.object({
   bg: z.string().max(20).optional(),
   texts: z.array(pageTextSchema).max(20).optional(),
 });
-// themeId необязателен: старые макеты без него рисуются в теме по умолчанию.
-export const layoutSchema = z.object({ pages: z.array(pageSchema), themeId: z.string().optional() });
+export const coverSchema = z.object({
+  photoId: z.string().nullable(),
+  title: z.string().max(100),
+  subtitle: z.string().max(100).optional(),
+  spine: z.string().max(60).optional(),
+});
+// themeId и cover необязательны: старые макеты без них рисуются в теме по умолчанию и с первой страницей на обложке.
+export const layoutSchema = z.object({
+  pages: z.array(pageSchema),
+  themeId: z.string().optional(),
+  cover: coverSchema.optional(),
+});
 
 export const userSchema = z.object({
   id: z.string(),
