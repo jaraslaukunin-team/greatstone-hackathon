@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import type { PhotoDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
+import { sha256Hex } from '../../crypto/payload.js';
 import { projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import { readImageMeta } from '../photos/imageMeta.js';
@@ -103,6 +104,7 @@ export async function applyAdjust(
         height: meta.height,
         takenAt: null,
         source: 'ai',
+        contentHash: sha256Hex(output),
       })
       .returning();
 

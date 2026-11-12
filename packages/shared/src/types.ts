@@ -97,6 +97,8 @@ export type PhotoDTO = {
   url: string;
   uploadedBy: string | null;
   source: 'gallery' | 'ai';
+  /** SHA-256 файла; null у старых загрузок без хеша. */
+  contentHash: string | null;
 };
 
 export type ProjectDTO = {

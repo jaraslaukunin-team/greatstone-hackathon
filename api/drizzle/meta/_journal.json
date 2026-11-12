@@ -92,6 +92,13 @@
       "when": 1795000000000,
       "tag": "0012_order_favorite",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795100000000,
+      "tag": "0013_photo_content_hash",
+      "breakpoints": true
     }
   ]
 }

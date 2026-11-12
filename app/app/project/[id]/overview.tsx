@@ -65,10 +65,10 @@ export default function OverviewScreen() {
   function addPhoto(photo: PhotoDTO) {
     setPhotoMap((map) => new Map(map).set(photo.id, photo));
   }
-  const photoUpload = draft?.project.status === 'draft' && id
-    ? <AddProjectPhotos projectId={id} onAdded={addPhoto} />
-    : undefined;
   const photoList = useMemo(() => Array.from(photoMap.values()), [photoMap]);
+  const photoUpload = draft?.project.status === 'draft' && id
+    ? <AddProjectPhotos projectId={id} existingPhotos={photoList} onAdded={addPhoto} />
+    : undefined;
   const layoutForIssues = draft?.layout;
   const issues = useMemo(
     () => layoutForIssues ? spreadIssues(layoutForIssues, Object.fromEntries(photoMap), { pageWidthCm: limits.widthCm }) : [],

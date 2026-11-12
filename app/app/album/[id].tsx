@@ -314,7 +314,11 @@ export default function AlbumScreen() {
         <Text style={styles.sub}>Общий пул фото. У каждого участника — своя книга.</Text>
 
         {!ordered && id ? (
-          <AddProjectPhotos projectId={id} onAdded={(photo) => setPhotos((list) => [...list, photo])} />
+          <AddProjectPhotos
+            projectId={id}
+            existingPhotos={photos}
+            onAdded={(photo) => setPhotos((list) => [...list, photo])}
+          />
         ) : null}
 
         {photos.length > 0 ? (

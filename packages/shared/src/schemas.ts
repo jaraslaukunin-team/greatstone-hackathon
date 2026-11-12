@@ -153,6 +153,7 @@ export const photoSchema = z.object({
   url: z.string(),
   uploadedBy: z.string().nullable(),
   source: z.enum(['gallery', 'ai']),
+  contentHash: z.string().nullable(),
 });
 
 export const projectSchema = z.object({

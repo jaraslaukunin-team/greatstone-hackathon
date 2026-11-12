@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import type { AiEditKind, AiJobDTO, AspectRatio } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
+import { sha256Hex } from '../../crypto/payload.js';
 import { aiJobs, consents, projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import { readImageMeta, sniffMime } from '../photos/imageMeta.js';
@@ -206,6 +207,7 @@ async function runJob(app: FastifyInstance, jobId: string): Promise<void> {
           height: meta.height,
           takenAt: null,
           source: 'ai',
+          contentHash: sha256Hex(output.image),
         });
         await tx
           .update(aiJobs)

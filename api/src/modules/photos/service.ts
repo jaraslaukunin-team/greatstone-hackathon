@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import type { PhotoDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
+import { sha256Hex } from '../../crypto/payload.js';
 import { orders, projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import { signUrl } from '../../storage/signedUrl.js';
@@ -29,6 +30,7 @@ export function toPhotoDTO(app: FastifyInstance, row: PhotoRow): PhotoDTO {
     url: signUrl(row.id, expiresAt, app.config.fileUrlSecret),
     uploadedBy: row.uploadedBy,
     source: row.source,
+    contentHash: row.contentHash ?? null,
   };
 }
 
@@ -41,6 +43,7 @@ export async function addPhoto(
   const project = await assertProjectAccess(app.db, user, projectId, 'write');
   if (project.status === 'ordered') throw ordered();
   const meta = await readImageMeta(data);
+  const contentHash = sha256Hex(data);
 
   const [{ next }] = (await app.db
     .select({ next: sql<number>`coalesce(max(${projectPhotos.position}) + 1, 0)::int` })
@@ -62,6 +65,7 @@ export async function addPhoto(
         width: meta.width,
         height: meta.height,
         takenAt: meta.takenAt,
+        contentHash,
       })
       .returning();
     await audit(app.db, { userId: user.id, action: 'photo.upload', objectType: 'photo', objectId: id, result: 'ok' });
@@ -122,6 +126,7 @@ export async function copyPhoto(
         height: src.height,
         takenAt: src.takenAt,
         source: src.source,
+        contentHash: src.contentHash,
       })
       .returning();
     await audit(app.db, { userId: user.id, action: 'photo.copy', objectType: 'photo', objectId: id, result: 'ok' });

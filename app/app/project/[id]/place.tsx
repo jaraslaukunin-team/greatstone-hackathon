@@ -236,7 +236,7 @@ export default function PlaceScreen() {
           );
         })}
       </ScrollView>
-      {!ordered && id ? <AddProjectPhotos projectId={id} onAdded={addPhoto} /> : null}
+      {!ordered && id ? <AddProjectPhotos projectId={id} existingPhotos={photoList} onAdded={addPhoto} /> : null}
 
       <Button title="Разместить фото" disabled={ordered || !cellValid || !photoId} onPress={place} />
       <Text style={styles.hint}>{cellValid && photoId ? 'В выделенную ячейку · выбрано 1 фото' : 'Выберите ячейку и фото'}</Text>

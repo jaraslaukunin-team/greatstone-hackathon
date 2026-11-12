@@ -1,7 +1,16 @@
 import type { PhotoDTO } from '@picpac/shared';
 import { useEditResult } from './editResultStore';
 
-const photo = (id: string): PhotoDTO => ({ id, width: 100, height: 100, takenAt: null, url: `/files/${id}`, uploadedBy: null, source: 'gallery' });
+const photo = (id: string): PhotoDTO => ({
+  id,
+  width: 100,
+  height: 100,
+  takenAt: null,
+  url: `/files/${id}`,
+  uploadedBy: null,
+  source: 'gallery',
+  contentHash: null,
+});
 
 describe('editResultStore', () => {
   beforeEach(() => useEditResult.setState({ results: {} }));

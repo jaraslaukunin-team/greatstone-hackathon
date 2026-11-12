@@ -142,10 +142,21 @@ describe('фото проекта', () => {
       uploadedBy: alice.id,
       source: 'gallery',
     });
+    expect(photo.contentHash).toMatch(/^[a-f0-9]{64}$/);
     expect(photo.url.startsWith(`/files/${photo.id}?exp=`)).toBe(true);
     const [row] = await rows();
     expect(row!.storagePath).toBe(`projects/${projectId}/${photo.id}`);
+    expect(row!.contentHash).toBe(photo.contentHash);
     expect((await app.storage.get(row!.storagePath)).equals(fixture('photo-ok.jpg'))).toBe(true);
+  });
+
+  it('две одинаковые загрузки в один проект получают один contentHash', async () => {
+    const data = fixture('photo-ok.jpg');
+    const a = photoSchema.parse((await upload(alice, projectId, 'a.jpg', data)).json());
+    const b = photoSchema.parse((await upload(alice, projectId, 'b.jpg', data)).json());
+    expect(a.id).not.toBe(b.id);
+    expect(a.contentHash).toBeTruthy();
+    expect(a.contentHash).toBe(b.contentHash);
   });
 
   it('вертикальное фото с EXIF-ориентацией 6 возвращает 1600×2400, а не сырые 2400×1600', async () => {

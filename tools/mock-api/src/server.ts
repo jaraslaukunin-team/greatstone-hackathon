@@ -257,6 +257,7 @@ async function buildApp() {
       url: `https://mock.local/photos/${newId()}.jpg`,
       uploadedBy: userId,
       source,
+      contentHash: null as string | null,
     };
     state.photos.set(photo.id, photo);
     const { projectId: _p, ...dto } = photo;
@@ -583,6 +584,7 @@ async function buildApp() {
           url: 'https://mock.local/ai-result.jpg',
           uploadedBy: session.user.id,
           source: 'ai',
+          contentHash: null as string | null,
         },
       });
     }, 300);
@@ -613,6 +615,7 @@ async function buildApp() {
       url: 'https://mock.local/adjusted.jpg',
       uploadedBy: session.user.id,
       source: 'ai' as const,
+      contentHash: null as string | null,
     };
     if (body.projectId) {
       state.photos.set(photo.id, { ...photo, projectId: body.projectId, uploadedBy: session.user.id });

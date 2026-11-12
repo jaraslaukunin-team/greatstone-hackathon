@@ -1,4 +1,4 @@
-import type { PhotoDTO, ProjectDTO } from '@picpac/shared';
+import { findDuplicatePhotoGroups, type PhotoDTO, type ProjectDTO } from '@picpac/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -15,6 +15,8 @@ import { Button } from '../../../src/ui/Button';
 import { lightColors, radius, space, typography } from '../../../src/theme/theme';
 
 const GRAD_MIN = 2;
+const DUPLICATE_WARN =
+  'Загружены одинаковые фотографии — лучше удалить лишние копии';
 
 function isGraduation(project: ProjectDTO | null): boolean {
   return !!project?.isShared && !project.isPool;
@@ -98,6 +100,8 @@ export default function PhotosScreen() {
     ? photos.length >= GRAD_MIN && pending === 0 && !finishing
     : photos.length > 0 && pending === 0 && !finishing;
 
+  const hasDuplicates = findDuplicatePhotoGroups(photos).length > 0;
+
   async function onDone() {
     if (!canDone || !project) return;
     if (isMember) {
@@ -135,6 +139,11 @@ export default function PhotosScreen() {
         {pending > 0 ? ` · загружается ещё ${pending}` : ''}
         {failed > 0 ? ` · не удалось загрузить ${failed}` : ''}
       </Text>
+      {hasDuplicates ? (
+        <Text accessibilityRole="alert" style={styles.warn}>
+          {DUPLICATE_WARN}
+        </Text>
+      ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {photos.length > 0 ? (
         <View style={styles.grid}>
@@ -163,6 +172,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
   progress: { ...typography.bodyStrong, color: lightColors.text },
+  warn: { ...typography.caption, color: lightColors.warning },
   error: { ...typography.caption, color: lightColors.danger },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   thumb: { width: 76, height: 76, borderRadius: radius.photo, backgroundColor: lightColors.border },

@@ -121,7 +121,7 @@ export default function FreeScreen() {
 
       {panel === 'photos' ? (
         <>
-        {!ordered && id ? <AddProjectPhotos projectId={id} onAdded={addPhoto} /> : null}
+        {!ordered && id ? <AddProjectPhotos projectId={id} existingPhotos={photoList} onAdded={addPhoto} /> : null}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tray}>
           {photoList.map((p) => {
             const info = sourceOf(p.id);

@@ -161,6 +161,8 @@ export const projectPhotos = pgTable(
     height: integer('height').notNull(),
     takenAt: ts('taken_at'),
     source: photoSourceEnum('source').notNull().default('gallery'),
+    /** SHA-256 содержимого файла; для старых загрузок может быть null. */
+    contentHash: text('content_hash'),
     /** Фото пула, из которого скопирована эта запись (личная книга). */
     sourcePhotoId: uuid('source_photo_id'),
     createdAt: createdAt(),
