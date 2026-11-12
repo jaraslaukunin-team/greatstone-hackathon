@@ -77,3 +77,18 @@ test('photos field matches photosCount', () => {
   };
   expect(memberRows(progress)[0].photos).toBe(7);
 });
+
+test('отмечает, у кого есть пожелание и ссылка на видео', () => {
+  const progress: AlbumProgress = {
+    expected: 3,
+    members: [
+      { userId: 'u1', childName: null, photosCount: 1 },
+      { userId: 'u2', childName: 'Маша', photosCount: 3, wish: 'Удачи!', videoUrl: 'https://x.by/v' },
+      { userId: 'u3', childName: 'Петя', photosCount: 0, wish: '  ', videoUrl: null },
+    ],
+  };
+  const rows = memberRows(progress);
+  expect(rows[1]).toMatchObject({ hasWish: true, hasVideo: true });
+  expect(rows[2]).toMatchObject({ hasWish: false, hasVideo: false });
+  expect(rows[0]).toMatchObject({ hasWish: false, hasVideo: false });
+});

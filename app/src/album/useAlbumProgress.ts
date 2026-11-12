@@ -3,7 +3,7 @@ import type { ApiClient } from '../api/client';
 
 export type AlbumProgress = {
   expected: number | null;
-  members: Array<{ userId: string; childName: string | null; photosCount: number }>;
+  members: Array<{ userId: string; childName: string | null; photosCount: number; wish?: string | null; videoUrl?: string | null }>;
 };
 
 export function useAlbumProgress(client: ApiClient, albumId: string | null) {
