@@ -1,6 +1,6 @@
-import type { ProjectDTO, ThemeId } from '@picpac/shared';
+import { DEFAULT_THEME_ID, type ProjectDTO, type ThemeId } from '@picpac/shared';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiRequestError } from '../../src/api/client';
 import { useApiClient } from '../../src/api/hooks';
@@ -12,48 +12,64 @@ import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
 import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
-const EXPECTED_MIN = 1;
-const EXPECTED_MAX = 100;
+const SHARED_EXPECTED_MEMBERS = 25;
 
 export default function CreateAlbumScreen() {
   const client = useApiClient();
   const catalog = useCatalog();
-  const [title, setTitle] = useState('11 Б, 2027');
-  const [expected, setExpected] = useState('25');
+  const [title, setTitle] = useState('');
+  const [shared, setShared] = useState(false);
   const [password, setPassword] = useState('');
-  const [themeId, setThemeId] = useState<ThemeId>('graduation');
+  const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
   const [selectedVariant, setVariantId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const graduation = catalog.data?.products.find((p) => p.kind === 'graduation');
-  const variants = graduation?.variants ?? [];
 
-  const variantId = selectedVariant ?? variants[0]?.id;
+  const variants = shared
+    ? (catalog.data?.products.find((p) => p.kind === 'graduation')?.variants ?? [])
+    : (catalog.data?.products.filter((p) => p.kind === 'photobook').flatMap((p) => p.variants) ?? []);
+  const firstVariantId = variants[0]?.id ?? null;
+  const variantId =
+    selectedVariant && variants.some((v) => v.id === selectedVariant)
+      ? selectedVariant
+      : firstVariantId;
+
+  // При смене «общий / личный» список форматов другой — берём первый доступный.
+  useEffect(() => {
+    setVariantId(firstVariantId);
+  }, [shared, firstVariantId]);
 
   async function create() {
     if (!variantId) return;
-    const n = Number(expected);
-    if (!Number.isInteger(n) || n < EXPECTED_MIN || n > EXPECTED_MAX) {
-      setError(`Укажите число учеников от ${EXPECTED_MIN} до ${EXPECTED_MAX}`);
-      return;
-    }
-    const problem = passwordProblem(password);
-    if (problem) {
-      setError(problem);
-      return;
+    if (shared) {
+      const problem = passwordProblem(password);
+      if (problem) {
+        setError(problem);
+        return;
+      }
     }
     setError(null);
     setBusy(true);
     try {
-      const project = await client.post<ProjectDTO>('/projects', {
-        variantId,
-        title: title.trim() || 'Выпускной альбом',
-        isShared: true,
-        expectedMembers: n,
-        joinPassword: password,
-      });
+      const project = await client.post<ProjectDTO>(
+        '/projects',
+        shared
+          ? {
+              variantId,
+              title: title.trim() || 'Выпускной альбом',
+              isShared: true,
+              expectedMembers: SHARED_EXPECTED_MEMBERS,
+              joinPassword: password,
+            }
+          : {
+              variantId,
+              title: title.trim() || 'Моя фотокнига',
+              isShared: false,
+            },
+      );
       useThemeChoice.getState().set(project.id, themeId);
-      router.push(`/album/${project.id}`);
+      if (shared) router.push(`/album/${project.id}`);
+      else router.push(`/project/${project.id}/photos`);
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать альбом');
     } finally {
@@ -61,17 +77,24 @@ export default function CreateAlbumScreen() {
     }
   }
 
+  const canSubmit =
+    Boolean(variantId) && !busy && (!shared || passwordProblem(password) === null);
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Выпускной альбом</Text>
+      <Text style={styles.title}>Создать альбом</Text>
 
-      <Text style={styles.label}>Класс / название</Text>
-      <Input value={title} onChangeText={setTitle} placeholder="Например: 11 Б, 2027" />
+      <Text style={styles.label}>Название</Text>
+      <Input
+        value={title}
+        onChangeText={setTitle}
+        placeholder={shared ? 'Например: 11 Б, 2027' : 'Например: Отпуск 2026'}
+      />
 
       <Text style={styles.label}>Оформление</Text>
       <ThemePicker value={themeId} onChange={setThemeId} />
 
-      {variants.length > 1 ? (
+      {variants.length > 0 ? (
         <View style={styles.section}>
           <Text style={styles.label}>Формат</Text>
           <View style={styles.chips}>
@@ -92,29 +115,49 @@ export default function CreateAlbumScreen() {
         </View>
       ) : null}
 
-      <Text style={styles.label}>Число учеников</Text>
-      <Input
-        value={expected}
-        onChangeText={setExpected}
-        keyboardType="number-pad"
-        placeholder={`От ${EXPECTED_MIN} до ${EXPECTED_MAX}`}
-      />
+      <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: shared }}
+        onPress={() => {
+          setShared((v) => {
+            const next = !v;
+            setThemeId(next ? 'graduation' : DEFAULT_THEME_ID);
+            return next;
+          });
+        }}
+        style={styles.checkRow}
+      >
+        <View style={[styles.checkBox, shared && styles.checkBoxOn]}>
+          {shared ? <Text style={styles.checkMark}>✓</Text> : null}
+        </View>
+        <View style={styles.checkCopy}>
+          <Text style={styles.label}>Общий альбом</Text>
+          <Text style={styles.hint}>
+            Другие смогут присоединиться по ссылке и паролю. Без галочки — личная фотокнига только для вас.
+          </Text>
+        </View>
+      </Pressable>
 
-      <Text style={styles.label}>Пароль для входа</Text>
-      <Input
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Обязательно"
-        secureTextEntry
-        autoCapitalize="none"
-        autoComplete="off"
-      />
-      <Text style={styles.hint}>
-        В альбом вступят только те, кому вы передали и ссылку, и пароль. Так фото детей не попадут к чужим, даже если
-        ссылка утечёт. Пароль можно сменить позже, убрать его нельзя.
-      </Text>
+      {shared ? (
+        <View style={styles.section}>
+          <Text style={styles.label}>Пароль для входа</Text>
+          <Input
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Обязательно"
+            secureTextEntry
+            autoCapitalize="none"
+            autoComplete="off"
+          />
+          <Text style={styles.hint}>
+            В альбом вступят только те, кому вы передали и ссылку, и пароль. Пароль можно сменить позже, убрать его
+            нельзя.
+          </Text>
+        </View>
+      ) : null}
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Создать" onPress={() => void create()} disabled={busy || !variantId || password.length === 0} />
+      <Button title="Создать" onPress={() => void create()} disabled={!canSubmit} />
     </ScrollView>
   );
 }
@@ -140,4 +183,28 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: lightColors.action, borderColor: lightColors.action },
   chipText: { ...typography.label, color: lightColors.text },
   chipTextActive: { color: lightColors.textOnAccent },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space[3],
+    minHeight: 44,
+    paddingVertical: space[1],
+  },
+  checkBox: {
+    width: 24,
+    height: 24,
+    marginTop: 2,
+    borderRadius: radius.photo,
+    borderWidth: 2,
+    borderColor: lightColors.border,
+    backgroundColor: lightColors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBoxOn: {
+    borderColor: lightColors.action,
+    backgroundColor: lightColors.action,
+  },
+  checkMark: { color: lightColors.textOnAccent, fontSize: 14, fontWeight: '700' },
+  checkCopy: { flex: 1, gap: space[1] },
 });
