@@ -5,20 +5,26 @@ import { PrintStack } from '../../src/ui/PrintStack';
 import { Wordmark } from '../../src/ui/Wordmark';
 import { lightColors, space, typography } from '../../src/theme/theme';
 import { Icon } from '../../src/ui/Icon';
+import { ShowcaseStrip } from '../../src/showcase/ShowcaseStrip';
+import { useT } from '../../src/i18n/useT';
 
 export default function HomeScreen() {
+  const t = useT();
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Wordmark />
-        <Text style={styles.slogan}>Храните воспоминания красиво</Text>
+        <Text style={styles.slogan}>{t.home.slogan}</Text>
       </View>
+
+      <ShowcaseStrip />
 
       <Link href="/catalog/books" asChild>
         <Card tone="green" style={styles.hero} accessibilityRole="link">
           <View style={styles.heroText}>
-            <Text style={styles.heroTitle}>Собрать фотокнигу</Text>
-            <Text style={styles.heroSub}>Ваши истории на бумаге</Text>
+            <Text style={styles.heroTitle}>{t.home.heroTitle}</Text>
+            <Text style={styles.heroSub}>{t.home.heroSub}</Text>
           </View>
           <View style={styles.heroArt}>
             <PrintStack size={104} />
@@ -29,8 +35,8 @@ export default function HomeScreen() {
       <Link href="/catalog/prints" asChild>
         <Card tone="rose" accessibilityRole="link">
           <Icon name="image" size={28} color={lightColors.text} />
-          <Text style={styles.cardTitle}>Напечатать фото</Text>
-          <Text style={styles.cardSub}>Любимые кадры — в руках</Text>
+          <Text style={styles.cardTitle}>{t.home.printsTitle}</Text>
+          <Text style={styles.cardSub}>{t.home.printsSub}</Text>
         </Card>
       </Link>
 
@@ -38,15 +44,15 @@ export default function HomeScreen() {
         <Link href="/album/create" asChild>
           <Card tone="mint" style={styles.half} accessibilityRole="link">
             <Icon name="heart" size={28} color={lightColors.text} />
-            <Text style={styles.cardTitle}>Выпускной альбом</Text>
-            <Text style={styles.cardSub}>Соберём вместе</Text>
+            <Text style={styles.cardTitle}>{t.home.albumTitle}</Text>
+            <Text style={styles.cardSub}>{t.home.albumSub}</Text>
           </Card>
         </Link>
         <Link href="/ai/consent" asChild>
           <Card tone="lilac" style={styles.half} accessibilityRole="link">
             <Icon name="star" size={28} color={lightColors.text} />
-            <Text style={styles.cardTitle}>AI-редактор</Text>
-            <Text style={styles.cardSub}>Новый взгляд на фото</Text>
+            <Text style={styles.cardTitle}>{t.home.aiTitle}</Text>
+            <Text style={styles.cardSub}>{t.home.aiSub}</Text>
           </Card>
         </Link>
       </View>
