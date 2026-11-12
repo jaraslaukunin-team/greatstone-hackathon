@@ -39,11 +39,11 @@ export default function OrderDetailsScreen() {
     setActionError(null);
     setBusy(true);
     try {
-      const copy = await client.post<ProjectDTO>(`/projects/${order.projectId}/duplicate`);
+      const copy = await client.post<ProjectDTO>(`/orders/${order.id}/repeat`);
       setDraft(copy);
       router.push(`/project/${copy.id}/overview`);
-    } catch {
-      setActionError('Не удалось повторить заказ');
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Не удалось повторить заказ');
     } finally {
       setBusy(false);
     }

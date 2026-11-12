@@ -1,4 +1,4 @@
-import { parseFormattedText } from './formattedText';
+import { parseFormattedText } from './parseFormattedText';
 
 describe('parseFormattedText', () => {
   it('returns empty for empty input', () => {

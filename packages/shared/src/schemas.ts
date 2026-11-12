@@ -215,6 +215,7 @@ export const createOrderRequestSchema = z.object({
 });
 
 export const orderSchema = z.object({
+  favorite: z.boolean().optional(),
   id: z.string(),
   number: z.string(),
   projectId: z.string().nullable(),

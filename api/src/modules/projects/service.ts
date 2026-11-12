@@ -173,16 +173,22 @@ export async function saveLayout(
 }
 
 export async function deleteProject(db: Db, storage: Storage, user: AuthUser, projectId: string): Promise<void> {
-  const project = await assertProjectAccess(db, user, projectId, 'organizer');
-  const [order] = await db.select({ id: orders.id }).from(orders).where(eq(orders.projectId, projectId)).limit(1);
-  if (project.status === 'ordered' || order) {
-    throw new AppError(409, 'PROJECT_ORDERED', 'Проект уже заказан, его нельзя удалить');
-  }
-  const files = await db
-    .select({ path: projectPhotos.storagePath })
-    .from(projectPhotos)
-    .where(eq(projectPhotos.projectId, projectId));
-  await db.delete(projects).where(eq(projects.id, projectId));
+  await assertProjectAccess(db, user, projectId, 'organizer');
+  const files = await db.transaction(async (tx) => {
+    const [project] = await tx.select({ status: projects.status }).from(projects)
+      .where(eq(projects.id, projectId)).for('update');
+    if (!project) throw notFound();
+    const [order] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.projectId, projectId)).limit(1);
+    if (project.status === 'ordered' || order) {
+      throw new AppError(409, 'PROJECT_ORDERED', 'Проект уже заказан, его нельзя удалить');
+    }
+    const files = await tx
+      .select({ path: projectPhotos.storagePath })
+      .from(projectPhotos)
+      .where(eq(projectPhotos.projectId, projectId));
+    await tx.delete(projects).where(eq(projects.id, projectId));
+    return files;
+  });
   // Файлы удаляем после фиксации строк: сбой диска не должен вернуть удалённый проект.
   await Promise.allSettled(files.map((f) => storage.remove(f.path)));
   await audit(db, { userId: user.id, action: 'project.delete', objectType: 'project', objectId: projectId, result: 'ok' });
@@ -303,44 +309,44 @@ export async function duplicateProject(
 
   let newProject: typeof projects.$inferSelect;
   try {
-    // Вставить новый проект.
-    const [inserted] = await db
-      .insert(projects)
-      .values({
-        id: newProjectId,
-        ownerId: user.id,
-        variantId: src.variantId,
-        title: newTitle,
-        isShared: false,
-        expectedMembers: null,
-        joinPasswordHash: null,
-        status: 'draft',
-        layout: newLayout,
-      })
-      .returning();
-    newProject = inserted!;
+    newProject = await db.transaction(async (tx) => {
+      // Вставить новый проект.
+      const [inserted] = await tx
+        .insert(projects)
+        .values({
+          id: newProjectId,
+          ownerId: user.id,
+          variantId: src.variantId,
+          title: newTitle,
+          isShared: false,
+          expectedMembers: null,
+          joinPasswordHash: null,
+          status: 'draft',
+          layout: newLayout,
+        })
+        .returning();
 
-    // Вставить копии фото.
-    if (copies.length > 0) {
-      await db.insert(projectPhotos).values(
-        copies.map((c) => ({
-          id: c.newId,
-          projectId: newProjectId,
-          uploadedBy: user.id,
-          storagePath: c.key,
-          position: c.src.position,
-          width: c.src.width,
-          height: c.src.height,
-          takenAt: c.src.takenAt,
-          source: c.src.source,
-        })),
-      );
-    }
+      // Вставить копии фото.
+      if (copies.length > 0) {
+        await tx.insert(projectPhotos).values(
+          copies.map((c) => ({
+            id: c.newId,
+            projectId: newProjectId,
+            uploadedBy: user.id,
+            storagePath: c.key,
+            position: c.src.position,
+            width: c.src.width,
+            height: c.src.height,
+            takenAt: c.src.takenAt,
+            source: c.src.source,
+          })),
+        );
+      }
+      return inserted!;
+    });
   } catch (e) {
     // Откат хранилища: новый проект мог не создаться или ошибка при вставке фото.
     await Promise.allSettled(copies.map((c) => storage.remove(c.key)));
-    // Попытаться удалить проект из БД, если он всё-таки вставился.
-    await db.delete(projects).where(eq(projects.id, newProjectId)).catch(() => undefined);
     throw e;
   }
 

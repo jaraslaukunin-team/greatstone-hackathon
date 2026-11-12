@@ -21,6 +21,7 @@ import {
   interactions,
   orderStatusHistory,
   orders,
+  profiles,
   productVariants,
   products,
   projectPhotos,
@@ -71,6 +72,7 @@ export async function toOrderDTOs(db: Db, rows: OrderRow[]): Promise<OrderDTO[]>
     db.select({ id: interactions.id, orderId: interactions.orderId }).from(interactions).where(inArray(interactions.orderId, ids)),
   ]);
   return rows.map((row) => ({
+    favorite: row.favorite,
     id: row.id,
     number: row.number,
     projectId: row.projectId,
@@ -99,6 +101,12 @@ export async function transitionOrder(
   t: { orderId: string; from: OrderStatus; to: OrderStatus; actorId: string; comment: string | null; now: Date },
 ): Promise<OrderRow | null> {
   return db.transaction(async (tx) => {
+    if (t.to === 'cancelled') {
+      const [order] = await tx.select({ projectId: orders.projectId }).from(orders).where(eq(orders.id, t.orderId));
+      if (order?.projectId) {
+        await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, order.projectId)).for('update');
+      }
+    }
     const [row] = await tx
       .update(orders)
       .set({ status: t.to })
@@ -266,6 +274,23 @@ export async function loadOrder(db: Db, user: AuthUser, id: string, opts: { oper
   if (allowed) return row;
   await audit(db, { userId: user.id, action: 'access.denied', objectType: 'order', objectId: id, result: 'denied' });
   throw notFound();
+}
+
+export async function setOrderFavorite(db: Db, user: AuthUser, id: string, favorite: boolean): Promise<OrderDTO> {
+  if (!UUID.test(id)) throw notFound();
+  const row = await db.transaction(async (tx) => {
+    await tx.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, user.id)).for('no key update');
+    const owned = and(eq(orders.id, id), eq(orders.customerId, user.id));
+    const [order] = await tx.select({ projectId: orders.projectId }).from(orders).where(owned);
+    if (!order) throw notFound();
+    if (order.projectId) {
+      await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, order.projectId)).for('update');
+    }
+    const [updated] = await tx.update(orders).set({ favorite }).where(owned).returning();
+    if (!updated) throw notFound();
+    return updated;
+  });
+  return toOrderDTO(db, row);
 }
 
 export async function getOrder(db: Db, user: AuthUser, id: string): Promise<OrderDTO> {

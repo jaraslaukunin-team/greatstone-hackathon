@@ -91,6 +91,57 @@ describe('удаление данных пользователя', () => {
   const summary = (s: Session | null) =>
     app.inject({ method: 'GET', url: '/me/data-summary', headers: s ? { authorization: `Bearer ${s.token}` } : {} });
 
+  it('хранит избранный заказ и фото до снятия отметки, повтор создаёт черновик', async () => {
+    const projectId = await makeProject(alice);
+    const photo = await addPhoto(alice, projectId);
+    const [order] = await db.insert(orders).values({
+      customerId: alice.id,
+      projectId,
+      idempotencyKey: randomUUID(),
+      requestHash: 'test',
+      total: 1000,
+      deliveryMethod: 'courier_minsk',
+      status: 'cancelled',
+    }).returning();
+    const favorite = (session: Session, value: boolean) => app.inject({
+      method: 'POST',
+      url: `/orders/${order!.id}/favorite`,
+      headers: { authorization: `Bearer ${session.token}` },
+      payload: { favorite: value },
+    });
+    const repeat = (session: Session) => app.inject({
+      method: 'POST',
+      url: `/orders/${order!.id}/repeat`,
+      headers: { authorization: `Bearer ${session.token}` },
+    });
+
+    expect((await favorite(bob, true)).statusCode).toBe(404);
+    expect((await repeat(bob)).statusCode).toBe(404);
+    expect((await favorite(alice, true)).json()).toMatchObject({ favorite: true });
+    const list = await app.inject({
+      method: 'GET',
+      url: '/orders',
+      headers: { authorization: `Bearer ${alice.token}` },
+    });
+    expect(list.json()).toEqual([expect.objectContaining({ id: order!.id, favorite: true })]);
+    expect((await del(alice)).statusCode).toBe(409);
+    expect((await app.inject({
+      method: 'DELETE',
+      url: `/photos/${photo.id}`,
+      headers: { authorization: `Bearer ${alice.token}` },
+    })).statusCode).toBe(409);
+    expect(await fileExists(photo.key)).toBe(true);
+
+    const copy = await repeat(alice);
+    expect(copy.statusCode).toBe(201);
+    expect(copy.json()).toMatchObject({ status: 'draft', variantId });
+    expect(copy.json().id).not.toBe(projectId);
+
+    expect((await favorite(alice, false)).json()).toMatchObject({ favorite: false });
+    expect((await del(alice)).statusCode).toBe(204);
+    expect(await fileExists(photo.key)).toBe(false);
+  });
+
   it('сводка данных: число проектов, фото и заказов, дата согласия на AI; без токена 401', async () => {
     expect((await summary(null)).statusCode).toBe(401);
     const empty = dataSummarySchema.parse((await summary(alice)).json());

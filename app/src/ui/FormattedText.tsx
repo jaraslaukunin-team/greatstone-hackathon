@@ -1,6 +1,6 @@
 import { Text, type StyleProp, type TextStyle } from 'react-native';
 import { fonts } from '../theme/theme';
-import { parseFormattedText } from './formattedText';
+import { parseFormattedText } from './parseFormattedText';
 
 type Props = {
   children: string;

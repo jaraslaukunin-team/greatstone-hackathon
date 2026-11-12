@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import type { PhotoDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
-import { projectPhotos } from '../../db/schema.js';
+import { orders, projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import { signUrl } from '../../storage/signedUrl.js';
 import { assertProjectAccess, viewerRole } from '../projects/service.js';
@@ -153,8 +153,16 @@ export async function deletePhoto(app: FastifyInstance, user: AuthUser, photoId:
   const project = await assertProjectAccess(app.db, user, photo.projectId, 'write');
   // Чужие фото вправе удалять только владелец проекта и организатор альбома.
   if (photo.uploadedBy !== user.id) await assertProjectAccess(app.db, user, photo.projectId, 'organizer');
-  if (project.status === 'ordered') throw ordered();
-  await app.db.delete(projectPhotos).where(eq(projectPhotos.id, photoId));
+  await app.db.transaction(async (tx) => {
+    const [current] = await tx.select({ status: projects.status }).from(projects)
+      .where(eq(projects.id, project.id)).for('update');
+    if (!current) throw notFound();
+    if (current.status === 'ordered') throw ordered();
+    const [favorite] = await tx.select({ id: orders.id }).from(orders)
+      .where(and(eq(orders.projectId, project.id), eq(orders.favorite, true))).limit(1);
+    if (favorite) throw new AppError(409, 'FAVORITE_ORDER_RETAINED', 'Фото хранится для избранного заказа');
+    await tx.delete(projectPhotos).where(eq(projectPhotos.id, photoId));
+  });
   await app.storage.remove(photo.storagePath).catch((e) => app.log.error(e, 'не удалось удалить файл фото'));
   await audit(app.db, { userId: user.id, action: 'photo.delete', objectType: 'photo', objectId: photoId, result: 'ok' });
 }

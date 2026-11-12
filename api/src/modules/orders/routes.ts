@@ -3,7 +3,9 @@ import { createOrderRequestSchema } from '@picpac/shared';
 import { requireAuth } from '../../auth/plugin.js';
 import { AppError } from '../../errors.js';
 import { parse } from '../../validation.js';
-import { cancelOrder, createOrder, getOrder, listOrders } from './service.js';
+import { z } from 'zod';
+import { duplicateProject } from '../projects/service.js';
+import { cancelOrder, createOrder, getOrder, listOrders, loadOrder, setOrderFavorite } from './service.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -26,6 +28,20 @@ export function registerOrderRoutes(app: FastifyInstance): void {
   app.get('/orders/:id', auth, async (req) => {
     const { id } = req.params as { id: string };
     return getOrder(req.server.db, req.user!, id);
+  });
+
+  app.post('/orders/:id/favorite', auth, async (req) => {
+    const { id } = req.params as { id: string };
+    const { favorite } = parse(z.object({ favorite: z.boolean() }), req.body);
+    return setOrderFavorite(req.server.db, req.user!, id, favorite);
+  });
+
+  app.post('/orders/:id/repeat', auth, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const order = await loadOrder(req.server.db, req.user!, id, { operatorMay: false });
+    if (!order.projectId) throw new AppError(409, 'ORDER_PROJECT_MISSING', 'Макет этого заказа больше недоступен');
+    const project = await duplicateProject(req.server, req.user!, order.projectId);
+    return reply.code(201).send(project);
   });
 
   app.post('/orders/:id/cancel', auth, async (req) => {

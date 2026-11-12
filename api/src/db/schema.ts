@@ -222,6 +222,7 @@ export const orders = pgTable(
     currency: text('currency').notNull().default('BYN'),
     deliveryMethod: deliveryMethodEnum('delivery_method').notNull(),
     paymentMethod: paymentMethodEnum('payment_method').notNull().default('card'),
+    favorite: boolean('favorite').notNull().default(false),
     eripNumber: text('erip_number'),
     recipientName: text('recipient_name'),
     address: text('address'),

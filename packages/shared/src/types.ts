@@ -159,6 +159,7 @@ export type CreateOrderRequest = {
 export type OrderHistoryEntry = { status: OrderStatus; at: string; note?: string };
 
 export type OrderDTO = {
+  favorite?: boolean;
   id: string;
   number: string;
   projectId: string | null;
