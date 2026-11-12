@@ -20,6 +20,7 @@ function filmstrip(w: number, h: number): DecorShape[] {
   const rw = band * 0.5;
   const rh = band * 0.75;
   const step = rh * 2;
+  if (step <= 0) return [];
   const out: DecorShape[] = [];
   for (let y = step / 2; y + rh <= h - step / 4; y += step) {
     out.push({ kind: 'rect', x: (band - rw) / 2, y, w: rw, h: rh, r: rw * 0.25, opacity: 0.6 });
@@ -89,6 +90,8 @@ function ribbon(w: number, h: number): DecorShape[] {
 
 /** Фигуры украшения для листа w×h в пикселях. Расчёт без случайности: на любом устройстве одинаковый. */
 export function decorShapes(decor: DecorId, w: number, h: number): DecorShape[] {
+  // Лист ещё не измерен (0), или размер не число: рисовать нечего. Для нулевого шага цикл плёнки не закончился бы никогда.
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w < 20 || h < 20) return [];
   switch (decor) {
     case 'filmstrip':
       return filmstrip(w, h);

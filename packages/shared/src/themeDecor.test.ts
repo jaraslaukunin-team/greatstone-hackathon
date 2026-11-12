@@ -66,4 +66,19 @@ describe('decorShapes', () => {
       expect(t.decorColor).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
   });
+
+  it('лист без размера (ещё не измерен) даёт пустой список и не зацикливается', () => {
+    for (const t of THEMES) {
+      expect(decorShapes(t.decor, 0, 0), t.id).toEqual([]);
+      expect(decorShapes(t.decor, 0, 300), t.id).toEqual([]);
+      expect(decorShapes(t.decor, 300, 0), t.id).toEqual([]);
+      expect(decorShapes(t.decor, Number.NaN, 300), t.id).toEqual([]);
+      expect(decorShapes(t.decor, Number.POSITIVE_INFINITY, 300), t.id).toEqual([]);
+      expect(decorShapes(t.decor, 5, 5), t.id).toEqual([]);
+    }
+  });
+
+  it('число фигур плёнки ограничено даже на очень большом листе', () => {
+    expect(decorShapes('filmstrip', 2000, 2000).length).toBeLessThan(400);
+  });
 });
