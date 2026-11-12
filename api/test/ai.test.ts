@@ -5,7 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import type { FastifyInstance } from 'fastify';
 import { and, eq } from 'drizzle-orm';
 import { aiJobSchema, photoSchema } from '@picpac/shared';
-import { auditLog, consents, aiJobs, productVariants, projectMembers, projectPhotos, projects } from '../src/db/schema.js';
+import { auditLog, consents, aiJobs, orders, productVariants, projectMembers, projectPhotos, projects } from '../src/db/schema.js';
 import { AiaiProvider } from '../src/modules/ai/aiaiProvider.js';
 import { AiaiChatProvider, StubChatProvider } from '../src/modules/ai/chatProvider.js';
 import { BLOCKED_TERMS, isPromptAllowed } from '../src/modules/ai/promptFilter.js';
@@ -523,6 +523,40 @@ describe('AI-редактор', () => {
     });
     expect(res.statusCode).toBe(422);
     expect(res.json().error.code).toBe('PROMPT_REJECTED');
+  });
+
+  it('в промпт к chat-провайдеру уходят ORD-N без реальных номеров и контактов', async () => {
+    const seen: { system: string; messages: { content: string }[] }[] = [];
+    app.ai.chat = {
+      name: 'capture',
+      async complete(input) {
+        seen.push({ system: input.system, messages: input.messages });
+        return 'Статус ORD-1 в работе';
+      },
+    };
+    await consent(alice);
+    await db.insert(orders).values({
+      customerId: alice.id,
+      projectId,
+      number: 'PP-SECRET-99',
+      status: 'accepted',
+      total: 1000,
+      deliveryMethod: 'belpost',
+      idempotencyKey: randomUUID(),
+      requestHash: 'test-hash',
+    });
+    const res = await call(alice, 'POST', '/ai/chat', {
+      messages: [{ role: 'user', content: 'Где заказ? Пишите a@b.by +375291112233' }],
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().reply).toContain('PP-SECRET-99');
+    expect(seen.length).toBe(1);
+    expect(seen[0]!.messages[0]!.content).toContain('[contact]');
+    expect(seen[0]!.messages[0]!.content).toContain('[phone]');
+    expect(seen[0]!.messages[0]!.content).not.toContain('a@b.by');
+    expect(seen[0]!.system).toContain('ORD-1');
+    expect(seen[0]!.system).not.toContain('PP-SECRET-99');
+    expect(seen[0]!.system).not.toMatch(/\+375/);
   });
 });
 

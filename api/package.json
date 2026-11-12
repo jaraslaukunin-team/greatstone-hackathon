@@ -15,6 +15,7 @@
     "ai:probe": "tsx scripts/ai-probe.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^10.1.0",
     "@fastify/multipart": "^10.1.8",
     "@picpac/shared": "*",
     "drizzle-orm": "^0.38.3",

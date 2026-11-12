@@ -12,6 +12,7 @@ import { assertProjectAccess, viewerRole } from '../projects/service.js';
 import { prepareAiEgress } from './egress.js';
 import { isPromptAllowed } from './promptFilter.js';
 import { wrapEditPrompt } from './promptWrap.js';
+import { sanitizeForExternalLlm } from './sanitize.js';
 import { sizeFor } from './sizeFor.js';
 
 export const AI_HOURLY_LIMIT = 10;
@@ -69,7 +70,8 @@ export async function requestEdit(
     throw new AppError(422, 'PROMPT_REJECTED', 'Такой запрос обработать нельзя. Опишите другое изменение фото');
   }
 
-  const wrappedPrompt = wrapEditPrompt(input.prompt, kind);
+  // В aiai уходит только обезличенный prompt (без контактов/телефонов).
+  const wrappedPrompt = wrapEditPrompt(sanitizeForExternalLlm(input.prompt), kind);
   const now = app.clock.now();
   // Лимит считается при заблокированном пользователе, поэтому параллельные запросы его не обходят.
   const job = await db.transaction(async (tx) => {
@@ -125,7 +127,8 @@ async function runJob(app: FastifyInstance, jobId: string): Promise<void> {
   const db = app.db;
   const controller = new AbortController();
   app.ai.controllers.add(controller);
-  const timer = setTimeout(() => controller.abort(), app.ai.timeoutMs);
+  // Таймер только на вызов внешнего провайдера (не на локальную подготовку egress).
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const fail = async ({ reason }: Failure) => {
     await db.update(aiJobs).set({ status: 'failed', reason }).where(eq(aiJobs.id, jobId));
   };
@@ -155,6 +158,7 @@ async function runJob(app: FastifyInstance, jobId: string): Promise<void> {
 
     let output: { image: Buffer; mime: string };
     try {
+      timer = setTimeout(() => controller.abort(), app.ai.timeoutMs);
       output = await app.ai.provider.edit({
         image: egress.image,
         mime: egress.mime,
@@ -169,6 +173,9 @@ async function runJob(app: FastifyInstance, jobId: string): Promise<void> {
           ? 'Сервис не ответил вовремя, попробуйте ещё раз'
           : 'Сервис обработки фото временно недоступен, попробуйте ещё раз',
       });
+    } finally {
+      if (timer) clearTimeout(timer);
+      timer = undefined;
     }
     let meta;
     try {
@@ -213,7 +220,7 @@ async function runJob(app: FastifyInstance, jobId: string): Promise<void> {
     app.log.error(e, 'не удалось выполнить AI-задачу');
     await fail({ reason: 'Не удалось сохранить результат, попробуйте ещё раз' }).catch(() => undefined);
   } finally {
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
     app.ai.controllers.delete(controller);
   }
 }
