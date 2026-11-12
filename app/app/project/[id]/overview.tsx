@@ -1,10 +1,13 @@
-import { themeById, type CatalogDTO, type PhotoDTO, type ProjectDTO } from '@picpac/shared';
+import { DEFAULT_THEME_ID, themeById, type CatalogDTO, type PhotoDTO, type ProjectDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import { autoLayoutLocal, unplacedPhotos } from '../../../src/editor/autoLayoutLocal';
+import { setTheme } from '../../../src/editor/editorActions';
 import { useProjectStore } from '../../../src/project/projectStore';
+import { useThemeChoice } from '../../../src/project/themeChoiceStore';
+import { ThemePicker } from '../../../src/theme/ThemePicker';
 import { syncProject } from '../../../src/project/syncProject';
 import { Button } from '../../../src/ui/Button';
 import { BookViewer } from '../../../src/book/BookViewer';
@@ -18,6 +21,7 @@ export default function OverviewScreen() {
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState('Собираем вашу книгу…');
   const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
+  const [showThemes, setShowThemes] = useState(false);
   const sourceOf = useMemo(() => projectSource(photoMap, client.resolveUrl), [photoMap, client.resolveUrl]);
 
   useEffect(() => {
@@ -33,9 +37,12 @@ export default function OverviewScreen() {
       const previous = stored?.project.id === project.id ? stored.layout : project.layout;
       const keep =
         previous.pages.some((pg) => pg.cells.some((c) => c.photoId)) && unplacedPhotos(previous, photos).length === 0;
-      const layout = keep
+      const laidOut = keep
         ? previous
         : autoLayoutLocal(photos, { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 60 });
+      // Тема: уже записанная в макете, иначе выбранная до загрузки фото, иначе по умолчанию. Повторная раскладка тему не теряет.
+      const chosen = useThemeChoice.getState().get(project.id) ?? DEFAULT_THEME_ID;
+      const layout = { ...laidOut, themeId: previous.themeId ?? laidOut.themeId ?? chosen };
       if (cancelled) return;
       setDraft({ ...project, layout });
       setLayout(layout);
@@ -77,6 +84,17 @@ export default function OverviewScreen() {
         />
       ) : null}
       <Text style={styles.hint}>Листайте свайпом или стрелками. Нажмите на «Разворот», чтобы открыть его в редакторе.</Text>
+      {draft?.layout?.pages?.length ? (
+        <>
+          <Button title={showThemes ? 'Скрыть оформление' : 'Оформление'} variant="secondary" onPress={() => setShowThemes((v) => !v)} />
+          {showThemes ? (
+            <ThemePicker
+              value={themeById(draft.layout.themeId).id}
+              onChange={(themeId) => setLayout(setTheme(draft.layout, themeId))}
+            />
+          ) : null}
+        </>
+      ) : null}
       <Button title="Проверить перед заказом" disabled={busy} onPress={() => router.push(`/project/${id}/review`)} />
     </ScrollView>
   );
