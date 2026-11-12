@@ -1,6 +1,6 @@
-import type { CatalogDTO, PhotoDTO, ProjectDTO } from '@picpac/shared';
+import { themeById, type CatalogDTO, type PhotoDTO, type ProjectDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import { autoLayoutLocal, unplacedPhotos } from '../../../src/editor/autoLayoutLocal';
@@ -8,6 +8,7 @@ import { useProjectStore } from '../../../src/project/projectStore';
 import { syncProject } from '../../../src/project/syncProject';
 import { Button } from '../../../src/ui/Button';
 import { BookViewer } from '../../../src/book/BookViewer';
+import { projectSource } from '../../../src/book/imageSource';
 import { lightColors, space, typography } from '../../../src/theme/theme';
 
 export default function OverviewScreen() {
@@ -17,6 +18,7 @@ export default function OverviewScreen() {
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState('Собираем вашу книгу…');
   const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
+  const sourceOf = useMemo(() => projectSource(photoMap, client.resolveUrl), [photoMap, client.resolveUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,8 +71,8 @@ export default function OverviewScreen() {
         <BookViewer
           title={draft.project.title}
           layout={draft.layout}
-          photos={photoMap}
-          resolveUrl={client.resolveUrl}
+          sourceOf={sourceOf}
+          theme={themeById(draft.layout.themeId)}
           onOpenPage={(page) => router.push(`/project/${id}/spread/${page}`)}
         />
       ) : null}

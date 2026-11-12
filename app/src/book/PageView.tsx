@@ -1,63 +1,71 @@
-import { fitRect, type Cell, type Page, type PhotoDTO } from '@picpac/shared';
+import { fitRect, type BookTheme, type Cell, type Page, type Rect } from '@picpac/shared';
 import { Image, StyleSheet, View } from 'react-native';
 import { lightColors } from '../theme/theme';
+import { cellRects } from './cellRects';
+import type { SourceOf } from './imageSource';
 
 type Props = {
   page: Page | null;
-  photos: Map<string, PhotoDTO>;
-  resolveUrl: (path: string) => string;
+  sourceOf: SourceOf;
   width: number;
   height: number;
+  theme: BookTheme;
 };
 
-const GAP = 4;
-
-/** Раскладка ячеек страницы по шаблону: 1, 2 в ряд, 4 в сетке 2×2. */
-export function cellRects(template: Page['template'], width: number, height: number, count: number) {
-  const g = GAP;
-  if (template === 'two' && count >= 2) {
-    const w = (width - g * 3) / 2;
-    return [0, 1].map((i) => ({ x: g + i * (w + g), y: g, width: w, height: height - g * 2 }));
-  }
-  if (template === 'four' && count >= 4) {
-    const w = (width - g * 3) / 2;
-    const h = (height - g * 3) / 2;
-    return [0, 1, 2, 3].map((i) => ({ x: g + (i % 2) * (w + g), y: g + Math.floor(i / 2) * (h + g), width: w, height: h }));
-  }
-  return [{ x: g, y: g, width: width - g * 2, height: height - g * 2 }];
+/** Поля рамки «полароид»: по бокам и сверху одинаковые, снизу шире. */
+function innerRect(rect: Rect, frame: BookTheme['frame']): Rect {
+  if (frame !== 'polaroid') return { x: 0, y: 0, width: rect.width, height: rect.height };
+  const side = rect.width * 0.06;
+  const bottom = rect.height * 0.16;
+  return { x: side, y: side, width: rect.width - side * 2, height: rect.height - side - bottom };
 }
 
-function CellView({ cell, rect, photos, resolveUrl }: { cell: Cell; rect: ReturnType<typeof cellRects>[number]; photos: Map<string, PhotoDTO>; resolveUrl: Props['resolveUrl'] }) {
-  const photo = cell.photoId ? photos.get(cell.photoId) : undefined;
-  if (!photo) return <View style={[styles.empty, { left: rect.x, top: rect.y, width: rect.width, height: rect.height }]} />;
+function CellView({ cell, rect, sourceOf, theme }: { cell: Cell; rect: Rect; sourceOf: SourceOf; theme: BookTheme }) {
+  const info = cell.photoId ? sourceOf(cell.photoId) : null;
+  const box = { left: rect.x, top: rect.y, width: rect.width, height: rect.height };
+  if (!info) return <View style={[styles.empty, box]} />;
+
+  const inner = innerRect(rect, theme.frame);
   // Фото видно целиком, пока пользователь сам не выбрал «заполнить».
-  const r = fitRect(photo, rect, cell.fit ?? 'contain');
+  const fit = fitRect(info, inner, cell.fit ?? 'contain');
+  // Кадр: масштаб растёт от центра, сдвиг задан долями размера ячейки.
+  const scale = Math.max(1, cell.crop.scale);
+  const w = fit.width * scale;
+  const h = fit.height * scale;
+  const left = fit.x + (fit.width - w) / 2 + cell.crop.x * inner.width;
+  const top = fit.y + (fit.height - h) / 2 + cell.crop.y * inner.height;
+
+  const frameStyle =
+    theme.frame === 'thin'
+      ? { borderWidth: 1, borderColor: theme.frameColor }
+      : theme.frame === 'polaroid'
+        ? { backgroundColor: theme.frameColor }
+        : null;
+
   return (
-    <View style={[styles.cell, { left: rect.x, top: rect.y, width: rect.width, height: rect.height }]}>
-      <Image
-        source={{ uri: resolveUrl(photo.url) }}
-        style={{ position: 'absolute', left: r.x, top: r.y, width: r.width, height: r.height }}
-        resizeMode="cover"
-      />
+    <View style={[styles.cell, frameStyle, box]}>
+      <View style={{ position: 'absolute', left: inner.x, top: inner.y, width: inner.width, height: inner.height, overflow: 'hidden' }}>
+        <Image source={info.source} style={{ position: 'absolute', left, top, width: w, height: h }} resizeMode="cover" />
+      </View>
     </View>
   );
 }
 
-/** Одна страница книги: белый лист с фото по шаблону. Без страницы (null) рисуется пустая подложка. */
-export function PageView({ page, photos, resolveUrl, width, height }: Props) {
-  const rects = page ? cellRects(page.template, width, height, page.cells.length) : [];
+/** Одна страница книги: лист цвета темы с фото по шаблону. Без страницы (null) рисуется пустая подложка. */
+export function PageView({ page, sourceOf, width, height, theme }: Props) {
+  const rects = page ? cellRects(page.template, width, height, page.cells.length, theme) : [];
   return (
-    <View style={[styles.sheet, { width, height }]}>
+    <View style={[styles.sheet, { width, height, backgroundColor: theme.pageBg }]}>
       {page?.cells.map((cell, i) => {
         const rect = rects[i];
-        return rect ? <CellView key={i} cell={cell} rect={rect} photos={photos} resolveUrl={resolveUrl} /> : null;
+        return rect ? <CellView key={i} cell={cell} rect={rect} sourceOf={sourceOf} theme={theme} /> : null;
       })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: { backgroundColor: '#FFFFFF', overflow: 'hidden' },
-  cell: { position: 'absolute', overflow: 'hidden', backgroundColor: '#FFFFFF' },
+  sheet: { overflow: 'hidden' },
+  cell: { position: 'absolute', overflow: 'hidden' },
   empty: { position: 'absolute', backgroundColor: lightColors.border, opacity: 0.35 },
 });

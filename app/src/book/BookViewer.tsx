@@ -1,16 +1,18 @@
-import type { Layout, PhotoDTO } from '@picpac/shared';
+import type { BookTheme, Layout, Rect } from '@picpac/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import { lightColors, radius, space, typography } from '../theme/theme';
+import { fonts, lightColors, radius, space, typography } from '../theme/theme';
 import { nextIndex, spreadsOf } from './flip';
+import type { SourceOf } from './imageSource';
 import { PageView } from './PageView';
 
 type Props = {
   title: string;
   layout: Layout;
-  photos: Map<string, PhotoDTO>;
-  resolveUrl: (path: string) => string;
-  onOpenPage?: (pageIndex: number) => void;
+  sourceOf: SourceOf;
+  theme: BookTheme;
+  /** Тап по странице: индекс страницы и её прямоугольник в окне (для анимации увеличения). */
+  onOpenPage?: (pageIndex: number, rect: Rect) => void;
 };
 
 const FLIP_MS = 450;
@@ -19,8 +21,10 @@ const FLIP_MS = 450;
  * Листание книги: обложка, затем развороты. Переворот страницы поворачивает лист вокруг корешка;
  * при включённом «уменьшении движения» разворот меняется без анимации.
  */
-export function BookViewer({ title, layout, photos, resolveUrl, onOpenPage }: Props) {
+export function BookViewer({ title, layout, sourceOf, theme, onOpenPage }: Props) {
   const spreads = useMemo(() => spreadsOf(layout.pages.length), [layout.pages.length]);
+  // Типы View в RN 0.88 не знают measureInWindow через ref, поэтому описываем нужный кусок сами.
+  const bookRef = useRef<{ measureInWindow(cb: (x: number, y: number, w: number, h: number) => void): void } | null>(null);
   const [index, setIndex] = useState(0);
   const [flip, setFlip] = useState<{ from: number; to: number } | null>(null);
   const [boxWidth, setBoxWidth] = useState(0);
@@ -69,9 +73,21 @@ export function BookViewer({ title, layout, photos, resolveUrl, onOpenPage }: Pr
 
   const page = (i: number | null) => (i === null ? null : (layout.pages[i] ?? null));
   const view = (i: number | null) => (
-    <PageView page={page(i)} photos={photos} resolveUrl={resolveUrl} width={pageW} height={pageH} />
+    <PageView page={page(i)} sourceOf={sourceOf} width={pageW} height={pageH} theme={theme} />
   );
   const [curL, curR] = spreads[index]!;
+
+  // Тап по странице: сообщаем её индекс и положение в окне, чтобы правка «выросла» из этого места.
+  function openPage() {
+    const p = curR ?? curL;
+    if (p === null || !onOpenPage) return;
+    const fromRight = curR !== null;
+    bookRef.current?.measureInWindow((x, y, w, h) => {
+      onOpenPage(p, { x: fromRight ? x + w / 2 : x, y, width: w / 2, height: h });
+    });
+  }
+
+  const titleStyle = { fontFamily: fonts[theme.titleFont], color: theme.titleColor };
   const target = flip ? spreads[flip.to]! : null;
   const forward = flip ? flip.to > flip.from : true;
 
@@ -98,16 +114,28 @@ export function BookViewer({ title, layout, photos, resolveUrl, onOpenPage }: Pr
       accessibilityLabel={`Книга «${title}», разворот ${index + 1} из ${spreads.length}`}
       {...pan.panHandlers}
     >
-      <View style={[styles.book, { height: pageH }]}>
+      <View ref={bookRef as never} collapsable={false} style={[styles.book, { height: pageH }]}>
         <View style={[styles.half, { width: pageW, height: pageH }]}>
           {isCover ? <View style={[styles.sheet, { width: pageW, height: pageH }]} /> : leftContent}
         </View>
         <View style={[styles.half, { width: pageW, height: pageH }]}>
           {isCover ? (
-            <View style={[styles.cover, { width: pageW, height: pageH }]}>
-              {curR !== null && page(curR) ? view(curR) : null}
-              <View style={styles.coverTitle} pointerEvents="none">
-                <Text style={styles.coverText} numberOfLines={2}>
+            <View style={[styles.cover, { width: pageW, height: pageH, backgroundColor: theme.coverBg }]}>
+              {theme.cover === 'full-photo' && curR !== null && page(curR) ? view(curR) : null}
+              {theme.cover === 'framed-photo' && curR !== null && page(curR) ? (
+                <View style={{ position: 'absolute', left: pageW * 0.1, top: pageH * 0.08, width: pageW * 0.8, height: pageH * 0.68 }}>
+                  <PageView page={page(curR)} sourceOf={sourceOf} width={pageW * 0.8} height={pageH * 0.68} theme={theme} />
+                </View>
+              ) : null}
+              <View
+                style={[
+                  styles.coverTitle,
+                  theme.cover === 'full-photo' ? styles.coverShade : null,
+                  theme.cover === 'color-title' ? styles.coverTitleCenter : null,
+                ]}
+                pointerEvents="none"
+              >
+                <Text style={[styles.coverText, titleStyle]} numberOfLines={2}>
                   {title}
                 </Text>
               </View>
@@ -132,10 +160,7 @@ export function BookViewer({ title, layout, photos, resolveUrl, onOpenPage }: Pr
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Открыть страницу в редакторе"
-          onPress={() => {
-            const p = curR ?? curL;
-            if (p !== null) onOpenPage?.(p);
-          }}
+          onPress={openPage}
         >
           <Text style={styles.counter}>
             {index === 0 ? 'Обложка' : `Разворот ${index} из ${spreads.length - 1}`}
@@ -166,8 +191,10 @@ const styles = StyleSheet.create({
   half: { overflow: 'hidden' },
   sheet: { backgroundColor: 'transparent' },
   cover: { backgroundColor: lightColors.action, overflow: 'hidden', justifyContent: 'flex-end' },
-  coverTitle: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: space[3], backgroundColor: 'rgba(0,0,0,0.45)' },
-  coverText: { ...typography.h2, color: '#FFFFFF' },
+  coverTitle: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: space[3] },
+  coverShade: { backgroundColor: 'rgba(0,0,0,0.45)' },
+  coverTitleCenter: { top: 0, justifyContent: 'center', alignItems: 'center' },
+  coverText: { ...typography.h2 },
   face: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backfaceVisibility: 'hidden' },
   front: {},
   back: { transform: [{ rotateY: '180deg' }] },
