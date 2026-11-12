@@ -162,6 +162,7 @@ export type InteractionMessageDTO = {
   authorRole: Role | null;
   body: string;
   createdAt: string;
+  attachmentUrl: string | null;
 };
 
 export type InteractionDTO = {

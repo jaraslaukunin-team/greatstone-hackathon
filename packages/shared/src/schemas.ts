@@ -173,6 +173,7 @@ export const interactionMessageSchema = z.object({
   authorRole: z.enum(['customer', 'operator']).nullable(),
   body: z.string(),
   createdAt: iso,
+  attachmentUrl: z.string().nullable(),
 });
 export const interactionSchema = z.object({
   id: z.string(),
