@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
   thumbHit: { position: 'relative', width: 88, height: 88 },
   thumbImg: { width: 88, height: 88, borderRadius: 8, backgroundColor: lightColors.surface },
   thumbOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 8,
     backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
