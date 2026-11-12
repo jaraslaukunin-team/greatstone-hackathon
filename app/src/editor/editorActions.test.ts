@@ -1,5 +1,6 @@
 import {
   addPageText,
+  addSpread,
   applyTemplate,
   clearPhoto,
   setCover,
@@ -270,5 +271,27 @@ describe('editorActions', () => {
     const input = layoutWith(['a']);
     const next = replacePhoto(input, { pageIndex: 0, cellIndex: 0 }, 'b');
     expect(next.pages[0]?.cells[0]?.photoId).toBe('b');
+  });
+});
+
+describe('addSpread', () => {
+  const one = (id: string) => ({ template: 'one' as const, cells: [{ photoId: id, crop: { x: 0, y: 0, scale: 1, rotation: 0 as const } }] });
+  it('добавляет две пустые страницы в конец', () => {
+    const r = addSpread({ pages: [one('a')] }, 10);
+    expect(r.pages).toHaveLength(3);
+    expect(r.pages[1]?.cells[0]?.photoId).toBeNull();
+    expect(r.pages[2]?.template).toBe('one');
+  });
+  it('не выходит за максимум страниц', () => {
+    expect(addSpread({ pages: [one('a'), one('b')] }, 3).pages).toHaveLength(2);
+    expect(addSpread({ pages: [one('a')] }, 2).pages).toHaveLength(1);
+  });
+});
+
+describe('setCover: цвет', () => {
+  it('сохраняет цвет, пустой цвет удаляет поле', () => {
+    const withColor = setCover({ pages: [] }, { color: '#EDD5D5' }, 'Т');
+    expect(withColor.cover?.color).toBe('#EDD5D5');
+    expect(setCover(withColor, { color: '' }).cover).not.toHaveProperty('color');
   });
 });

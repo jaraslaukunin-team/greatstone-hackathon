@@ -99,7 +99,7 @@ export function setCover(layout: Layout, patch: Partial<Cover>, fallbackTitle = 
   const next = cloneLayout(layout);
   const merged: Cover = { ...(next.cover ?? { photoId: null, title: fallbackTitle }), ...patch };
   merged.title = merged.title.slice(0, MAX_COVER_TEXT);
-  for (const key of ['subtitle', 'spine'] as const) {
+  for (const key of ['subtitle', 'spine', 'color'] as const) {
     const value = merged[key]?.trim();
     if (value) merged[key] = value.slice(0, MAX_COVER_TEXT);
     else delete merged[key];
@@ -154,6 +154,16 @@ export function insertPage(layout: Layout, at: number): Layout {
     template: 'one',
     cells: [{ photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 as const } }],
   });
+  return next;
+}
+
+/** Разворот из двух пустых страниц в конец книги; за максимум страниц не выходит. */
+export function addSpread(layout: Layout, pagesMax: number): Layout {
+  const next = cloneLayout(layout);
+  if (next.pages.length + 2 > pagesMax) return next;
+  for (let i = 0; i < 2; i++) {
+    next.pages.push({ template: 'one', cells: [{ photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 as const } }] });
+  }
   return next;
 }
 

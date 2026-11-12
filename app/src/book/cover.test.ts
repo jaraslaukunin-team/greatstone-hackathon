@@ -1,5 +1,5 @@
 import type { Layout } from '@picpac/shared';
-import { coverPage, coverTitle, SPINE_MIN_PAGES, spineAllowed } from './cover';
+import { COVER_COLORS, coverPage, coverTitle, SPINE_MIN_PAGES, spineAllowed } from './cover';
 
 const crop = { x: 0, y: 0, scale: 1, rotation: 0 as const };
 const layout = (cover?: Layout['cover']): Layout => ({
@@ -41,5 +41,11 @@ describe('coverTitle', () => {
     expect(coverTitle(layout({ photoId: null, title: 'Лето' }), 'Книга')).toBe('Лето');
     expect(coverTitle(layout({ photoId: null, title: '   ' }), 'Книга')).toBe('Книга');
     expect(coverTitle(layout(), 'Книга')).toBe('Книга');
+  });
+});
+
+describe('COVER_COLORS', () => {
+  it('четыре цвета ткани как в макете', () => {
+    expect(COVER_COLORS).toEqual(['#F6EFE6', '#EDD5D5', '#CFE0DB', '#364C49']);
   });
 });

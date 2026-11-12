@@ -11,15 +11,17 @@ type Props = {
   page: Page | null;
   sourceOf: SourceOf;
   theme: BookTheme;
+  /** Цвет ткани обложки (Cover.color); без него берётся цвет темы. */
+  color?: string;
   width: number;
   height: number;
 };
 
 /** Передняя сторона обложки в стиле темы: фото на весь лист, фото в рамке или цветная с названием. */
-export function CoverView({ title, subtitle, page, sourceOf, theme, width, height }: Props) {
+export function CoverView({ title, subtitle, page, sourceOf, theme, color, width, height }: Props) {
   const titleStyle = { fontFamily: fonts[theme.titleFont], color: theme.titleColor };
   return (
-    <View style={[styles.cover, { width, height, backgroundColor: theme.coverBg }]}>
+    <View style={[styles.cover, { width, height, backgroundColor: color ?? theme.coverBg }]}>
       {theme.cover === 'full-photo' && page ? (
         <PageView page={page} sourceOf={sourceOf} width={width} height={height} theme={theme} />
       ) : null}

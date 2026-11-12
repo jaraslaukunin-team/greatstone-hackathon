@@ -155,6 +155,7 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndex
               page={coverPage(layout)}
               sourceOf={sourceOf}
               theme={theme}
+              color={layout.cover?.color}
               width={pageW}
               height={pageH}
             />

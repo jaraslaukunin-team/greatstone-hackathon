@@ -58,6 +58,7 @@ export function CoverEditor({ layout, projectTitle, photos, sourceOf, theme, onC
               page={coverPage(layout)}
               sourceOf={sourceOf}
               theme={theme}
+              color={cover?.color}
               width={frontW}
               height={frontH}
             />
