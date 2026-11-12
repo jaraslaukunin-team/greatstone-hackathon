@@ -1,38 +1,23 @@
 import { router } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import {
-  Dimensions,
-  FlatList,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSettingsStore } from '../../src/settings/settingsStore';
 import { useT } from '../../src/i18n/useT';
 import { Button } from '../../src/ui/Button';
 import { PrintStack } from '../../src/ui/PrintStack';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-
-function OnboardingCard({ title, body, index }: { title: string; body: string; index: number }) {
-  return (
-    <View style={[styles.card, { width: SCREEN_W }]}>
-      <View style={styles.art}>
-        <PrintStack size={140} />
-      </View>
-      <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.cardBody}>{body}</Text>
-    </View>
-  );
-}
-
+/**
+ * Три приветственных слайда. Показывается один слайд по номеру, без горизонтальной прокрутки:
+ * ширина не зависит от окна, поэтому одинаково работает на телефоне и в веб-колонке, а кнопки всегда делают то, что написано.
+ */
 export default function OnboardingScreen() {
   const t = useT();
   const setOnboardingSeen = useSettingsStore((s) => s.setOnboardingSeen);
   const [current, setCurrent] = useState(0);
-  const listRef = useRef<FlatList>(null);
   const cards = t.onboarding.cards;
+  const card = cards[current]!;
+  const isLast = current === cards.length - 1;
 
   function finish() {
     setOnboardingSeen(true);
@@ -40,56 +25,38 @@ export default function OnboardingScreen() {
   }
 
   function next() {
-    if (current < cards.length - 1) {
-      listRef.current?.scrollToIndex({ index: current + 1, animated: true });
-    } else {
-      finish();
-    }
+    if (isLast) finish();
+    else setCurrent((i) => i + 1);
   }
-
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: { index?: number | null; item: unknown }[] }) => {
-      const first = viewableItems[0];
-      if (first != null && first.index != null) {
-        setCurrent(first.index);
-      }
-    },
-    [],
-  );
-
-  const isLast = current === cards.length - 1;
 
   return (
     <View style={styles.screen}>
-      <FlatList
-        ref={listRef}
-        data={cards}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(_, i) => String(i)}
-        renderItem={({ item, index }) => (
-          <OnboardingCard title={item.title} body={item.body} index={index} />
-        )}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-        style={styles.list}
-      />
+      <View style={styles.card}>
+        <View style={styles.art}>
+          <PrintStack size={140} />
+        </View>
+        <Text style={styles.cardTitle}>{card.title}</Text>
+        <Text style={styles.cardBody}>{card.body}</Text>
+      </View>
 
       <View style={styles.dots}>
         {cards.map((_, i) => (
-          <View key={i} style={[styles.dot, i === current && styles.dotActive]} />
+          <Pressable
+            key={i}
+            accessibilityRole="button"
+            accessibilityLabel={`${i + 1} / ${cards.length}`}
+            accessibilityState={{ selected: i === current }}
+            onPress={() => setCurrent(i)}
+            style={styles.dotHit}
+          >
+            <View style={[styles.dot, i === current && styles.dotActive]} />
+          </Pressable>
         ))}
       </View>
 
       <View style={styles.actions}>
-        <Button
-          title={isLast ? t.onboarding.start : t.onboarding.next}
-          onPress={next}
-        />
-        {!isLast ? (
-          <Button title={t.onboarding.skip} variant="text" onPress={finish} />
-        ) : null}
+        <Button title={isLast ? t.onboarding.start : t.onboarding.next} onPress={next} />
+        {!isLast ? <Button title={t.onboarding.skip} variant="text" onPress={finish} /> : null}
       </View>
     </View>
   );
@@ -101,7 +68,6 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.bg,
     paddingBottom: space[5],
   },
-  list: { flex: 1 },
   card: {
     flex: 1,
     padding: space[4],
@@ -118,7 +84,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: space[4],
   },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: space[2], marginBottom: space[4] },
+  dots: { flexDirection: 'row', justifyContent: 'center', marginBottom: space[3] },
+  dotHit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   dot: {
     width: 8,
     height: 8,
