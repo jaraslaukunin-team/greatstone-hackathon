@@ -10,7 +10,7 @@
     "extra": {
       "apiUrl": "https://picpac.jaraslau.dev",
       "eas": {
-        "projectId": "00000000-0000-4000-8000-000000000000"
+        "projectId": "3bab2969-094e-478a-a913-9f376104de9a"
       }
     },
     "ios": {
@@ -63,6 +63,7 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "mioryyy"
   }
 }
