@@ -16,7 +16,7 @@ import { API_URL } from '../src/config';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
 import { sessionTokenRef } from '../src/auth/sessionToken';
 import { parseInviteUrl } from '../src/album/parseInvite';
-import { networkFailureRef } from '../src/dev/networkFailure';
+import { networkFailureRef, setNetworkFailure } from '../src/dev/networkFailure';
 import { WebPhoneShell } from '../src/ui/WebPhoneShell';
 
 import { StateBanner } from '../src/ui/StateBanner';
@@ -83,7 +83,13 @@ installRuntimeTranslate();
 export default function RootLayout() {
   // Смена языка перемонтирует навигатор, чтобы все экраны перерисовались с новыми строками.
   const lang = useSettingsStore((s) => s.lang);
+  const failNetwork = useSettingsStore((s) => s.failNetwork);
   const [fontsLoaded, fontError] = useFonts(futuraFonts);
+
+  // Демо-переключатель «Имитация сбоя сети»: сетевая ошибка на каждом запросе к API.
+  useEffect(() => {
+    setNetworkFailure(failNetwork);
+  }, [failNetwork]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) void SplashScreen.hideAsync();

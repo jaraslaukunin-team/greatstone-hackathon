@@ -59,6 +59,7 @@ export type Strings = {
     langRu: string;
     langBe: string;
     langEn: string;
+    failNetwork: string;
   };
   faq: {
     title: string;
@@ -158,6 +159,7 @@ export const ru: Strings = {
     langRu: 'Русский',
     langBe: 'Белорусский',
     langEn: 'Английский',
+    failNetwork: 'Имитация сбоя сети',
   },
   faq: {
     title: 'Вопросы и ответы',
@@ -298,6 +300,7 @@ export const be: Strings = {
     langRu: 'Руская',
     langBe: 'Беларуская',
     langEn: 'Англійская',
+    failNetwork: 'Імітацыя збою сеткі',
   },
   faq: {
     title: 'Пытанні і адказы',
@@ -438,6 +441,7 @@ export const en: Strings = {
     langRu: 'Russian',
     langBe: 'Belarusian',
     langEn: 'English',
+    failNetwork: 'Simulate network failure',
   },
   faq: {
     title: 'FAQ',

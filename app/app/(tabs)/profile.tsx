@@ -12,7 +12,7 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const client = useApiClient();
   const t = useT();
-  const { lang, notifications, setLang, setNotifications } = useSettingsStore();
+  const { lang, notifications, failNetwork, setLang, setNotifications, setFailNetwork } = useSettingsStore();
   const demoHint = process.env.EXPO_PUBLIC_DEMO_HINT === '1';
   const [message, setMessage] = useState<string | null>(null);
 
@@ -51,6 +51,17 @@ export default function ProfileScreen() {
         <Switch
           value={notifications}
           onValueChange={(v) => setNotifications(v)}
+          trackColor={{ true: lightColors.accent, false: lightColors.disabledBg }}
+          thumbColor={lightColors.surface}
+        />
+      </View>
+
+      {/* Демонстрация обработки сбоя: запросы к API падают с сетевой ошибкой. */}
+      <View style={styles.row}>
+        <Text style={styles.rowLabel}>{t.profile.failNetwork}</Text>
+        <Switch
+          value={failNetwork}
+          onValueChange={(v) => setFailNetwork(v)}
           trackColor={{ true: lightColors.accent, false: lightColors.disabledBg }}
           thumbColor={lightColors.surface}
         />

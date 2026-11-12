@@ -22,6 +22,7 @@ beforeEach(() => {
     lang: 'ru',
     notifications: true,
     onboardingSeen: false,
+    failNetwork: false,
   });
 });
 
@@ -57,4 +58,11 @@ test('setNotifications to true', () => {
 test('setOnboardingSeen marks as seen', () => {
   useSettingsStore.getState().setOnboardingSeen(true);
   expect(useSettingsStore.getState().onboardingSeen).toBe(true);
+});
+
+test('setFailNetwork toggles the demo network failure', () => {
+  useSettingsStore.getState().setFailNetwork(true);
+  expect(useSettingsStore.getState().failNetwork).toBe(true);
+  useSettingsStore.getState().setFailNetwork(false);
+  expect(useSettingsStore.getState().failNetwork).toBe(false);
 });
