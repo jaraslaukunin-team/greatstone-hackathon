@@ -26,6 +26,8 @@ const createSchema = z.object({
 const passwordSchema = z.object({ password: z.string().min(4).max(64) });
 const saveSchema = z.object({ layout: z.unknown(), version: z.number().int().positive() });
 const renameSchema = z.object({ title: z.string().trim().min(1).max(200) });
+// personal: именная копия общего альбома (имя ученика на обложке, его разворот первым).
+const duplicateSchema = z.object({ personal: z.boolean().optional() });
 
 export function registerProjectRoutes(app: FastifyInstance): void {
   const auth = { preHandler: requireAuth };
@@ -73,6 +75,7 @@ export function registerProjectRoutes(app: FastifyInstance): void {
   app.post('/projects/:id/duplicate', auth, async (req, reply) => {
     const { id } = req.params as { id: string };
     reply.code(201);
-    return duplicateProject(req.server, req.user!, id);
+    const body = parse(duplicateSchema, req.body ?? {});
+    return duplicateProject(req.server, req.user!, id, { personal: body.personal });
   });
 }

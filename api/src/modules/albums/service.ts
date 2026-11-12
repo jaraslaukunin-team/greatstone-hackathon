@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { and, asc, count, eq, gt } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import type { AlbumProgressDTO, InviteDTO, ProjectDTO } from '@picpac/shared';
+import type { AlbumProgressDTO, InviteDTO, ProjectDTO, UpdateMyMemberRequest } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import { verifyPassword } from '../../auth/password.js';
 import type { AuthUser } from '../../auth/plugin.js';
@@ -124,13 +124,44 @@ export async function getProgress(db: Db, user: AuthUser, projectId: string): Pr
   return {
     expected: project.expectedMembers,
     members: [
-      { userId: project.ownerId, childName: null, role: 'organizer', photosCount: photosOf(project.ownerId) },
+      { userId: project.ownerId, childName: null, role: 'organizer', photosCount: photosOf(project.ownerId), wish: null, videoUrl: null },
       ...members.map((m) => ({
         userId: m.userId,
         childName: m.childName,
         role: m.role,
         photosCount: photosOf(m.userId),
+        wish: m.wish,
+        videoUrl: m.videoUrl,
       })),
     ],
   };
+}
+
+/**
+ * Участник обновляет только свою запись (путь /members/me не принимает чужой userId). Организатор без записи
+ * и посторонние получают 404, заказанный альбом — 409. Пустое пожелание хранится как null.
+ */
+export async function updateMyMember(
+  app: FastifyInstance,
+  user: AuthUser,
+  projectId: string,
+  patch: UpdateMyMemberRequest,
+): Promise<{ userId: string; childName: string | null; wish: string | null; videoUrl: string | null }> {
+  const project = await assertProjectAccess(app.db, user, projectId, 'read');
+  if (!project.isShared) throw new AppError(404, 'NOT_FOUND', 'Проект не найден');
+  const [member] = await app.db
+    .select()
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, user.id)));
+  if (!member) throw new AppError(404, 'NOT_FOUND', 'Проект не найден');
+  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Альбом уже заказан');
+  const set: Partial<typeof projectMembers.$inferInsert> = {};
+  if (patch.childName !== undefined) set.childName = patch.childName;
+  if (patch.wish !== undefined) set.wish = patch.wish === '' ? null : patch.wish;
+  if (patch.videoUrl !== undefined) set.videoUrl = patch.videoUrl;
+  const [row] = Object.keys(set).length
+    ? await app.db.update(projectMembers).set(set).where(eq(projectMembers.id, member.id)).returning()
+    : [member];
+  await audit(app.db, { userId: user.id, action: 'album.member_update', objectType: 'project', objectId: projectId, result: 'ok' });
+  return { userId: row!.userId, childName: row!.childName, wish: row!.wish, videoUrl: row!.videoUrl };
 }

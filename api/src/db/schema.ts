@@ -171,6 +171,9 @@ export const projectMembers = pgTable(
       .references(() => profiles.id, { onDelete: 'cascade' }),
     role: memberRoleEnum('role').notNull(),
     childName: text('child_name'),
+    // Пожелание ученика классу и ссылка на видео-поздравление (https): печатаются на его развороте.
+    wish: text('wish'),
+    videoUrl: text('video_url'),
     createdAt: createdAt(),
   },
   (t) => [

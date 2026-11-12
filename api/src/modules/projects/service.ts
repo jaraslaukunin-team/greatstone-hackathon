@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import type { Layout, ProjectDTO } from '@picpac/shared';
+import { personalizeLayout, type Layout, type ProjectDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import { hashPassword } from '../../auth/password.js';
 import type { AuthUser } from '../../auth/plugin.js';
@@ -208,7 +208,12 @@ function remapLayout(layout: Layout, idMap: Map<string, string>): Layout {
   };
 }
 
-export async function duplicateProject(app: FastifyInstance, user: AuthUser, projectId: string): Promise<ProjectDTO> {
+export async function duplicateProject(
+  app: FastifyInstance,
+  user: AuthUser,
+  projectId: string,
+  opts: { personal?: boolean } = {},
+): Promise<ProjectDTO> {
   const db = app.db;
   const storage = app.storage;
 
@@ -261,7 +266,15 @@ export async function duplicateProject(app: FastifyInstance, user: AuthUser, pro
   const idMap = new Map(copies.map((c) => [c.src.id, c.newId]));
 
   const sourceLayout = (src.layout as Layout | null) ?? { pages: [] };
-  const newLayout = remapLayout(sourceLayout, idMap);
+  let newLayout = remapLayout(sourceLayout, idMap);
+  if (opts.personal) {
+    // Именная копия: имя берётся из записи участника, личные страницы идентифицируются его userId.
+    const [member] = await db
+      .select({ childName: projectMembers.childName })
+      .from(projectMembers)
+      .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, user.id)));
+    newLayout = personalizeLayout(newLayout, user.id, member?.childName ?? null);
+  }
   const newTitle = `${src.title} — копия`;
 
   let newProject: typeof projects.$inferSelect;
