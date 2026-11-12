@@ -179,12 +179,7 @@ function StoryViewer({ storyId, startAtEnd }: { storyId: string; startAtEnd: boo
       {slide.image ? (
         <Image source={slide.image} style={styles.bgImage} resizeMode="cover" />
       ) : null}
-      {hasImage ? (
-        <>
-          <View style={styles.scrimTop} pointerEvents="none" />
-          <View style={styles.scrimBottom} pointerEvents="none" />
-        </>
-      ) : null}
+      {hasImage ? <View style={styles.scrimBottom} pointerEvents="none" /> : null}
 
       <View style={styles.copy} pointerEvents="none">
         <Text style={[styles.slideTitle, { color: textColor }]}>{slide.title}</Text>
@@ -260,21 +255,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  scrimTop: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: '28%',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
   scrimBottom: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: '55%',
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    height: '42%',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   missing: {
     alignItems: 'center',

@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { Button } from '../../src/ui/Button';
@@ -6,10 +6,22 @@ import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function AiConsentScreen() {
   const client = useApiClient();
+  const params = useLocalSearchParams<{
+    projectId?: string;
+    photoId?: string;
+    photoUrl?: string;
+    requestId?: string;
+    returnTo?: string;
+  }>();
 
   async function accept() {
     await client.post('/ai/consent', { consent: true });
-    router.push('/ai/edit');
+    const next: Record<string, string> = {};
+    for (const key of ['projectId', 'photoId', 'photoUrl', 'requestId', 'returnTo'] as const) {
+      const value = params[key];
+      if (typeof value === 'string' && value) next[key] = value;
+    }
+    router.push({ pathname: '/ai/edit', params: next });
   }
 
   return (

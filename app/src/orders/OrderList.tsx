@@ -1,5 +1,6 @@
 import type { OrderDTO, ProjectDTO } from '@picpac/shared';
 import { statusLabel } from '../orders/statusLabel';
+import { orderStatusTone } from '../orders/statusTone';
 import { formatByn } from '@picpac/shared';
 import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -75,41 +76,48 @@ export function OrderList({ favoritesOnly = false }: { favoritesOnly?: boolean }
         />
       ) : null}
       {actionError ? <StateBanner title={actionError} tone="danger" /> : null}
-      {visibleOrders.map((order, index) => (
-        <Card key={order.id} delay={staggerDelay(index)}>
-          <Link href={`/orders/${order.id}`} asChild>
-            <Pressable accessibilityRole="link" style={styles.orderLink}>
-              <Text style={styles.cardTitle}>{order.number}</Text>
-              <Text style={styles.cardSub}>
-                {statusLabel(order.status)} · {formatByn(order.totalKop)}
-              </Text>
-            </Pressable>
-          </Link>
-          <View style={styles.actions}>
-            <Button
-              title={order.favorite ? 'Убрать из избранного' : 'В избранное'}
-              variant="secondary"
-              disabled={busy || loading}
-              onPress={() => void runAction(async () => {
-                const updated = await client.post<OrderDTO>(`/orders/${order.id}/favorite`, { favorite: !order.favorite });
-                setOrders((current) => current.map((item) => item.id === updated.id ? updated : item));
-              })}
-            />
-            {order.projectId ? (
+      {visibleOrders.map((order, index) => {
+        const tone = orderStatusTone(order.status);
+        return (
+          <Card
+            key={order.id}
+            delay={staggerDelay(index)}
+            style={{ backgroundColor: tone.backgroundColor, borderColor: tone.borderColor }}
+          >
+            <Link href={`/orders/${order.id}`} asChild>
+              <Pressable accessibilityRole="link" style={styles.orderLink}>
+                <Text style={styles.cardTitle}>{order.number}</Text>
+                <Text style={[styles.cardSub, { color: tone.statusColor, fontWeight: '600' }]}>
+                  {statusLabel(order.status)} · {formatByn(order.totalKop)}
+                </Text>
+              </Pressable>
+            </Link>
+            <View style={styles.actions}>
               <Button
-                title="Повторить заказ"
-                variant="dark"
+                title={order.favorite ? 'Убрать из избранного' : 'В избранное'}
+                variant="secondary"
                 disabled={busy || loading}
                 onPress={() => void runAction(async () => {
-                  const copy = await client.post<ProjectDTO>(`/orders/${order.id}/repeat`);
-                  setDraft(copy);
-                  router.push(`/project/${copy.id}/overview`);
+                  const updated = await client.post<OrderDTO>(`/orders/${order.id}/favorite`, { favorite: !order.favorite });
+                  setOrders((current) => current.map((item) => item.id === updated.id ? updated : item));
                 })}
               />
-            ) : null}
-          </View>
-        </Card>
-      ))}
+              {order.projectId ? (
+                <Button
+                  title="Повторить заказ"
+                  variant="dark"
+                  disabled={busy || loading}
+                  onPress={() => void runAction(async () => {
+                    const copy = await client.post<ProjectDTO>(`/orders/${order.id}/repeat`);
+                    setDraft(copy);
+                    router.push(`/project/${copy.id}/overview`);
+                  })}
+                />
+              ) : null}
+            </View>
+          </Card>
+        );
+      })}
     </>
   );
 }

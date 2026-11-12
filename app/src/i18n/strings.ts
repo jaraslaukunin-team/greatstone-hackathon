@@ -104,7 +104,7 @@ export const ru: Strings = {
     heroSub: 'Ваши истории на бумаге',
     printsTitle: 'Напечатать фото',
     printsSub: 'Любимые кадры — в руках',
-    albumTitle: 'Выпускная фотокнига',
+    albumTitle: 'Выпускной альбом',
     albumSub: 'Соберём вместе',
     aiTitle: 'AI-редактор',
     aiSub: 'Новый взгляд на фото',
@@ -135,7 +135,7 @@ export const ru: Strings = {
         body: 'Загрузите фото, выберите формат — и мы сами разложим снимки по страницам. Готовая книга придёт к вам домой.',
       },
       {
-        title: 'Выпускная фотокнига вместе',
+        title: 'Выпускной альбом вместе',
         body: 'Пригласите участников по ссылке. Каждый добавит свои фото, а вы увидите, как складывается общая история.',
       },
       {
@@ -181,8 +181,8 @@ export const ru: Strings = {
         a: 'Да. После автоматической раскладки вы можете переставить фото, поменять страницы местами и отредактировать каждый разворот.',
       },
       {
-        q: 'Как работает выпускная фотокнига?',
-        a: 'Организатор создаёт фотокнигу и отправляет участникам ссылку. Каждый загружает свои фото прямо из телефона.',
+        q: 'Как работает выпускной альбом?',
+        a: 'Организатор создаёт альбом и отправляет участникам ссылку. Каждый загружает свои фото прямо из телефона.',
       },
       {
         q: 'Мои фото в безопасности?',
@@ -245,7 +245,7 @@ export const be: Strings = {
     heroSub: 'Вашы гісторыі на паперы',
     printsTitle: 'Надрукаваць фота',
     printsSub: 'Любімыя кадры — у руках',
-    albumTitle: 'Выпускная фотакніга',
+    albumTitle: 'Выпускны альбом',
     albumSub: 'Збярэм разам',
     aiTitle: 'AI-рэдактар',
     aiSub: 'Новы погляд на фота',
@@ -276,7 +276,7 @@ export const be: Strings = {
         body: 'Загрузіце фота, абярыце фармат — і мы самі разложым здымкі па старонках. Гатовая кніга прыйдзе да вас дадому.',
       },
       {
-        title: 'Выпускная фотакніга разам',
+        title: 'Выпускны альбом разам',
         body: 'Запрасіце ўдзельнікаў па спасылцы. Кожны дадасць свае фота, а вы ўбачыце, як складваецца агульная гісторыя.',
       },
       {
@@ -322,8 +322,8 @@ export const be: Strings = {
         a: 'Так. Пасля аўтаматычнай раскладкі вы можаце перастаўляць фота, мяняць старонкі месцамі і рэдагаваць кожны разварот.',
       },
       {
-        q: 'Як працуе выпускная фотакніга?',
-        a: 'Арганізатар стварае фотакнігу і дасылае ўдзельнікам спасылку. Кожны загружае свае фота прама з тэлефона.',
+        q: 'Як працуе выпускны альбом?',
+        a: 'Арганізатар стварае альбом і дасылае ўдзельнікам спасылку. Кожны загружае свае фота прама з тэлефона.',
       },
       {
         q: 'Мае фота ў бяспецы?',
@@ -386,7 +386,7 @@ export const en: Strings = {
     heroSub: 'Your stories on paper',
     printsTitle: 'Print photos',
     printsSub: 'Your favorite shots in hand',
-    albumTitle: 'Graduation photobook',
+    albumTitle: 'Graduation album',
     albumSub: 'We’ll build it together',
     aiTitle: 'AI editor',
     aiSub: 'A fresh take on photos',
@@ -417,7 +417,7 @@ export const en: Strings = {
         body: 'Upload photos, choose a format, and we’ll lay them out across pages. Your finished book ships to your door.',
       },
       {
-        title: 'A graduation photobook together',
+        title: 'A graduation album together',
         body: 'Invite people with a link. Everyone adds their photos, and you watch your shared story come together.',
       },
       {
@@ -463,8 +463,8 @@ export const en: Strings = {
         a: 'Yes. After auto layout you can move photos, swap pages and edit any spread.',
       },
       {
-        q: 'How does the graduation photobook work?',
-        a: 'The organizer creates the photobook and sends a link. Everyone uploads photos straight from their phone.',
+        q: 'How does the graduation album work?',
+        a: 'The organizer creates the album and sends a link. Everyone uploads photos straight from their phone.',
       },
       {
         q: 'Are my photos safe?',

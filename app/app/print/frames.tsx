@@ -84,14 +84,38 @@ export default function PrintFramesScreen() {
     setFrames((list) => list.map((f, i) => (i === index ? { ...f, ...patch } : f)));
   }
 
-  // Правка кадра в фоторедакторе: готовое фото встаёт на место прежнего, оригинал остаётся в проекте.
-  function openEditor(index: number) {
+  // Правка кадра в фоторедакторе / нейросети: готовое фото встаёт на место прежнего.
+  function beginEdit(index: number) {
     const current = project.current;
     const frame = frames[index];
-    if (!current || !frame) return;
+    if (!current || !frame) return null;
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     pendingEdit.current = { requestId, photoId: frame.photo.id };
-    router.push({ pathname: '/photo-editor', params: { projectId: current.id, photoId: frame.photo.id, requestId } });
+    return { current, frame, requestId };
+  }
+
+  function openEditor(index: number) {
+    const ctx = beginEdit(index);
+    if (!ctx) return;
+    router.push({
+      pathname: '/photo-editor',
+      params: { projectId: ctx.current.id, photoId: ctx.frame.photo.id, requestId: ctx.requestId },
+    });
+  }
+
+  function openAi(index: number) {
+    const ctx = beginEdit(index);
+    if (!ctx) return;
+    router.push({
+      pathname: '/ai/consent',
+      params: {
+        projectId: ctx.current.id,
+        photoId: ctx.frame.photo.id,
+        photoUrl: ctx.frame.photo.url,
+        requestId: ctx.requestId,
+        returnTo: 'print',
+      },
+    });
   }
 
   useEffect(() => {
@@ -165,6 +189,7 @@ export default function PrintFramesScreen() {
                 />
               </View>
               <Button title="Редактор" variant="text" onPress={() => openEditor(index)} />
+              <Button title="Нейросеть" variant="text" onPress={() => openAi(index)} />
             </View>
           </View>
         </Card>

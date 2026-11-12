@@ -46,7 +46,7 @@ export const STORIES: CompanyStory[] = [
         bg: '#C44545',
         textColor: lightColors.textOnAccent,
         image: require('../../assets/stories/discounts-2.jpg'),
-        cta: { label: 'Создать фотокнигу', href: '/album/create' },
+        cta: { label: 'Создать выпускной альбом', href: '/album/create' },
       },
     ],
   },

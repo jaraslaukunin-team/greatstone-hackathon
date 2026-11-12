@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { statusLabel } from '../../src/orders/statusLabel';
+import { orderStatusTone } from '../../src/orders/statusTone';
 import { statusSteps } from '../../src/orders/statusSteps';
 import { useOrderPolling } from '../../src/orders/useOrderPolling';
 import { useProjectStore } from '../../src/project/projectStore';
@@ -21,6 +22,7 @@ export default function OrderDetailsScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const steps = order ? statusSteps(order.status) : [];
+  const tone = orderStatusTone(order?.status);
 
   async function cancel() {
     setActionError(null);
@@ -56,8 +58,10 @@ export default function OrderDetailsScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {actionError ? <Text style={styles.error}>{actionError}</Text> : null}
 
-        <Card>
-          <Text style={styles.cardTitle}>Статус: {statusLabel(order?.status)}</Text>
+        <Card style={{ backgroundColor: tone.backgroundColor, borderColor: tone.borderColor }}>
+          <Text style={[styles.cardTitle, { color: tone.statusColor }]}>
+            Статус: {statusLabel(order?.status)}
+          </Text>
           <Text style={styles.cardSub}>{order ? formatByn(order.totalKop) : ''}</Text>
           {order?.status === 'cancelled' ? (
             <Text style={styles.cancelNote}>Заказ отменён</Text>
@@ -68,31 +72,44 @@ export default function OrderDetailsScreen() {
           <Card>
             <Text style={styles.timelineTitle}>Ход заказа</Text>
             <View style={styles.timeline}>
-              {steps.map((step, index) => (
-                <View key={step.status} style={styles.stepRow}>
-                  <View style={styles.rail}>
-                    <View
+              {steps.map((step, index) => {
+                const stepTone = orderStatusTone(step.status);
+                return (
+                  <View key={step.status} style={styles.stepRow}>
+                    <View style={styles.rail}>
+                      <View
+                        style={[
+                          styles.dot,
+                          step.reached && { backgroundColor: stepTone.borderColor },
+                          step.current && {
+                            backgroundColor: stepTone.statusColor,
+                            width: 14,
+                            height: 14,
+                            borderRadius: 7,
+                          },
+                        ]}
+                      />
+                      {index < steps.length - 1 ? (
+                        <View
+                          style={[
+                            styles.line,
+                            step.reached && !step.current && { backgroundColor: stepTone.borderColor },
+                          ]}
+                        />
+                      ) : null}
+                    </View>
+                    <Text
                       style={[
-                        styles.dot,
-                        step.reached && styles.dotReached,
-                        step.current && styles.dotCurrent,
+                        styles.stepLabel,
+                        step.current && [styles.stepLabelCurrent, { color: stepTone.statusColor }],
+                        !step.reached && styles.stepLabelMuted,
                       ]}
-                    />
-                    {index < steps.length - 1 ? (
-                      <View style={[styles.line, step.reached && !step.current && styles.lineReached]} />
-                    ) : null}
+                    >
+                      {step.label}
+                    </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.stepLabel,
-                      step.current && styles.stepLabelCurrent,
-                      !step.reached && styles.stepLabelMuted,
-                    ]}
-                  >
-                    {step.label}
-                  </Text>
-                </View>
-              ))}
+                );
+              })}
             </View>
           </Card>
         ) : null}
@@ -142,8 +159,6 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.border,
     marginTop: 4,
   },
-  dotReached: { backgroundColor: lightColors.fillMint },
-  dotCurrent: { backgroundColor: lightColors.accent, width: 14, height: 14, borderRadius: 7 },
   line: {
     width: 2,
     flex: 1,
@@ -151,7 +166,6 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.border,
     marginVertical: 2,
   },
-  lineReached: { backgroundColor: lightColors.fillMint },
   stepLabel: { ...typography.body, color: lightColors.text, flex: 1, paddingTop: 0 },
   stepLabelCurrent: { ...typography.bodyStrong },
   stepLabelMuted: { color: lightColors.textMuted },

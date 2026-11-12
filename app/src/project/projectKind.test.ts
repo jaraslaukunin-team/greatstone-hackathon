@@ -78,7 +78,7 @@ describe('projectKind', () => {
   });
 
   it('даёт русскую подпись', () => {
-    expect(projectKindLabel('graduation')).toBe('Выпускная фотокнига');
+    expect(projectKindLabel('graduation')).toBe('Выпускной альбом');
     expect(projectKindLabel(null)).toBe('Проект');
   });
 });

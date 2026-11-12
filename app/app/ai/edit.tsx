@@ -27,7 +27,13 @@ async function ensureAiProject(client: ApiClient): Promise<ProjectDTO> {
 }
 
 export default function AiEditScreen() {
-  const params = useLocalSearchParams<{ photoId?: string; projectId?: string; photoUrl?: string }>();
+  const params = useLocalSearchParams<{
+    photoId?: string;
+    projectId?: string;
+    photoUrl?: string;
+    requestId?: string;
+    returnTo?: string;
+  }>();
   const client = useApiClient();
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -38,6 +44,7 @@ export default function AiEditScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef<Promise<{ jobId: string }> | null>(null);
+  const fromPrint = params.returnTo === 'print';
 
   async function choosePhoto() {
     setError(null);
@@ -75,7 +82,14 @@ export default function AiEditScreen() {
         { projectId, photoId: photo.id, prompt: text, kind: 'edit', aspect: 'original' },
         inFlight,
       );
-      router.push({ pathname: '/ai/result', params: { jobId, sourceUrl: photo.url, projectId } });
+      const resultParams: Record<string, string> = {
+        jobId,
+        sourceUrl: photo.url,
+        projectId,
+      };
+      if (typeof params.requestId === 'string' && params.requestId) resultParams.requestId = params.requestId;
+      if (typeof params.returnTo === 'string' && params.returnTo) resultParams.returnTo = params.returnTo;
+      router.push({ pathname: '/ai/result', params: resultParams });
     } catch (e) {
       setMessages((prev) => [
         ...prev.filter((m) => m.role !== 'system' || m.text !== 'Обрабатываем фото…'),
@@ -95,14 +109,20 @@ export default function AiEditScreen() {
     <View style={styles.screen}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>AI</Text>
-        <Text style={styles.sub}>Загрузите фото и напишите в чат, что изменить.</Text>
+        <Text style={styles.sub}>
+          {fromPrint
+            ? 'Напишите в чат, что изменить на этом фото для печати.'
+            : 'Загрузите фото и напишите в чат, что изменить.'}
+        </Text>
 
         {!photo ? (
           <Button title="Загрузить фотографию" disabled={busy} onPress={() => void choosePhoto()} />
         ) : (
           <>
             <Image source={{ uri: client.resolveUrl(photo.url) }} style={styles.preview} resizeMode="contain" />
-            <Button title="Выбрать другое фото" variant="secondary" disabled={busy} onPress={() => void choosePhoto()} />
+            {fromPrint ? null : (
+              <Button title="Выбрать другое фото" variant="secondary" disabled={busy} onPress={() => void choosePhoto()} />
+            )}
           </>
         )}
 

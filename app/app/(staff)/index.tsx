@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { statusLabel } from '../../src/orders/statusLabel';
+import { orderStatusTone } from '../../src/orders/statusTone';
 import { Button } from '../../src/ui/Button';
 import { Card } from '../../src/ui/Card';
 import { EmptyState } from '../../src/ui/EmptyState';
@@ -56,16 +57,19 @@ export default function StaffOrdersScreen() {
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {orders && orders.length === 0 ? <EmptyState icon="doc" title="Заказов нет" message="В этом статусе пусто" /> : null}
-      {(orders ?? []).map((order) => (
-        <Link key={order.id} href={`/operator/order/${order.id}`} asChild>
-          <Card chevron>
-            <Text style={styles.cardTitle}>{order.number}</Text>
-            <Text style={styles.cardSub}>
-              {statusLabel(order.status)} · {formatByn(order.totalKop)}
-            </Text>
-          </Card>
-        </Link>
-      ))}
+      {(orders ?? []).map((order) => {
+        const tone = orderStatusTone(order.status);
+        return (
+          <Link key={order.id} href={`/operator/order/${order.id}`} asChild>
+            <Card chevron style={{ backgroundColor: tone.backgroundColor, borderColor: tone.borderColor }}>
+              <Text style={styles.cardTitle}>{order.number}</Text>
+              <Text style={[styles.cardSub, { color: tone.statusColor, fontWeight: '600' }]}>
+                {statusLabel(order.status)} · {formatByn(order.totalKop)}
+              </Text>
+            </Card>
+          </Link>
+        );
+      })}
     </ScrollView>
   );
 }
