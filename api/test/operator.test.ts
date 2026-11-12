@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { and, asc, eq } from 'drizzle-orm';
 import { auditEntrySchema, orderSchema, type OrderStatus } from '@picpac/shared';
-import { auditLog, orderStatusHistory, orders, productVariants, projects } from '../src/db/schema.js';
+import { auditLog, orderStatusHistory, orders, productVariants, profiles, projects } from '../src/db/schema.js';
 import { canTransition } from '../src/modules/operator/service.js';
 import { seed, testApp } from './helpers.js';
 
@@ -241,5 +241,30 @@ describe('оператор и статусы заказа', () => {
     for (const bad of ['0', '501', 'abc', '-1']) {
       expect((await call(operator, 'GET', `/operator/audit?limit=${bad}`)).statusCode).toBe(400);
     }
+  });
+
+  it('журнал показывает, кто совершил действие: имя и роль', async () => {
+    const { orderId } = await makeOrder(alice);
+    await setStatus(operator, orderId, 'moderation');
+    await call(alice, 'GET', '/operator/orders'); // клиенту отказано, отказ пишется от его имени
+    const entries = ((await call(operator, 'GET', '/operator/audit?limit=20')).json() as unknown[]).map((e) =>
+      auditEntrySchema.parse(e),
+    );
+    const byOperator = entries.find((e) => e.action === 'order.status' && e.objectId === orderId)!;
+    expect(byOperator).toMatchObject({ userId: operator.id, actorName: 'Оператор Тестовый', actorRole: 'operator' });
+    const denied = entries.find((e) => e.action === 'access.denied' && e.userId === alice.id)!;
+    expect(denied.actorRole).toBe('customer');
+    expect(denied.actorName?.length).toBeGreaterThan(0);
+  });
+
+  it('если пользователь удалён, запись остаётся, а имя и роль пустые', async () => {
+    await call(bob, 'GET', '/operator/orders'); // отказ от имени bob
+    await db.delete(profiles).where(eq(profiles.id, bob.id));
+    const entries = ((await call(operator, 'GET', '/operator/audit?limit=20')).json() as unknown[]).map((e) =>
+      auditEntrySchema.parse(e),
+    );
+    const orphan = entries.find((e) => e.userId === bob.id)!;
+    expect(orphan.actorName).toBeNull();
+    expect(orphan.actorRole).toBeNull();
   });
 });

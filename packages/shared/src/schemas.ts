@@ -326,6 +326,9 @@ export const apiErrorBodySchema = z.object({
 export const auditEntrySchema = z.object({
   id: z.string(),
   userId: z.string().nullable(),
+  /** Имя и роль того, кто совершил действие; пустые, если пользователя уже удалили или действие без входа. */
+  actorName: z.string().nullable(),
+  actorRole: z.enum(['customer', 'operator']).nullable(),
   at: iso,
   action: z.string(),
   objectType: z.string().nullable(),

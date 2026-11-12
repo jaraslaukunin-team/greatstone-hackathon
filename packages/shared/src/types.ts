@@ -258,6 +258,8 @@ export type ApiErrorBody = { error: { code: string; message: string; details?: R
 export type AuditEntryDTO = {
   id: string;
   userId: string | null;
+  actorName: string | null;
+  actorRole: 'customer' | 'operator' | null;
   at: string;
   action: string;
   objectType: string | null;

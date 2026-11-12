@@ -2,6 +2,7 @@ import type { AuditEntryDTO } from '@picpac/shared';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
+import { actionLabel, actorLabel, objectLabel } from '../../src/staff/auditLabels';
 import { Card } from '../../src/ui/Card';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
@@ -25,10 +26,11 @@ export default function StaffAuditScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {(rows ?? []).map((r) => (
         <Card key={r.id}>
-          <Text style={styles.action}>{r.action}</Text>
-          <Text style={[styles.meta, r.result === 'denied' && styles.denied]}>
+          <Text style={styles.action}>{actionLabel(r.action)}</Text>
+          <Text style={styles.actor}>Кто: {actorLabel(r)}</Text>
+          <Text style={[styles.meta, r.result !== 'ok' && styles.denied]}>
             {new Date(r.at).toLocaleString('ru-RU')} · {RESULT[r.result]}
-            {r.objectType ? ` · ${r.objectType}` : ''}
+            {r.objectType ? ` · ${objectLabel(r.objectType, r.objectId)}` : ''}
           </Text>
         </Card>
       ))}
@@ -41,6 +43,7 @@ const styles = StyleSheet.create({
   content: { padding: space[4], gap: space[2] },
   sub: { ...typography.body, color: lightColors.textSecondary, marginBottom: space[2] },
   action: { ...typography.bodyStrong, color: lightColors.text },
+  actor: { ...typography.body, color: lightColors.text, marginTop: 2 },
   meta: { ...typography.caption, color: lightColors.textSecondary, marginTop: 2 },
   denied: { color: lightColors.danger },
   error: { ...typography.caption, color: lightColors.danger },

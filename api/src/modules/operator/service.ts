@@ -3,7 +3,7 @@ import type { AuditEntryDTO, OrderDTO, OrderStatus } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import type { Db } from '../../db/client.js';
-import { auditLog, orders } from '../../db/schema.js';
+import { auditLog, orders, profiles } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import { toOrderDTO, toOrderDTOs, transitionOrder } from '../orders/service.js';
 
@@ -55,10 +55,18 @@ export async function changeStatus(
 }
 
 export async function listAudit(db: Db, limit: number): Promise<AuditEntryDTO[]> {
-  const rows = await db.select().from(auditLog).orderBy(desc(auditLog.at), desc(auditLog.id)).limit(limit);
-  return rows.map((r) => ({
+  // Журнал не ссылается на профили внешним ключом (переживает удаление пользователя), поэтому имя берём левым соединением.
+  const rows = await db
+    .select({ entry: auditLog, actorName: profiles.displayName, actorRole: profiles.role })
+    .from(auditLog)
+    .leftJoin(profiles, eq(profiles.id, auditLog.userId))
+    .orderBy(desc(auditLog.at), desc(auditLog.id))
+    .limit(limit);
+  return rows.map(({ entry: r, actorName, actorRole }) => ({
     id: r.id,
     userId: r.userId,
+    actorName: actorName ?? null,
+    actorRole: actorRole ?? null,
     at: r.at.toISOString(),
     action: r.action,
     objectType: r.objectType,
