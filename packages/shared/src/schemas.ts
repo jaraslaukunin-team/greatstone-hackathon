@@ -164,6 +164,8 @@ export const projectSchema = z.object({
   isShared: z.boolean(),
   expectedMembers: z.number().int().nonnegative().nullable(),
   hasPassword: z.boolean(),
+  isPool: z.boolean().optional(),
+  sourceProjectId: z.string().nullable().optional(),
   layout: layoutSchema,
   version: z.number().int(),
   updatedAt: iso,
@@ -258,6 +260,7 @@ export const albumMemberSchema = z.object({
   photosCount: z.number().int().nonnegative(),
   wish: z.string().nullable(),
   videoUrl: z.string().nullable(),
+  displayName: z.string().nullable().optional(),
 });
 export const updateMyMemberRequestSchema = z.object({
   childName: z.string().trim().min(1).max(100).optional(),
