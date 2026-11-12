@@ -12,7 +12,7 @@ import { PagesGrid } from '../../../src/book/PagesGrid';
 import { spreadPhotoCount, spreadRange } from '../../../src/book/spreadInfo';
 import { useApiClient } from '../../../src/api/hooks';
 import { hasContent, markSeen, reconcileLayout } from '../../../src/editor/reconcileLayout';
-import { addSpread, moveSpreadBy, replacePhoto, setCover, setTheme, type CellRef } from '../../../src/editor/editorActions';
+import { addSpread, replacePhoto, setCover, setTheme, type CellRef } from '../../../src/editor/editorActions';
 import { useVariantPrice } from '../../../src/catalog/useCatalog';
 import { goodsPriceKop } from '../../../src/checkout/goodsPrice';
 import { spreadIssues } from '../../../src/book/spreadIssues';
@@ -270,30 +270,6 @@ export default function OverviewScreen() {
                   }
                 />
               ) : null}
-              {viewIndex >= 1 ? (
-                <View style={styles.moveRow}>
-                  <Button
-                    title="◀ Раньше"
-                    variant="secondary"
-                    style={styles.moveBtn}
-                    disabled={viewIndex <= 1}
-                    onPress={() => {
-                      setLayout(moveSpreadBy(draft.layout, viewIndex, -1));
-                      setJump({ index: viewIndex - 1, key: Date.now() });
-                    }}
-                  />
-                  <Button
-                    title="Позже ▶"
-                    variant="secondary"
-                    style={styles.moveBtn}
-                    disabled={viewIndex >= spreadsOf(pageCount).length - 1}
-                    onPress={() => {
-                      setLayout(moveSpreadBy(draft.layout, viewIndex, 1));
-                      setJump({ index: viewIndex + 1, key: Date.now() });
-                    }}
-                  />
-                </View>
-              ) : null}
             </>
           ) : null}
         </View>
@@ -403,7 +379,5 @@ const styles = StyleSheet.create({
   spreadTab: { gap: space[3] },
   pagesTab: { gap: space[3] },
   hidden: { display: 'none' },
-  moveRow: { flexDirection: 'row', gap: space[2] },
-  moveBtn: { flex: 1 },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginVertical: space[2] },
 });
