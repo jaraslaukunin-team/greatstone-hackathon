@@ -168,6 +168,7 @@ export default function DesignsScreen() {
 
           {items.map((project, index) => {
             const kind = projectKindLabel(projectKind(project, catalog.data));
+            const inOrder = project.status === 'ordered';
             return (
               <View key={project.id} style={styles.row}>
                 <Pressable
@@ -176,10 +177,15 @@ export default function DesignsScreen() {
                   accessibilityRole="link"
                   accessibilityLabel={project.title}
                 >
-                  <Card chevron style={styles.card} delay={staggerDelay(index)}>
+                  <Card
+                    chevron
+                    tone={inOrder ? 'mint' : 'plain'}
+                    style={styles.card}
+                    delay={staggerDelay(index)}
+                  >
                     <Text style={styles.cardTitle}>{project.title}</Text>
-                    <Text style={styles.cardSub}>
-                      {kind} · {project.status === 'draft' ? 'Черновик' : 'В заказе'} · v{project.version}
+                    <Text style={[styles.cardSub, inOrder && styles.cardSubOrdered]}>
+                      {kind} · {inOrder ? 'В заказе' : 'Черновик'} · v{project.version}
                     </Text>
                   </Card>
                 </Pressable>
@@ -254,6 +260,7 @@ const styles = StyleSheet.create({
   card: { paddingRight: space[4] + 44 + 8 + 28 },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
+  cardSubOrdered: { color: lightColors.success, fontWeight: '600' },
   menuBtn: {
     position: 'absolute',
     // Слева от шеврона (он у Card: right space[3], иконка 24)

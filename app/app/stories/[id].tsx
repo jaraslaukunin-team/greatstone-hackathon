@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { nextStoryId, prevStoryId, storyById } from '../../src/stories/stories';
 import { Button } from '../../src/ui/Button';
-import { lightColors, space, typography } from '../../src/theme/theme';
+import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
 const SLIDE_MS = 5000;
 const SWIPE_DOWN_PX = 80;
@@ -179,12 +179,6 @@ function StoryViewer({ storyId, startAtEnd }: { storyId: string; startAtEnd: boo
       {slide.image ? (
         <Image source={slide.image} style={styles.bgImage} resizeMode="cover" />
       ) : null}
-      {hasImage ? <View style={styles.scrimBottom} pointerEvents="none" /> : null}
-
-      <View style={styles.copy} pointerEvents="none">
-        <Text style={[styles.slideTitle, { color: textColor }]}>{slide.title}</Text>
-        <Text style={[styles.slideBody, { color: textColor }]}>{slide.body}</Text>
-      </View>
 
       <Pressable
         style={styles.tapLayer}
@@ -234,16 +228,25 @@ function StoryViewer({ storyId, startAtEnd }: { storyId: string; startAtEnd: boo
         </View>
       </View>
 
-      {slide.cta ? (
-        <View style={[styles.ctaWrap, { paddingBottom: insets.bottom + space[5] }]} pointerEvents="box-none">
-          <Button
-            title={slide.cta.label}
-            variant="dark"
-            onPress={() => router.replace(slide.cta!.href as Href)}
-            style={styles.cta}
-          />
+      <View
+        style={[styles.bottom, { paddingBottom: insets.bottom + space[5] }]}
+        pointerEvents="box-none"
+      >
+        <View style={[styles.textCard, !hasImage && styles.textCardPlain]} pointerEvents="box-none">
+          <View pointerEvents="none" style={styles.textCopy}>
+            <Text style={[styles.slideTitle, { color: textColor }]}>{slide.title}</Text>
+            <Text style={[styles.slideBody, { color: textColor }]}>{slide.body}</Text>
+          </View>
+          {slide.cta ? (
+            <Button
+              title={slide.cta.label}
+              variant="dark"
+              onPress={() => router.replace(slide.cta!.href as Href)}
+              style={styles.cta}
+            />
+          ) : null}
         </View>
-      ) : null}
+      </View>
     </View>
   );
 }
@@ -255,14 +258,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  scrimBottom: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '42%',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
   missing: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -271,16 +266,30 @@ const styles = StyleSheet.create({
     padding: space[5],
   },
   missingText: { ...typography.h3, color: lightColors.text },
-  copy: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: 'flex-end',
-    paddingHorizontal: space[5],
-    paddingBottom: space[7] + 56,
-    gap: space[3],
-    zIndex: 1,
+  bottom: {
+    position: 'absolute',
+    left: space[5],
+    right: space[5],
+    bottom: 0,
+    zIndex: 4,
+    alignItems: 'flex-start',
   },
+  textCard: {
+    maxWidth: 420,
+    borderRadius: radius.card,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: space[4],
+    paddingVertical: space[4],
+    gap: space[3],
+  },
+  textCardPlain: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  textCopy: { gap: space[3] },
   slideTitle: { ...typography.display, fontSize: 32, lineHeight: 38 },
-  slideBody: { ...typography.body, opacity: 0.95, maxWidth: 420 },
+  slideBody: { ...typography.body, opacity: 0.95 },
   tapLayer: {
     ...StyleSheet.absoluteFill,
     zIndex: 2,
@@ -305,12 +314,5 @@ const styles = StyleSheet.create({
   storyTitle: { ...typography.label, flex: 1 },
   closeHit: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   close: { ...typography.h2, fontSize: 20 },
-  ctaWrap: {
-    position: 'absolute',
-    left: space[5],
-    right: space[5],
-    bottom: 0,
-    zIndex: 4,
-  },
   cta: { alignSelf: 'flex-start' },
 });
