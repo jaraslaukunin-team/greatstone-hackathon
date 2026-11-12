@@ -1,3 +1,5 @@
+import { installRuntimeTranslate, tr } from '../src/i18n/runtimeTranslate';
+import { useSettingsStore } from '../src/settings/settingsStore';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { useFonts } from 'expo-font';
@@ -74,7 +76,12 @@ function DeepLinkBridge({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Перевод интерфейса на белорусский при отрисовке: ставится до первого рендера.
+installRuntimeTranslate();
+
 export default function RootLayout() {
+  // Смена языка перемонтирует навигатор, чтобы все экраны перерисовались с новыми строками.
+  const lang = useSettingsStore((s) => s.lang);
   const [fontsLoaded, fontError] = useFonts(futuraFonts);
 
   useEffect(() => {
@@ -94,7 +101,7 @@ export default function RootLayout() {
         <ApiBridge>
           <DeepLinkBridge>
             <WebPhoneShell>
-              <Stack screenOptions={{ headerShown: false }}>
+              <Stack key={lang} screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="(tabs)" />
@@ -106,7 +113,7 @@ export default function RootLayout() {
                 <Stack.Screen name="print" />
                 <Stack.Screen name="album" />
                 <Stack.Screen name="invite/[token]" />
-                <Stack.Screen name="photo-editor" options={{ presentation: 'modal', title: 'Редактор фото', headerShown: false }} />
+                <Stack.Screen name="photo-editor" options={{ presentation: 'modal', title: tr('Редактор фото'), headerShown: false }} />
                 <Stack.Screen name="ai" />
                 <Stack.Screen name="operator" />
                 <Stack.Screen name="profile" />
