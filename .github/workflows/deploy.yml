@@ -1,0 +1,74 @@
+name: Deploy
+
+# Автовыкладка: каждый push в main собирает веб, прогоняет тесты и обновляет сервер (API и веб-версию).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Адрес API, который вшивается в веб-сборку.
+      EXPO_PUBLIC_API_URL: https://picpac.jaraslau.dev
+      EXPO_PUBLIC_DEMO_HINT: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Тесты без базы: общий пакет и приложение. Тесты API идут отдельно (нужен Postgres).
+      - run: npm test -w @picpac/shared
+      - run: npm test -w app
+      - run: npx tsc --noEmit
+        working-directory: app
+
+      - name: Сборка веб-версии
+        run: |
+          npm run copy:canvaskit -w app
+          npx expo export -p web --clear --output-dir dist-prod
+        working-directory: app
+
+      - name: Архивы
+        run: |
+          git archive --format=tgz -o src.tgz HEAD
+          tar czf web.tgz -C app/dist-prod .
+
+      - name: SSH-ключ
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Выкладка на сервер
+        run: |
+          SSH="ssh -i ~/.ssh/deploy_key -o BatchMode=yes ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}"
+          scp -i ~/.ssh/deploy_key -o BatchMode=yes src.tgz web.tgz "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/picpac/"
+          $SSH 'set -e
+            cd /opt/picpac
+            tar xzf src.tgz --exclude=.env
+            cd web && find . -mindepth 1 -delete && tar xzf ../web.tgz && cd ..
+            docker compose up -d --build api
+            docker compose up -d caddy'
+
+      - name: Проверка
+        run: |
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://picpac.jaraslau.dev/health || true)
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "Сервер не ответил 200 на /health" >&2
+          exit 1
