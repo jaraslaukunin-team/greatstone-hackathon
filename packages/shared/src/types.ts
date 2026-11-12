@@ -42,6 +42,8 @@ export type VariantDTO = {
 export type ProductDTO = {
   id: string;
   kind: 'photobook' | 'prints' | 'graduation';
+  /** Линейка печати: 'photo' — фотопечать, 'digital' — цифровая, null — не применимо (книги). */
+  line: 'photo' | 'digital' | null;
   title: string;
   description: string;
   variants: VariantDTO[];

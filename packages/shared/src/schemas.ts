@@ -52,9 +52,11 @@ export const variantSchema = z.object({
   pageWidthCm: z.number(),
   leadTimeDays: z.number().int(),
 });
+export const productLineSchema = z.enum(['photo', 'digital']).nullable();
 export const productSchema = z.object({
   id: z.string(),
   kind: z.enum(['photobook', 'prints', 'graduation']),
+  line: productLineSchema,
   title: z.string(),
   description: z.string(),
   variants: z.array(variantSchema),
