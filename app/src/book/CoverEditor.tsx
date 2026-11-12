@@ -42,10 +42,10 @@ export function CoverEditor({ layout, projectTitle, photos, sourceOf, theme, onC
 
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.spread} accessibilityLabel="Развёртка обложки">
-            <View style={[styles.back, { width: frontW, height: frontH, backgroundColor: theme.coverBg }]}>
+            <View style={[styles.back, { width: frontW, height: frontH, backgroundColor: cover?.color ?? theme.coverBg }]}>
               <Text style={[styles.backText, { color: theme.titleColor }]}>Задняя сторона</Text>
             </View>
-            <View style={[styles.spineBar, { width: SPINE_W, height: frontH, backgroundColor: theme.coverBg }]}>
+            <View style={[styles.spineBar, { width: SPINE_W, height: frontH, backgroundColor: cover?.color ?? theme.coverBg }]}>
               {cover?.spine ? (
                 <Text style={[styles.spineText, { color: theme.titleColor, width: frontH }]} numberOfLines={1}>
                   {cover.spine}

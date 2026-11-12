@@ -12,6 +12,7 @@ import {
   spreadTemplatesByPhotos,
   type SpreadTemplateId,
 } from '../../../src/book/spreadTemplates';
+import { useDebouncedSync } from '../../../src/project/useDebouncedSync';
 import { useProjectPhotos } from '../../../src/project/useProjectPhotos';
 import { useProjectStore } from '../../../src/project/projectStore';
 import { Button } from '../../../src/ui/Button';
@@ -31,7 +32,8 @@ export default function SpreadTemplatesScreen() {
   const client = useApiClient();
   const draft = useProjectStore((s) => s.draft);
   const setLayout = useProjectStore((s) => s.setLayout);
-  const { photoMap, sourceOf } = useProjectPhotos(client, id);
+  const { photoMap, sourceOf, loading } = useProjectPhotos(client, id);
+  useDebouncedSync(client, id, !!draft && draft.project.id === id);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all');
   const [selected, setSelected] = useState<SpreadTemplateId>('story');
   const [scope, setScope] = useState<'one' | 'all'>('one');
@@ -51,7 +53,7 @@ export default function SpreadTemplatesScreen() {
     return (
       <View style={styles.screen}>
         <Text style={styles.sub}>Откройте книгу из списка «Мои», затем выберите шаблон.</Text>
-        <Button title="К книге" onPress={() => router.replace(`/project/${id}/overview`)} />
+        <Button title="К книге" onPress={() => router.dismissTo(`/project/${id}/overview`)} />
       </View>
     );
   }
@@ -130,7 +132,7 @@ export default function SpreadTemplatesScreen() {
         {scope === 'one' ? 'Остальные страницы не изменятся.' : 'Фото каждого разворота остаются на своём месте, обложка не меняется.'}
       </Text>
 
-      <Button title={chosen ? `Применить «${chosen.title}»` : 'Применить'} disabled={!chosen || ordered} onPress={apply} />
+      <Button title={chosen ? `Применить «${chosen.title}»` : 'Применить'} disabled={!chosen || ordered || loading} onPress={apply} />
     </ScrollView>
   );
 }

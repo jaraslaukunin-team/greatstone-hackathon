@@ -8,8 +8,9 @@ import { spreadsOf } from '../../../src/book/flip';
 import { PageView } from '../../../src/book/PageView';
 import { spreadPhotoCount, spreadRange } from '../../../src/book/spreadInfo';
 import { TEXT_STYLES, TEXT_STYLE_IDS } from '../../../src/book/textStyles';
-import { addPageText, MAX_PAGE_TEXTS, replacePhoto, setPageBg, setPageGap } from '../../../src/editor/editorActions';
+import { addPageText, MAX_PAGE_TEXTS, replacePhoto, setCrop, setPageBg, setPageGap } from '../../../src/editor/editorActions';
 import { useProjectStore } from '../../../src/project/projectStore';
+import { useDebouncedSync } from '../../../src/project/useDebouncedSync';
 import { useProjectPhotos } from '../../../src/project/useProjectPhotos';
 import { Button } from '../../../src/ui/Button';
 import { Slider } from '../../../src/ui/Slider';
@@ -37,8 +38,12 @@ export default function PlaceScreen() {
   const [cell, setCell] = useState<{ pageIndex: number; cellIndex: number } | null>(null);
   const [photoId, setPhotoId] = useState<string | null>(null);
   const [gapPreview, setGapPreview] = useState<number | null>(null);
+  // Автосохранение: если книга открыта под этим экраном, она и сохраняет; при прямой ссылке — этот экран.
+  useDebouncedSync(client, id, !!draft && draft.project.id === id);
 
   const layout = draft && draft.project.id === id ? draft.layout : null;
+  // Выбранная ячейка могла пропасть после смены шаблона.
+  const cellValid = cell && layout?.pages[cell.pageIndex]?.cells[cell.cellIndex] ? cell : null;
   const ordered = draft?.project.status === 'ordered';
   const pageCount = layout?.pages.length ?? 0;
   const spreads = spreadsOf(pageCount);
@@ -51,7 +56,7 @@ export default function PlaceScreen() {
     return (
       <View style={styles.stub}>
         <Text style={styles.sub}>Откройте книгу, затем выберите разворот для правки.</Text>
-        <Button title="К книге" onPress={() => router.replace(`/project/${id}/overview`)} />
+        <Button title="К книге" onPress={() => router.dismissTo(`/project/${id}/overview`)} />
       </View>
     );
   }
@@ -67,8 +72,9 @@ export default function PlaceScreen() {
   };
 
   const place = () => {
-    if (!cell || !photoId || ordered) return;
-    setLayout(replacePhoto(layout, cell, photoId));
+    if (!cellValid || !photoId || ordered) return;
+    // Новое фото ставится с нейтральным кадром: кадр прежнего (например, половины панорамы) ему не подходит.
+    setLayout(setCrop(replacePhoto(layout, cellValid, photoId), cellValid, { x: 0, y: 0, scale: 1, rotation: 0 }));
     setPhotoId(null);
   };
 
@@ -89,7 +95,7 @@ export default function PlaceScreen() {
             <View key={pi} style={{ width: pageW, height: pageW }}>
               <PageView page={view} sourceOf={sourceOf} width={pageW} height={pageW} theme={theme} />
               {rects.map((r, ci) => {
-                const on = cell?.pageIndex === pi && cell.cellIndex === ci;
+                const on = cellValid?.pageIndex === pi && cellValid.cellIndex === ci;
                 return (
                   <Pressable
                     key={ci}
@@ -215,9 +221,14 @@ export default function PlaceScreen() {
         </Pressable>
       </ScrollView>
 
-      <Button title="Разместить фото" disabled={ordered || !cell || !photoId} onPress={place} />
-      <Text style={styles.hint}>{cell && photoId ? 'В выделенную ячейку · выбрано 1 фото' : 'Выберите ячейку и фото'}</Text>
-      <Button title="Подробная правка страницы" variant="secondary" onPress={() => router.replace(`/project/${id}/overview?page=${rightIndex ?? leftIndex}`)} />
+      <Button title="Разместить фото" disabled={ordered || !cellValid || !photoId} onPress={place} />
+      <Text style={styles.hint}>{cellValid && photoId ? 'В выделенную ячейку · выбрано 1 фото' : 'Выберите ячейку и фото'}</Text>
+      <Button
+        title="Подробная правка страницы"
+        variant="secondary"
+        disabled={ordered}
+        onPress={() => router.dismissTo({ pathname: '/project/[id]/overview', params: { id: String(id), page: String(rightIndex ?? leftIndex) } })}
+      />
     </ScrollView>
   );
 }

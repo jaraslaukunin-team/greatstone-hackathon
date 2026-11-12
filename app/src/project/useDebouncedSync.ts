@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { ApiClient } from '../api/client';
 import { createDebouncedSaver } from './debouncedSaver';
 import { useProjectStore } from './projectStore';
+import { claimSync, isSyncOwner, releaseSync } from './syncOwner';
 import { syncProject } from './syncProject';
 
 const DELAY_MS = 1000;
@@ -23,6 +24,7 @@ export function useDebouncedSync(
   const layout = useProjectStore((s) => s.draft?.layout);
   const setSyncState = useProjectStore((s) => s.setSyncState);
   const baseline = useRef<Layout | undefined>(undefined);
+  const token = useRef(Symbol('sync'));
 
   const saver = useMemo(() => {
     async function save(next: Layout, retried = false): Promise<void> {
@@ -72,9 +74,17 @@ export function useDebouncedSync(
     }
     if (layout && layout !== baseline.current) {
       baseline.current = layout;
-      saver.schedule(layout);
+      // Сохраняет один экран на проект: остальные (поверх книги) только следят за макетом.
+      if (projectId && isSyncOwner(projectId, token.current)) saver.schedule(layout);
     }
-  }, [enabled, layout, saver]);
+  }, [enabled, layout, saver, projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    const mine = token.current;
+    claimSync(projectId, mine);
+    return () => releaseSync(projectId, mine);
+  }, [projectId]);
 
   // Закрыли экран — последняя правка не теряется.
   useEffect(() => () => saver.flush(), [saver]);

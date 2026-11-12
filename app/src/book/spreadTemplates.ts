@@ -67,7 +67,14 @@ export function applySpreadTemplate(
   const right = rightIndex === null || template.right === null ? undefined : next.pages[rightIndex];
   if (!left) return next;
 
-  const found = [left, right].flatMap((p) => (p ? p.cells.map((c) => c.photoId) : [])).filter((x): x is string => Boolean(x));
+  // Кадр и fit переносятся вместе с фото, кроме кадров панорамы (они привязаны к половине разворота).
+  const carried = new Map<string, { crop: Cell['crop']; fit?: Cell['fit'] }>();
+  for (const p of [left, right]) {
+    if (!p || p.template === 'spread-one') continue;
+    for (const c of p.cells) if (c.photoId && !carried.has(c.photoId)) carried.set(c.photoId, { crop: c.crop, fit: c.fit });
+  }
+  // Одно фото на двух страницах (панорама) считается один раз.
+  const found = [...new Set([left, right].flatMap((p) => (p ? p.cells.map((c) => c.photoId) : [])).filter((x): x is string => Boolean(x)))];
 
   if (id === 'panorama') {
     const photoId = found[0] ?? null;
@@ -91,7 +98,13 @@ export function applySpreadTemplate(
     page.template = pageTemplate;
     page.cells = emptyCells(pageTemplate);
     page.cells.forEach((cell, i) => {
-      cell.photoId = found[from + i] ?? null;
+      const id = found[from + i] ?? null;
+      cell.photoId = id;
+      const keep = id ? carried.get(id) : undefined;
+      if (keep) {
+        cell.crop = { ...keep.crop };
+        if (keep.fit) cell.fit = keep.fit;
+      }
     });
     return from + page.cells.length;
   };

@@ -46,7 +46,7 @@ export default function OverviewScreen() {
   const [limits, setLimits] = useState({ min: 20, max: 60, widthCm: 20 });
   const [viewIndex, setViewIndex] = useState(0);
   const [jump, setJump] = useState<{ index: number; key: number } | undefined>(undefined);
-  const [paramHandled, setParamHandled] = useState(false);
+  const handledParam = useRef<string | undefined>(undefined);
   const goTab = useCallback(
     (next: BookTab) => {
       setTab(next);
@@ -104,15 +104,21 @@ export default function OverviewScreen() {
     }, []),
   );
 
-  // Ссылка вида ?page=N открывает правку этой страницы сразу после загрузки книги.
+  // Ссылка вида ?page=N (в том числе пришедшая с экрана расстановки фото) открывает правку этой страницы.
+  // Параметр сбрасывается после обработки, чтобы тот же номер можно было открыть ещё раз; заказанный проект не правится.
   useEffect(() => {
-    if (busy || paramHandled || pageParam === undefined || !draft?.layout.pages.length) return;
-    setParamHandled(true);
+    if (pageParam === undefined) {
+      handledParam.current = undefined;
+      return;
+    }
+    if (busy || handledParam.current === pageParam || !draft?.layout.pages.length) return;
+    handledParam.current = pageParam;
     const n = Number(pageParam);
-    if (Number.isInteger(n) && n >= 0 && n < draft.layout.pages.length) {
+    if (!ordered && Number.isInteger(n) && n >= 0 && n < draft.layout.pages.length) {
       setEditing({ pageIndex: n, rect: { x: winW / 2 - 80, y: winH / 2 - 80, width: 160, height: 160 } });
     }
-  }, [busy, paramHandled, pageParam, draft, winW, winH]);
+    router.setParams({ page: undefined });
+  }, [busy, pageParam, draft, ordered, winW, winH]);
 
   useEffect(() => {
     let cancelled = false;
