@@ -1,11 +1,10 @@
 import { httpsUrlSchema, type AlbumProgressDTO, type UpdateMyMemberRequest } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiRequestError } from '../../src/api/client';
 import { useApiClient } from '../../src/api/hooks';
 import { useAuth } from '../../src/auth/AuthProvider';
-import { useProjectPhotos } from '../../src/project/useProjectPhotos';
 import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
 import { lightColors, space, typography } from '../../src/theme/theme';
@@ -17,7 +16,6 @@ export default function MyWishScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const client = useApiClient();
   const { user } = useAuth();
-  const { photoList } = useProjectPhotos(client, projectId);
   const [childName, setChildName] = useState('');
   const [wish, setWish] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
@@ -70,18 +68,8 @@ export default function MyWishScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Ваш разворот</Text>
-      <Text style={styles.sub}>Выпускной альбом · один разворот. Добавьте пожелание классу и ссылку на видео-поздравление.</Text>
-      <View style={styles.spread}>
-        <View style={styles.photoGrid}>
-          {photoList.slice(0, 8).map((photo) => <Image key={photo.id} source={{ uri: client.resolveUrl(photo.url) }} style={styles.photo} />)}
-        </View>
-        <View style={styles.spreadText}>
-          <Text style={styles.spreadName}>{childName || 'Ваше имя'}</Text>
-          <Text style={styles.spreadWish}>{wish || 'Здесь будет ваше пожелание классу'}</Text>
-          {videoUrl.trim() ? <Text style={styles.videoHint}>QR-код на видео</Text> : null}
-        </View>
-      </View>
+      <Text style={styles.title}>Моё пожелание</Text>
+      <Text style={styles.sub}>Оно попадёт на ваш разворот в выпускном альбоме, а ссылка на видео станет QR-кодом на странице.</Text>
 
       <Text style={styles.label}>Имя ученика</Text>
       <Input value={childName} onChangeText={setChildName} placeholder="Имя и фамилия" maxLength={100} editable={loaded} />
@@ -134,11 +122,4 @@ const styles = StyleSheet.create({
   error: { ...typography.caption, color: lightColors.danger },
   wish: { minHeight: 96, textAlignVertical: 'top' },
   actions: { gap: space[2], marginTop: space[3] },
-  spread: { flexDirection: 'row', minHeight: 180, borderRadius: 16, overflow: 'hidden', backgroundColor: lightColors.surface, borderWidth: 1, borderColor: lightColors.border },
-  photoGrid: { width: '54%', flexDirection: 'row', flexWrap: 'wrap', alignContent: 'stretch' },
-  photo: { width: '50%', height: 88, backgroundColor: lightColors.fillSand, borderWidth: 1, borderColor: lightColors.surface },
-  spreadText: { flex: 1, padding: space[3], justifyContent: 'center', gap: space[2] },
-  spreadName: { ...typography.bodyStrong, color: lightColors.text },
-  spreadWish: { ...typography.caption, color: lightColors.textSecondary },
-  videoHint: { ...typography.caption, color: lightColors.action },
 });

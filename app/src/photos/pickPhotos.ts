@@ -6,7 +6,7 @@ export type PickedPhoto = {
   uri: string;
 };
 
-export async function pickPhotos(options: { selectionLimit?: number } = {}): Promise<PickedPhoto[]> {
+export async function pickPhotos(): Promise<PickedPhoto[]> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
     throw new Error('Нужен доступ к галерее');
@@ -14,7 +14,6 @@ export async function pickPhotos(options: { selectionLimit?: number } = {}): Pro
 
   const result = await ImagePicker.launchImageLibraryAsync({
     allowsMultipleSelection: true,
-    ...(options.selectionLimit ? { selectionLimit: options.selectionLimit } : {}),
     mediaTypes: ['images'],
     quality: 1,
   });
