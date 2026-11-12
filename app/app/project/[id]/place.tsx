@@ -125,6 +125,14 @@ export default function PlaceScreen() {
 
       {tab === 'template' ? (
         <Button
+          title="Свободный режим и слои"
+          variant="secondary"
+          disabled={ordered}
+          onPress={() => router.push({ pathname: '/project/[id]/free', params: { id: String(id), spread: String(spread) } })}
+        />
+      ) : null}
+      {tab === 'template' ? (
+        <Button
           title="Шаблоны разворота"
           variant="secondary"
           disabled={ordered}
