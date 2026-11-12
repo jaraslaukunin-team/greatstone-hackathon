@@ -1,3 +1,7 @@
+import { loadRepoEnv } from './loadEnv.js';
+
+loadRepoEnv();
+
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 

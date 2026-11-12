@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { count, sql } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
+import { loadRepoEnv } from '../loadEnv.js';
 import { closeDb, createDb, type Db } from './client.js';
 import * as s from './schema.js';
 
@@ -211,6 +212,7 @@ export async function seedDatabase(db: Db): Promise<SeedSummary> {
 
 // Запуск из командной строки: npm run db:seed -w api
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  loadRepoEnv();
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('Не задана переменная окружения DATABASE_URL');
   const db = createDb(url);
