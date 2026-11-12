@@ -1,6 +1,8 @@
-import { THEMES, type ThemeId } from '@picpac/shared';
+import { DEFAULT_THEME_ID, THEMES, type ThemeId } from '@picpac/shared';
 import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
+
+/* ───────────── Тема по проекту ───────────── */
 
 type State = {
   choices: Record<string, ThemeId>;
@@ -50,3 +52,31 @@ export function createThemeChoiceStore(storage: StateStorage = lazyStorage) {
 }
 
 export const useThemeChoice = createThemeChoiceStore();
+
+/* ───────────── Режим сборки книги (общий выбор перед созданием проекта) ───────────── */
+
+/** 'auto' — автомакет; 'manual' — пользователь раскладывает сам. */
+export type BuildMode = 'auto' | 'manual';
+
+type ThemeChoiceState = {
+  themeId: ThemeId;
+  mode: BuildMode;
+  setThemeId(id: ThemeId): void;
+  setMode(mode: BuildMode): void;
+};
+
+// Ключ отличается от picpac.theme-choice (тема по проекту): иначе два стора затирали бы друг друга.
+export const useThemeChoiceStore = create<ThemeChoiceState>()(
+  persist(
+    (set) => ({
+      themeId: DEFAULT_THEME_ID,
+      mode: 'auto',
+      setThemeId: (themeId) => set({ themeId }),
+      setMode: (mode) => set({ mode }),
+    }),
+    {
+      name: 'picpac.build-options',
+      storage: createJSONStorage(() => lazyStorage),
+    },
+  ),
+);

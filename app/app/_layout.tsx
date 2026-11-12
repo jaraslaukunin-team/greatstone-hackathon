@@ -84,6 +84,7 @@ export default function RootLayout() {
               <Stack.Screen name="ai" />
               <Stack.Screen name="operator" />
               <Stack.Screen name="profile" />
+              <Stack.Screen name="showcase" />
             </Stack>
           </DeepLinkBridge>
         </ApiBridge>

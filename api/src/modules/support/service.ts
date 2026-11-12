@@ -1,17 +1,26 @@
+import { randomUUID } from 'node:crypto';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
-import type { InteractionDTO } from '@picpac/shared';
+import type { FastifyInstance } from 'fastify';
+import type { InteractionDTO, InteractionMessageDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import type { Db } from '../../db/client.js';
 import { interactionMessages, interactions, profiles } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import { loadOrder } from '../orders/service.js';
+import { readImageMeta, sniffMime } from '../photos/imageMeta.js';
 
 type InteractionRow = typeof interactions.$inferSelect;
 
 export const INTERACTIONS_LIMIT = 200;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const notFound = () => new AppError(404, 'NOT_FOUND', 'Обращение не найдено');
+
+export const supportAttachmentKey = (interactionId: string, messageId: string) =>
+  `support/${interactionId}/${messageId}`;
+
+export const attachmentUrl = (interactionId: string, messageId: string) =>
+  `/interactions/${interactionId}/attachments/${messageId}`;
 
 // Сообщения всех обращений списка грузятся одним запросом вместе с ролью автора.
 async function toDTOs(db: Db, rows: InteractionRow[]): Promise<InteractionDTO[]> {
@@ -23,6 +32,7 @@ async function toDTOs(db: Db, rows: InteractionRow[]): Promise<InteractionDTO[]>
       authorId: interactionMessages.authorId,
       authorRole: profiles.role,
       body: interactionMessages.body,
+      attachmentKey: interactionMessages.attachmentKey,
       createdAt: interactionMessages.createdAt,
     })
     .from(interactionMessages)
@@ -38,12 +48,13 @@ async function toDTOs(db: Db, rows: InteractionRow[]): Promise<InteractionDTO[]>
     createdAt: r.createdAt.toISOString(),
     messages: messages
       .filter((m) => m.interactionId === r.id)
-      .map((m) => ({
+      .map((m): InteractionMessageDTO => ({
         id: m.id,
         authorId: m.authorId,
         authorRole: m.authorRole,
         body: m.body,
         createdAt: m.createdAt.toISOString(),
+        attachmentUrl: m.attachmentKey ? attachmentUrl(r.id, m.id) : null,
       })),
   }));
 }
@@ -104,4 +115,63 @@ export async function addMessage(db: Db, user: AuthUser, id: string, body: strin
   });
   await audit(db, { userId: user.id, action: 'interaction.message', objectType: 'interaction', objectId: id, result: 'ok' });
   return toDTO(db, updated);
+}
+
+/** Загружает фото, сохраняет в storage, создаёт сообщение с вложением. */
+export async function addPhotoMessage(
+  app: FastifyInstance,
+  user: AuthUser,
+  interactionId: string,
+  data: Buffer,
+  body: string,
+): Promise<InteractionDTO> {
+  const row = await loadInteraction(app.db, user, interactionId);
+  // Проверяем MIME — 415 для не-изображений.
+  await readImageMeta(data);
+
+  const messageId = randomUUID();
+  const key = supportAttachmentKey(row.id, messageId);
+  await app.storage.put(key, data);
+  try {
+    const updated = await app.db.transaction(async (tx) => {
+      await tx.insert(interactionMessages).values({
+        id: messageId,
+        interactionId: row.id,
+        authorId: user.id,
+        body,
+        attachmentKey: key,
+      });
+      const [next] = await tx
+        .update(interactions)
+        .set({ status: user.role === 'operator' ? 'answered' : 'open' })
+        .where(eq(interactions.id, row.id))
+        .returning();
+      return next!;
+    });
+    await audit(app.db, { userId: user.id, action: 'interaction.message', objectType: 'interaction', objectId: interactionId, result: 'ok' });
+    return toDTO(app.db, updated);
+  } catch (e) {
+    await app.storage.remove(key).catch(() => undefined);
+    throw e;
+  }
+}
+
+/** Возвращает данные вложения для скачивания; проверяет доступ к обращению. */
+export async function getMessageAttachment(
+  app: FastifyInstance,
+  user: AuthUser,
+  interactionId: string,
+  messageId: string,
+): Promise<{ data: Buffer; mime: string }> {
+  // Доступ проверяется через loadInteraction (чужое → 404 + журнал).
+  await loadInteraction(app.db, user, interactionId);
+  if (!UUID.test(messageId)) throw notFound();
+  const [msg] = await app.db
+    .select()
+    .from(interactionMessages)
+    .where(eq(interactionMessages.id, messageId));
+  if (!msg || !msg.attachmentKey) throw notFound();
+  const data = await app.storage.get(msg.attachmentKey);
+  const mime = sniffMime(data) ?? 'application/octet-stream';
+  return { data, mime };
 }

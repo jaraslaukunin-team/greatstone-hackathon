@@ -1,7 +1,8 @@
 import { formatByn } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog } from '../../src/catalog/useCatalog';
+import { paperLabel, paperOf } from '../../src/print/paper';
 import { Card } from '../../src/ui/Card';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
@@ -25,22 +26,37 @@ export default function PrintFormatScreen() {
       {products.map((product) => (
         <Card key={product.id}>
           <Text style={styles.product}>{product.title}</Text>
-          {product.variants.map((variant) => (
-            <Pressable
-              key={variant.id}
-              accessibilityRole="button"
-              style={styles.variant}
-              onPress={() =>
-                router.push({
-                  pathname: '/print/frames',
-                  params: { variantId: variant.id, photoId: photoId ?? '', sourceProjectId: sourceProjectId ?? '' },
-                })
-              }
-            >
-              <Text style={styles.cardTitle}>{variant.format}</Text>
-              <Text style={styles.price}>{formatByn(variant.basePriceKop)} за отпечаток</Text>
-            </Pressable>
-          ))}
+          {product.variants.map((variant) => {
+            const paper = paperOf(variant.format);
+            return (
+              <Pressable
+                key={variant.id}
+                accessibilityRole="button"
+                style={styles.variant}
+                onPress={() =>
+                  router.push({
+                    pathname: '/print/frames',
+                    params: { variantId: variant.id, photoId: photoId ?? '', sourceProjectId: sourceProjectId ?? '' },
+                  })
+                }
+              >
+                <View style={styles.variantRow}>
+                  <Text style={styles.cardTitle}>{variant.format}</Text>
+                  {paper ? (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{paperLabel[paper]}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <View style={styles.variantMeta}>
+                  <Text style={styles.price}>{formatByn(variant.basePriceKop)} за отпечаток</Text>
+                  {variant.leadTimeDays > 0 ? (
+                    <Text style={styles.lead}>{variant.leadTimeDays} дн.</Text>
+                  ) : null}
+                </View>
+              </Pressable>
+            );
+          })}
         </Card>
       ))}
     </ScrollView>
@@ -59,6 +75,16 @@ const styles = StyleSheet.create({
     borderTopColor: lightColors.border,
     minHeight: 44,
   },
+  variantRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  variantMeta: { flexDirection: 'row', gap: space[2], marginTop: 2 },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
-  price: { ...typography.caption, color: lightColors.textSecondary, marginTop: 2 },
+  price: { ...typography.caption, color: lightColors.textSecondary },
+  lead: { ...typography.caption, color: lightColors.textSecondary },
+  badge: {
+    backgroundColor: lightColors.canvas,
+    borderRadius: 999,
+    paddingHorizontal: space[2],
+    paddingVertical: 1,
+  },
+  badgeText: { ...typography.label, color: lightColors.text },
 });
