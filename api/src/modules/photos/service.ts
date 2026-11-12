@@ -91,8 +91,14 @@ export async function copyPhoto(
   const [src] = await app.db.select().from(projectPhotos).where(eq(projectPhotos.id, fromPhotoId));
   if (!src) throw await deny();
   const source = await assertProjectAccess(app.db, user, src.projectId, 'read');
-  // Участник альбома копирует только свои фото, как и видит только свои.
-  if ((await viewerRole(app.db, user, source)) === 'contributor' && src.uploadedBy !== user.id) throw await deny();
+  // В пуле участник видит все фото; в выпускном — только свои.
+  if (
+    !source.isPool &&
+    (await viewerRole(app.db, user, source)) === 'contributor' &&
+    src.uploadedBy !== user.id
+  ) {
+    throw await deny();
+  }
   if (target.status === 'ordered') throw ordered();
 
   const data = await app.storage.get(src.storagePath);
@@ -126,11 +132,12 @@ export async function copyPhoto(
   }
 }
 
-// Участник альбома видит только свои фото; владелец, организатор и оператор видят все.
+// Участник выпускного альбома видит только свои фото; в пуле — все; владелец/организатор/оператор — все.
 export async function listPhotos(app: FastifyInstance, user: AuthUser, projectId: string): Promise<PhotoDTO[]> {
   const project = await assertProjectAccess(app.db, user, projectId, 'read');
   const role = await viewerRole(app.db, user, project);
-  const own = role === 'contributor' ? eq(projectPhotos.uploadedBy, user.id) : undefined;
+  const own =
+    !project.isPool && role === 'contributor' ? eq(projectPhotos.uploadedBy, user.id) : undefined;
   const rows = await app.db
     .select()
     .from(projectPhotos)

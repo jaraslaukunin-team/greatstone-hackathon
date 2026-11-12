@@ -78,6 +78,13 @@
       "when": 1794800000000,
       "tag": "0010_member_wish",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794900000000,
+      "tag": "0011_event_album",
+      "breakpoints": true
     }
   ]
 }

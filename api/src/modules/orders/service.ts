@@ -150,6 +150,9 @@ export async function createOrder(
   }
 
   const project = await assertProjectAccess(db, user, req.projectId, 'organizer');
+  if (project.isPool) {
+    throw new AppError(409, 'POOL_NOT_ORDERABLE', 'Закажите свою книгу: откройте «Моя книга»');
+  }
   const hash = hashOrderRequest(req);
   const now = app.clock.now();
 

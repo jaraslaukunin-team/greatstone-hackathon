@@ -9,10 +9,12 @@ import {
   createProject,
   deleteProject,
   duplicateProject,
+  forkPoolProject,
   listProjects,
   renameProject,
   saveLayout,
   setJoinPassword,
+  syncPoolProject,
   toProjectDTO,
 } from './service.js';
 
@@ -20,6 +22,7 @@ const createSchema = z.object({
   variantId: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
   isShared: z.boolean().optional(),
+  isPool: z.boolean().optional(),
   expectedMembers: z.number().int().min(0).optional(),
   joinPassword: z.string().min(4).max(64).optional(),
 });
@@ -77,5 +80,16 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     reply.code(201);
     const body = parse(duplicateSchema, req.body ?? {});
     return duplicateProject(req.server, req.user!, id, { personal: body.personal });
+  });
+
+  app.post('/projects/:id/fork', auth, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    reply.code(201);
+    return forkPoolProject(req.server, req.user!, id);
+  });
+
+  app.post('/projects/:id/sync', auth, async (req) => {
+    const { id } = req.params as { id: string };
+    return syncPoolProject(req.server, req.user!, id);
   });
 }
