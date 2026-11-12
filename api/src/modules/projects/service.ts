@@ -1,15 +1,16 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { personalizeLayout, type Layout, type ProjectDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import { hashPassword } from '../../auth/password.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import type { Db } from '../../db/client.js';
-import { orders, projectMembers, projectPhotos, projects } from '../../db/schema.js';
+import type { PhotoDTO } from '@picpac/shared';
+import { orders, products, projectMembers, projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import type { Storage } from '../../storage/storage.js';
-import { storageKey } from '../photos/service.js';
+import { storageKey, toPhotoDTO } from '../photos/service.js';
 import { loadVariant } from '../quote/service.js';
 
 export type ProjectRow = typeof projects.$inferSelect;
@@ -27,6 +28,8 @@ export const toProjectDTO = (p: ProjectRow): ProjectDTO => ({
   isShared: p.isShared,
   expectedMembers: p.expectedMembers,
   hasPassword: p.joinPasswordHash !== null,
+  isPool: p.isPool,
+  sourceProjectId: p.sourceProjectId,
   layout: (p.layout as Layout | null) ?? { pages: [] },
   version: p.version,
   updatedAt: p.updatedAt.toISOString(),
@@ -89,13 +92,33 @@ export async function viewerRole(db: Db, user: AuthUser, project: ProjectRow): P
 export async function createProject(
   db: Db,
   user: AuthUser,
-  input: { variantId: string; title: string; isShared?: boolean; expectedMembers?: number; joinPassword?: string },
+  input: {
+    variantId: string;
+    title: string;
+    isShared?: boolean;
+    isPool?: boolean;
+    expectedMembers?: number;
+    joinPassword?: string;
+  },
 ): Promise<ProjectDTO> {
-  await loadVariant(db, input.variantId);
-  if (input.isShared && input.joinPassword === undefined) {
-    throw new AppError(400, 'PASSWORD_REQUIRED', 'Для выпускного альбома нужен пароль: по ссылке без него вступить нельзя');
+  const variant = await loadVariant(db, input.variantId);
+  const isPool = input.isPool === true;
+  const isShared = input.isShared ?? false;
+
+  if (isPool) {
+    if (!isShared) {
+      throw new AppError(400, 'POOL_REQUIRES_SHARED', 'Общий альбом должен быть совместным (isShared)');
+    }
+    const [product] = await db.select().from(products).where(eq(products.id, variant.productId));
+    if (!product || product.kind !== 'photobook') {
+      throw new AppError(400, 'POOL_FORMAT', 'Общий альбом создаётся только для фотокниги');
+    }
   }
-  if (input.joinPassword !== undefined && !input.isShared) {
+  // Пароль обязателен для любого совместного альбома (выпускной и общий пул).
+  if (isShared && input.joinPassword === undefined) {
+    throw new AppError(400, 'PASSWORD_REQUIRED', 'Для общего альбома нужен пароль: по ссылке без него вступить нельзя');
+  }
+  if (input.joinPassword !== undefined && !isShared) {
     throw new AppError(400, 'PASSWORD_NOT_ALLOWED', 'Пароль можно задать только общему выпускному альбому');
   }
   const [row] = await db
@@ -104,7 +127,8 @@ export async function createProject(
       ownerId: user.id,
       variantId: input.variantId,
       title: input.title,
-      isShared: input.isShared ?? false,
+      isShared,
+      isPool,
       expectedMembers: input.expectedMembers ?? null,
       joinPasswordHash: input.joinPassword === undefined ? null : await hashPassword(input.joinPassword),
     })
@@ -322,4 +346,171 @@ export async function duplicateProject(
 
   await audit(db, { userId: user.id, action: 'project.duplicate', objectType: 'project', objectId: newProjectId, result: 'ok' });
   return toProjectDTO(newProject);
+}
+
+/** Личная книга участника пула: копия всех фото с sourcePhotoId. Повторный вызов возвращает ту же книгу. */
+export async function forkPoolProject(app: FastifyInstance, user: AuthUser, poolId: string): Promise<ProjectDTO> {
+  const db = app.db;
+  const storage = app.storage;
+  const pool = await assertProjectAccess(db, user, poolId, 'read');
+  if (!pool.isPool) {
+    throw new AppError(409, 'NOT_A_POOL', 'Свою книгу можно собрать только из общего альбома');
+  }
+
+  const [existing] = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.ownerId, user.id), eq(projects.sourceProjectId, pool.id)));
+  if (existing) return toProjectDTO(existing);
+
+  const srcPhotos = await db
+    .select()
+    .from(projectPhotos)
+    .where(eq(projectPhotos.projectId, pool.id))
+    .orderBy(asc(projectPhotos.position), asc(projectPhotos.createdAt));
+
+  const newProjectId = randomUUID();
+  const copies: Array<{ newId: string; key: string; src: (typeof srcPhotos)[number] }> = [];
+  try {
+    for (const photo of srcPhotos) {
+      let data: Buffer;
+      try {
+        data = await storage.get(photo.storagePath);
+      } catch {
+        throw new AppError(422, 'PHOTO_FILE_MISSING', `Файл фото ${photo.id} не найден в хранилище`);
+      }
+      const newId = randomUUID();
+      const key = storageKey(newProjectId, newId);
+      await storage.put(key, data);
+      copies.push({ newId, key, src: photo });
+    }
+  } catch (e) {
+    await Promise.allSettled(copies.map((c) => storage.remove(c.key)));
+    throw e;
+  }
+
+  let newProject: typeof projects.$inferSelect;
+  try {
+    const [inserted] = await db
+      .insert(projects)
+      .values({
+        id: newProjectId,
+        ownerId: user.id,
+        variantId: pool.variantId,
+        title: pool.title,
+        isShared: false,
+        isPool: false,
+        sourceProjectId: pool.id,
+        expectedMembers: null,
+        joinPasswordHash: null,
+        status: 'draft',
+        layout: { pages: [] },
+      })
+      .returning();
+    newProject = inserted!;
+    if (copies.length > 0) {
+      await db.insert(projectPhotos).values(
+        copies.map((c) => ({
+          id: c.newId,
+          projectId: newProjectId,
+          uploadedBy: c.src.uploadedBy,
+          storagePath: c.key,
+          position: c.src.position,
+          width: c.src.width,
+          height: c.src.height,
+          takenAt: c.src.takenAt,
+          source: c.src.source,
+          sourcePhotoId: c.src.id,
+        })),
+      );
+    }
+  } catch (e) {
+    await Promise.allSettled(copies.map((c) => storage.remove(c.key)));
+    await db.delete(projects).where(eq(projects.id, newProjectId)).catch(() => undefined);
+    throw e;
+  }
+
+  await audit(db, { userId: user.id, action: 'project.fork', objectType: 'project', objectId: newProjectId, result: 'ok' });
+  return toProjectDTO(newProject);
+}
+
+/** Дописать в личную книгу фото пула, которых ещё нет (по sourcePhotoId). Макет не трогает. */
+export async function syncPoolProject(
+  app: FastifyInstance,
+  user: AuthUser,
+  bookId: string,
+): Promise<{ added: PhotoDTO[] }> {
+  const db = app.db;
+  const storage = app.storage;
+  const book = await assertProjectAccess(db, user, bookId, 'organizer');
+  if (!book.sourceProjectId) {
+    throw new AppError(409, 'NOT_A_FORK', 'Подтянуть фото можно только в книгу из общего альбома');
+  }
+  if (book.status === 'ordered') {
+    throw new AppError(409, 'PROJECT_ORDERED', 'Проект уже заказан и больше не меняется');
+  }
+  const pool = await assertProjectAccess(db, user, book.sourceProjectId, 'read');
+  if (!pool.isPool) {
+    throw new AppError(409, 'NOT_A_POOL', 'Источник книги больше не является общим альбомом');
+  }
+
+  const existing = await db
+    .select({ sourcePhotoId: projectPhotos.sourcePhotoId })
+    .from(projectPhotos)
+    .where(eq(projectPhotos.projectId, book.id));
+  const have = new Set(existing.map((r) => r.sourcePhotoId).filter((id): id is string => id != null));
+
+  const poolPhotos = await db
+    .select()
+    .from(projectPhotos)
+    .where(eq(projectPhotos.projectId, pool.id))
+    .orderBy(asc(projectPhotos.position), asc(projectPhotos.createdAt));
+  const missing = poolPhotos.filter((p) => !have.has(p.id));
+  if (missing.length === 0) return { added: [] };
+
+  const [{ next }] = (await db
+    .select({ next: sql<number>`coalesce(max(${projectPhotos.position}) + 1, 0)::int` })
+    .from(projectPhotos)
+    .where(eq(projectPhotos.projectId, book.id))) as [{ next: number }];
+
+  const added: PhotoDTO[] = [];
+  const written: string[] = [];
+  try {
+    let position = next;
+    for (const photo of missing) {
+      let data: Buffer;
+      try {
+        data = await storage.get(photo.storagePath);
+      } catch {
+        throw new AppError(422, 'PHOTO_FILE_MISSING', `Файл фото ${photo.id} не найден в хранилище`);
+      }
+      const newId = randomUUID();
+      const key = storageKey(book.id, newId);
+      await storage.put(key, data);
+      written.push(key);
+      const [row] = await db
+        .insert(projectPhotos)
+        .values({
+          id: newId,
+          projectId: book.id,
+          uploadedBy: photo.uploadedBy,
+          storagePath: key,
+          position,
+          width: photo.width,
+          height: photo.height,
+          takenAt: photo.takenAt,
+          source: photo.source,
+          sourcePhotoId: photo.id,
+        })
+        .returning();
+      position += 1;
+      added.push(toPhotoDTO(app, row!));
+    }
+  } catch (e) {
+    await Promise.allSettled(written.map((k) => storage.remove(k)));
+    throw e;
+  }
+
+  await audit(db, { userId: user.id, action: 'project.sync', objectType: 'project', objectId: book.id, result: 'ok' });
+  return { added };
 }

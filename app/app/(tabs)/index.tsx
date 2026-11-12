@@ -61,6 +61,14 @@ export default function HomeScreen() {
         </Card>
       </Link>
 
+      <Link href="/album/event-create" asChild>
+        <Card tone="sky" accessibilityRole="link">
+          <Icon name="image" size={28} color={lightColors.text} />
+          <Text style={styles.cardTitle}>Общий альбом</Text>
+          <Text style={styles.cardSub}>Пул фото по ссылке — у каждого своя книга</Text>
+        </Card>
+      </Link>
+
       <View style={styles.row}>
         <Link href="/album/create" asChild>
           <Card tone="mint" style={styles.half} accessibilityRole="link">
