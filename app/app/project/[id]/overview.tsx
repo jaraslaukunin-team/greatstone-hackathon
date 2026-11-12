@@ -244,6 +244,15 @@ export default function OverviewScreen() {
                 }}
               />
               {viewIndex >= 1 ? (
+                <Button
+                  title="Шаблоны разворота"
+                  variant="secondary"
+                  onPress={() =>
+                    router.push({ pathname: '/project/[id]/spread-templates', params: { id: String(id), spread: String(viewIndex) } })
+                  }
+                />
+              ) : null}
+              {viewIndex >= 1 ? (
                 <View style={styles.moveRow}>
                   <Button
                     title="◀ Раньше"
