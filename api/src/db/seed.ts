@@ -211,6 +211,8 @@ export async function seedDatabase(db: Db): Promise<SeedSummary> {
 
 // Запуск из командной строки: npm run db:seed -w api
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const { loadRepoEnv } = await import('../loadEnv.js');
+  loadRepoEnv();
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('Не задана переменная окружения DATABASE_URL');
   const db = createDb(url);
