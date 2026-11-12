@@ -8,9 +8,11 @@
 	# Браузер дальше ходит на домен только по HTTPS.
 	header Strict-Transport-Security "max-age=31536000"
 
-	@assets path /_expo/* /assets/* /favicon.ico
+	# canvaskit.wasm — движок Skia для фоторедактора в браузере (не в API).
+	@assets path /_expo/* /assets/* /favicon.ico /canvaskit.wasm
 	handle @assets {
 		root * /srv/web
+		header /canvaskit.wasm Content-Type application/wasm
 		file_server
 	}
 

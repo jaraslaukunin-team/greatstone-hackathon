@@ -1,4 +1,4 @@
-import { ASPECT_RATIOS, type AspectRatio, type CatalogDTO, type PhotoDTO, type ProjectDTO } from '@picpac/shared';
+import type { CatalogDTO, PhotoDTO, ProjectDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -12,6 +12,8 @@ import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
 const AI_PROJECT_TITLE = 'AI-редактор';
 
+type ChatMessage = { id: string; role: 'user' | 'system'; text: string };
+
 /** Фото для AI хранятся в служебном проекте: находим его или создаём один раз. */
 async function ensureAiProject(client: ApiClient): Promise<ProjectDTO> {
   const projects = await client.get<ProjectDTO[]>('/projects');
@@ -24,11 +26,10 @@ async function ensureAiProject(client: ApiClient): Promise<ProjectDTO> {
 }
 
 export default function AiEditScreen() {
-  // Из вкладки «Ассистент» экран открывают сразу с готовым фото: тогда выбирать его не нужно.
   const params = useLocalSearchParams<{ photoId?: string; projectId?: string; photoUrl?: string }>();
   const client = useApiClient();
-  const [prompt, setPrompt] = useState('Тёплая ретро-плёнка');
-  const [aspect, setAspect] = useState<AspectRatio>('original');
+  const [prompt, setPrompt] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [photo, setPhoto] = useState<{ id: string; url: string } | null>(
     params.photoId && params.photoUrl ? { id: params.photoId, url: params.photoUrl } : null,
   );
@@ -48,6 +49,7 @@ export default function AiEditScreen() {
       const uploaded = await client.upload<PhotoDTO>(`/projects/${project.id}/photos`, { uri: first.uri });
       setProjectId(project.id);
       setPhoto({ id: uploaded.id, url: uploaded.url });
+      setMessages([]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось добавить фото');
     } finally {
@@ -55,14 +57,33 @@ export default function AiEditScreen() {
     }
   }
 
-  async function submit() {
-    if (!photo || !projectId) return;
+  async function send() {
+    const text = prompt.trim();
+    if (!photo || !projectId || text.length === 0 || busy) return;
     setError(null);
     setBusy(true);
+    setPrompt('');
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${Date.now()}`, role: 'user', text },
+      { id: `s-${Date.now()}`, role: 'system', text: 'Обрабатываем фото…' },
+    ]);
     try {
-      const { jobId } = await startAiEdit(client, { projectId, photoId: photo.id, prompt, kind: 'edit', aspect }, inFlight);
+      const { jobId } = await startAiEdit(
+        client,
+        { projectId, photoId: photo.id, prompt: text, kind: 'edit', aspect: 'original' },
+        inFlight,
+      );
       router.push({ pathname: '/ai/result', params: { jobId, sourceUrl: photo.url, projectId } });
     } catch (e) {
+      setMessages((prev) => [
+        ...prev.filter((m) => m.role !== 'system' || m.text !== 'Обрабатываем фото…'),
+        {
+          id: `e-${Date.now()}`,
+          role: 'system',
+          text: e instanceof ApiRequestError ? e.message : 'Не удалось запустить обработку',
+        },
+      ]);
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось запустить AI');
     } finally {
       setBusy(false);
@@ -70,46 +91,88 @@ export default function AiEditScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>AI-редактор</Text>
-      {photo ? <Image source={{ uri: client.resolveUrl(photo.url) }} style={styles.preview} resizeMode="contain" /> : null}
-      <Button
-        title={photo ? 'Выбрать другое фото' : 'Выбрать фото'}
-        variant={photo ? 'secondary' : 'primary'}
-        disabled={busy}
-        onPress={() => void choosePhoto()}
-      />
-      <Text style={styles.label}>Формат результата</Text>
-      <View style={styles.aspects}>
-        {ASPECT_RATIOS.map((a) => (
-          <Button
-            key={a}
-            title={a === 'original' ? 'Как у фото' : a}
-            variant={a === aspect ? 'primary' : 'secondary'}
-            onPress={() => setAspect(a)}
+    <View style={styles.screen}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>AI</Text>
+        <Text style={styles.sub}>Загрузите фото и напишите в чат, что изменить.</Text>
+
+        {!photo ? (
+          <Button title="Загрузить фотографию" disabled={busy} onPress={() => void choosePhoto()} />
+        ) : (
+          <>
+            <Image source={{ uri: client.resolveUrl(photo.url) }} style={styles.preview} resizeMode="contain" />
+            <Button title="Выбрать другое фото" variant="secondary" disabled={busy} onPress={() => void choosePhoto()} />
+          </>
+        )}
+
+        {messages.length > 0 ? (
+          <View style={styles.chat}>
+            {messages.map((m) => (
+              <View key={m.id} style={[styles.bubble, m.role === 'user' ? styles.bubbleUser : styles.bubbleSystem]}>
+                <Text style={m.role === 'user' ? styles.bubbleUserText : styles.bubbleSystemText}>{m.text}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+      </ScrollView>
+
+      {photo ? (
+        <View style={styles.composer}>
+          <Input
+            multiline
+            value={prompt}
+            onChangeText={setPrompt}
+            placeholder="Напишите промпт…"
+            style={styles.input}
           />
-        ))}
-      </View>
-      <Input multiline value={prompt} onChangeText={setPrompt} placeholder="Что изменить?" />
-      <View style={styles.row}>
-        {['Ретро', 'На море', 'Студийный свет'].map((preset) => (
-          <Button key={preset} title={preset} variant="secondary" onPress={() => setPrompt(preset)} />
-        ))}
-      </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Обработать" disabled={!photo || busy || prompt.trim().length === 0} onPress={() => void submit()} />
-      <Button title="К редактору" variant="text" onPress={() => router.push('/(tabs)/editor')} />
-    </ScrollView>
+          <Button
+            title="Отправить"
+            disabled={busy || prompt.trim().length === 0}
+            onPress={() => void send()}
+          />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg },
-  content: { padding: space[4], gap: space[3] },
+  scroll: { flex: 1 },
+  content: { padding: space[4], gap: space[3], paddingBottom: space[5] },
   title: { ...typography.h1, color: lightColors.text },
+  sub: { ...typography.body, color: lightColors.textSecondary },
   preview: { width: '100%', height: 240, borderRadius: radius.card, backgroundColor: lightColors.border },
-  row: { gap: space[2] },
-  label: { ...typography.bodyStrong, color: lightColors.text },
-  aspects: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  chat: { gap: space[2], marginTop: space[2] },
+  bubble: {
+    maxWidth: '92%',
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
+    borderRadius: radius.card,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  bubbleUser: {
+    alignSelf: 'flex-end',
+    backgroundColor: lightColors.accent,
+  },
+  bubbleSystem: {
+    alignSelf: 'flex-start',
+    backgroundColor: lightColors.surface,
+    borderWidth: 1,
+    borderColor: lightColors.border,
+  },
+  bubbleUserText: { ...typography.body, color: lightColors.textOnAccent },
+  bubbleSystemText: { ...typography.body, color: lightColors.text },
+  composer: {
+    padding: space[4],
+    gap: space[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: lightColors.border,
+    backgroundColor: lightColors.bg,
+  },
+  input: { minHeight: 88 },
   error: { ...typography.caption, color: lightColors.danger },
 });

@@ -1,9 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { useAiJob } from '../../src/ai/useAiJob';
-import { useEditResult } from '../../src/photoEditor/editResultStore';
 import { BeforeAfterSlider } from '../../src/ui/BeforeAfterSlider';
 import { Button } from '../../src/ui/Button';
 import { lightColors, radius, space, typography } from '../../src/theme/theme';
@@ -23,23 +21,6 @@ export default function AiResultScreen() {
     if (!result) return;
     router.push({ pathname: '/print/format', params: { photoId: result.id, sourceProjectId: projectId ?? '' } });
   }
-
-  // «Доработать»: фоторедактор, а сохранённое фото сразу уходит в печать. Само AI-фото остаётся как есть.
-  const pendingEdit = useRef<string | null>(null);
-  const editResults = useEditResult((s) => s.results);
-  function refine() {
-    if (!result || !projectId) return;
-    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    pendingEdit.current = requestId;
-    router.push({ pathname: '/photo-editor', params: { projectId: String(projectId), photoId: result.id, requestId } });
-  }
-  useEffect(() => {
-    const requestId = pendingEdit.current;
-    if (!requestId || !editResults[requestId]) return;
-    const photo = useEditResult.getState().take(requestId);
-    pendingEdit.current = null;
-    if (photo) router.push({ pathname: '/print/format', params: { photoId: photo.id, sourceProjectId: projectId ?? '' } });
-  }, [editResults, projectId]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -74,9 +55,8 @@ export default function AiResultScreen() {
         <>
           <Text style={styles.sub}>Потяните границу, чтобы сравнить. Результат уже сохранён в ваши фото.</Text>
           <Button title="Напечатать это фото" onPress={print} disabled={!projectId} />
-          <Button title="Доработать" variant="secondary" onPress={refine} disabled={!projectId} />
-          <Button title="Обработать ещё раз" variant="secondary" onPress={() => router.replace('/ai/edit')} />
-          <Button title="К редактору" variant="text" onPress={() => router.push('/(tabs)/editor')} />
+          <Button title="Написать ещё один промпт" variant="secondary" onPress={() => router.replace('/ai/edit')} />
+          <Button title="Назад" variant="text" onPress={() => router.back()} />
         </>
       ) : null}
     </ScrollView>
