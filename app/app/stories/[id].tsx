@@ -1,13 +1,13 @@
 import { router, type Href, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
-  PanResponder,
   Pressable,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
+  type GestureResponderEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { nextStoryId, prevStoryId, storyById } from '../../src/stories/stories';
@@ -16,6 +16,7 @@ import { lightColors, space, typography } from '../../src/theme/theme';
 
 const SLIDE_MS = 5000;
 const SWIPE_DOWN_PX = 80;
+const LEFT_ZONE = 0.35;
 
 export default function StoryViewerScreen() {
   const { id, at } = useLocalSearchParams<{ id: string; at?: string }>();
@@ -33,6 +34,9 @@ function StoryViewer({ storyId, startAtEnd }: { storyId: string; startAtEnd: boo
   const [progress, setProgress] = useState(0);
   const pausedRef = useRef(false);
   const heldRef = useRef(false);
+  const swipedRef = useRef(false);
+  const touchStartY = useRef(0);
+  const touchStartX = useRef(0);
   const progressRef = useRef(0);
   const slideIndexRef = useRef(initialIndex);
 
@@ -78,50 +82,49 @@ function StoryViewer({ storyId, startAtEnd }: { storyId: string; startAtEnd: boo
     close();
   }, [storyId, close]);
 
-  const onZonePressIn = useCallback(() => {
+  const onTap = useCallback(
+    (e: GestureResponderEvent) => {
+      if (heldRef.current || swipedRef.current) return;
+      const x = e.nativeEvent.locationX;
+      if (x < width * LEFT_ZONE) goPrev();
+      else goNext();
+    },
+    [width, goPrev, goNext],
+  );
+
+  const onPressIn = useCallback((e: GestureResponderEvent) => {
     pausedRef.current = true;
     heldRef.current = false;
+    swipedRef.current = false;
+    touchStartX.current = e.nativeEvent.pageX;
+    touchStartY.current = e.nativeEvent.pageY;
   }, []);
 
-  const onZoneLongPress = useCallback(() => {
+  const onLongPress = useCallback(() => {
     heldRef.current = true;
     pausedRef.current = true;
   }, []);
 
-  const onZonePressOut = useCallback(() => {
+  const onPressOut = useCallback(() => {
     pausedRef.current = false;
-    // held сбрасываем чуть позже, чтобы onPress после longPress не навигировал
     requestAnimationFrame(() => {
       heldRef.current = false;
+      swipedRef.current = false;
     });
   }, []);
 
-  const onLeftPress = useCallback(() => {
-    if (heldRef.current) return;
-    goPrev();
-  }, [goPrev]);
-
-  const onRightPress = useCallback(() => {
-    if (heldRef.current) return;
-    goNext();
-  }, [goNext]);
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_e, g) =>
-          Math.abs(g.dy) > 12 && Math.abs(g.dy) > Math.abs(g.dx) * 1.2,
-        onPanResponderGrant: () => {
-          pausedRef.current = true;
-        },
-        onPanResponderRelease: (_e, g) => {
-          pausedRef.current = false;
-          if (g.dy > SWIPE_DOWN_PX) close();
-        },
-        onPanResponderTerminate: () => {
-          pausedRef.current = false;
-        },
-      }),
+  const onTouchMove = useCallback(
+    (e: GestureResponderEvent) => {
+      const dy = e.nativeEvent.pageY - touchStartY.current;
+      const dx = e.nativeEvent.pageX - touchStartX.current;
+      if (dy > SWIPE_DOWN_PX && Math.abs(dy) > Math.abs(dx) * 1.2) {
+        if (!swipedRef.current) {
+          swipedRef.current = true;
+          heldRef.current = true;
+          close();
+        }
+      }
+    },
     [close],
   );
 
@@ -172,7 +175,7 @@ function StoryViewer({ storyId, startAtEnd }: { storyId: string; startAtEnd: boo
     : (slide.textColor ?? lightColors.text);
 
   return (
-    <View style={[styles.fill, { backgroundColor: slide.bg }]} {...panResponder.panHandlers}>
+    <View style={[styles.fill, { backgroundColor: slide.bg }]}>
       {slide.image ? (
         <Image source={slide.image} style={styles.bgImage} resizeMode="cover" />
       ) : null}
@@ -188,27 +191,16 @@ function StoryViewer({ storyId, startAtEnd }: { storyId: string; startAtEnd: boo
         <Text style={[styles.slideBody, { color: textColor }]}>{slide.body}</Text>
       </View>
 
-      {/* Полноэкранные зоны: тап / hold. Кнопки выше по zIndex. */}
-      <View style={styles.tapLayer}>
-        <Pressable
-          style={[styles.tapZone, { width: width * 0.35 }]}
-          onPress={onLeftPress}
-          onPressIn={onZonePressIn}
-          onLongPress={onZoneLongPress}
-          delayLongPress={180}
-          onPressOut={onZonePressOut}
-          accessibilityLabel="Предыдущий слайд"
-        />
-        <Pressable
-          style={styles.tapZoneFlex}
-          onPress={onRightPress}
-          onPressIn={onZonePressIn}
-          onLongPress={onZoneLongPress}
-          delayLongPress={180}
-          onPressOut={onZonePressOut}
-          accessibilityLabel="Следующий слайд"
-        />
-      </View>
+      <Pressable
+        style={styles.tapLayer}
+        onPress={onTap}
+        onPressIn={onPressIn}
+        onLongPress={onLongPress}
+        delayLongPress={180}
+        onPressOut={onPressOut}
+        onTouchMove={onTouchMove}
+        accessibilityLabel="Листать сторис"
+      />
 
       <View style={[styles.top, { paddingTop: insets.top + space[2] }]} pointerEvents="box-none">
         <View style={styles.bars} pointerEvents="none">
@@ -304,11 +296,8 @@ const styles = StyleSheet.create({
   slideBody: { ...typography.body, opacity: 0.95, maxWidth: 420 },
   tapLayer: {
     ...StyleSheet.absoluteFill,
-    flexDirection: 'row',
     zIndex: 2,
   },
-  tapZone: { height: '100%' },
-  tapZoneFlex: { flex: 1, height: '100%' },
   top: { position: 'absolute', left: 0, right: 0, top: 0, paddingHorizontal: space[3], zIndex: 4 },
   bars: { flexDirection: 'row', gap: 4 },
   barTrack: {
