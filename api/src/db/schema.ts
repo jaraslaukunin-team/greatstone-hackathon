@@ -34,6 +34,7 @@ export const orderStatusEnum = pgEnum('order_status', [
   'cancelled',
 ]);
 export const deliveryMethodEnum = pgEnum('delivery_method', ['courier_minsk', 'ems', 'belpost']);
+export const paymentMethodEnum = pgEnum('payment_method', ['card', 'erip', 'courier']);
 export const interactionStatusEnum = pgEnum('interaction_status', ['open', 'answered', 'closed']);
 export const aiJobStatusEnum = pgEnum('ai_job_status', ['pending', 'done', 'failed']);
 export const consentKindEnum = pgEnum('consent_kind', ['ai_processing']);
@@ -205,6 +206,8 @@ export const orders = pgTable(
     total: integer('total').notNull(),
     currency: text('currency').notNull().default('BYN'),
     deliveryMethod: deliveryMethodEnum('delivery_method').notNull(),
+    paymentMethod: paymentMethodEnum('payment_method').notNull().default('card'),
+    eripNumber: text('erip_number'),
     recipientName: text('recipient_name'),
     address: text('address'),
     status: orderStatusEnum('status').notNull().default('accepted'),

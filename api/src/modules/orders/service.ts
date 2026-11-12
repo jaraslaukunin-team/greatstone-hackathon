@@ -11,6 +11,9 @@ import {
   type OrderStatus,
   type PhotoMeta,
 } from '@picpac/shared';
+import { BELPOST_PICKUP_IDS } from '../catalog/service.js';
+import { isCourierZone } from './courierZone.js';
+import { newEripNumber } from './eripNumber.js';
 import { audit } from '../../audit.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import type { Db } from '../../db/client.js';
@@ -42,13 +45,18 @@ export function hashOrderRequest(req: CreateOrderRequest): string {
     projectId: req.projectId,
     delivery: req.delivery,
     promoCode: normalizePromoCode(req.promoCode ?? ''),
-    address: a ? [a.recipient, a.phone, a.city, a.street, a.postalCode ?? ''].map((s) => s.trim()) : null,
+    payment: req.payment ?? 'card',
+    address: a
+      ? [a.recipient, a.phone, a.city, a.street ?? '', a.postalCode ?? '', a.pickupPointId ?? ''].map((s) => s.trim())
+      : null,
   });
   return createHash('sha256').update(canonical).digest('hex');
 }
 
-const formatAddress = (a: OrderAddress): string =>
-  `${a.postalCode ? `${a.postalCode}, ` : ''}${a.city}, ${a.street}; тел. ${a.phone}`;
+const formatAddress = (a: OrderAddress): string => {
+  const loc = a.pickupPointId ? `ПВЗ: ${a.pickupPointId}` : (a.street ?? '');
+  return `${a.postalCode ? `${a.postalCode}, ` : ''}${a.city}, ${loc}; тел. ${a.phone}`;
+};
 
 // Историю и обращения грузим одним запросом на весь список, а не по запросу на заказ.
 export async function toOrderDTOs(db: Db, rows: OrderRow[]): Promise<OrderDTO[]> {
@@ -70,6 +78,8 @@ export async function toOrderDTOs(db: Db, rows: OrderRow[]): Promise<OrderDTO[]>
     totalKop: row.total,
     currency: 'BYN' as const,
     delivery: row.deliveryMethod,
+    payment: row.paymentMethod,
+    eripNumber: row.eripNumber ?? null,
     createdAt: row.createdAt.toISOString(),
     history: history
       .filter((h) => h.orderId === row.id)
@@ -124,6 +134,21 @@ export async function createOrder(
 ): Promise<{ order: OrderDTO; created: boolean }> {
   const db = app.db;
   if (!req.address) throw new AppError(422, 'ADDRESS_REQUIRED', 'Укажите получателя и адрес доставки');
+
+  // Валидация способа оплаты (до расчёта цены).
+  const payment = req.payment ?? 'card';
+  if (payment === 'courier' && req.delivery !== 'courier_minsk') {
+    throw new AppError(422, 'PAYMENT_NOT_AVAILABLE', 'Оплата курьеру доступна только для курьерской доставки по Минску');
+  }
+  if (req.delivery === 'courier_minsk' && !isCourierZone(req.address.city)) {
+    throw new AppError(422, 'OUTSIDE_COURIER_ZONE', 'Курьерская доставка работает только по Минску');
+  }
+  if (req.address.pickupPointId !== undefined) {
+    if (!BELPOST_PICKUP_IDS.has(req.address.pickupPointId)) {
+      throw new AppError(422, 'PICKUP_POINT_UNKNOWN', 'Указанный пункт выдачи не найден');
+    }
+  }
+
   const project = await assertProjectAccess(db, user, req.projectId, 'organizer');
   const hash = hashOrderRequest(req);
   const now = app.clock.now();
@@ -191,6 +216,8 @@ export async function createOrder(
       });
     }
 
+    const eripNumber = payment === 'erip' ? newEripNumber() : null;
+
     const [row] = await tx
       .insert(orders)
       .values({
@@ -200,6 +227,8 @@ export async function createOrder(
         requestHash: hash,
         total: quote.totalKop,
         deliveryMethod: req.delivery,
+        paymentMethod: payment,
+        eripNumber,
         recipientName: req.address!.recipient,
         address: formatAddress(req.address!),
       })
