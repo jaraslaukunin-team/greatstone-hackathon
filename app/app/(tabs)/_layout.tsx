@@ -66,7 +66,7 @@ export default function TabsLayout() {
             title: tabTitles[name],
             tabBarLabel: tabTitles[name],
             tabBarIcon: ({ focused, color }) => (
-              <Icon name={tabIcons[name]} size={24} color={focused ? lightColors.accent : color} />
+              <Icon name={tabIcons[name]} size={24} color={focused ? lightColors.accent : String(color)} />
             ),
           }}
         />
