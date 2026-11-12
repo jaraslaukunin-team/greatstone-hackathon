@@ -4,8 +4,10 @@ import { Canvas, useTypeface } from '@shopify/react-native-skia';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useLayoutEffect, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { ApiRequestError } from '../api/client';
+import { ApiRequestError, NetworkError } from '../api/client';
 import { useApiClient } from '../api/hooks';
+import { useAuth } from '../auth/AuthProvider';
+import { API_URL } from '../config';
 import { pickPhotos } from '../photos/pickPhotos';
 import { useProjectStore } from '../project/projectStore';
 import { lightColors, radius, space, typography } from '../theme/theme';
@@ -46,6 +48,7 @@ function confirmDiscard(): Promise<boolean> {
 export default function EditorScreen() {
   const params = useLocalSearchParams<{ projectId?: string; photoId?: string; requestId?: string }>();
   const client = useApiClient();
+  const { token, loginAsGuest } = useAuth();
   const { width: winW, height: winH } = useWindowDimensions();
   const [history, dispatch] = useReducer(editReducer, undefined, initialHistory);
   const state = history.present;
@@ -123,15 +126,22 @@ export default function EditorScreen() {
     setUploading(true);
     setLoadError(null);
     try {
+      if (!token) await loginAsGuest();
       const picked = await pickPhotos();
       const first = picked[0];
       if (!first) return;
+      // Лёгкий ping — отделяем «API недоступен» от сбоя multipart.
+      await client.get<{ status: string }>('/health');
       const pid = await ensureProject();
       const uploaded = await client.upload<PhotoDTO>(`/projects/${pid}/photos`, { uri: first.uri });
       setPhotoId(uploaded.id);
       setPhoto(uploaded);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить фото');
+      if (e instanceof NetworkError) {
+        setLoadError(`${e.message} (${API_URL})`);
+      } else {
+        setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить фото');
+      }
     } finally {
       setUploading(false);
     }

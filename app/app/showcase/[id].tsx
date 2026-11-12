@@ -1,5 +1,5 @@
 import { themeById } from '@picpac/shared';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { lightColors, radius, space, typography } from '../../src/theme/theme';
 import { exampleById, showcaseSourceOf } from '../../src/showcase/examples';
@@ -86,7 +86,7 @@ export default function ShowcaseDetailScreen() {
 
       {/* CTA */}
       <View style={styles.cta}>
-        <Link href={showcaseSourceOf(example)} asChild>
+        <Link href={showcaseSourceOf(example) as Href} asChild>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Сделать такую книгу"

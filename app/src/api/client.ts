@@ -1,5 +1,3 @@
-import { getNetworkMessage, getPhotoReadMessage, getUnknownMessage } from '../i18n/localizeError';
-import { useSettingsStore } from '../settings/settingsStore';
 import {
   encryptAesGcm,
   encryptJson,
@@ -14,6 +12,10 @@ function asBufferSource(bytes: Uint8Array): BlobPart {
   return bytes as unknown as BlobPart;
 }
 
+const NETWORK_MESSAGE = 'Нет соединения с сервером';
+const PHOTO_READ_MESSAGE = 'Не удалось прочитать выбранное фото';
+const UNKNOWN_MESSAGE = 'Неизвестная ошибка';
+
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly code: string;
@@ -26,16 +28,8 @@ export class ApiRequestError extends Error {
   }
 }
 
-function clientLang() {
-  try {
-    return useSettingsStore.getState().lang;
-  } catch {
-    return 'ru' as const;
-  }
-}
-
 export class NetworkError extends Error {
-  constructor(message = getNetworkMessage(clientLang())) {
+  constructor(message = NETWORK_MESSAGE) {
     super(message);
     this.name = 'NetworkError';
   }
@@ -122,8 +116,9 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       });
     } catch (err) {
       const detail = err instanceof Error && err.message ? err.message : String(err ?? '');
-      const base = getNetworkMessage(clientLang());
-      throw new NetworkError(detail && detail !== 'Network request failed' ? `${base}: ${detail}` : base);
+      throw new NetworkError(
+        detail && detail !== 'Network request failed' ? `${NETWORK_MESSAGE}: ${detail}` : NETWORK_MESSAGE,
+      );
     }
 
     const text = await response.text();
@@ -143,7 +138,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     throw new ApiRequestError(
       status,
       err?.error?.code ?? 'UNKNOWN',
-      err?.error?.message ?? getUnknownMessage(clientLang()),
+      err?.error?.message ?? UNKNOWN_MESSAGE,
     );
   }
 
@@ -209,7 +204,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         const buf = await (await fetchImpl(uri)).arrayBuffer();
         return new Uint8Array(buf);
       } catch {
-        throw new NetworkError(getPhotoReadMessage(useSettingsStore.getState().lang));
+        throw new NetworkError(PHOTO_READ_MESSAGE);
       }
     }
     // React Native: читаем через fetch file:// или FileSystem, если доступен.
@@ -229,7 +224,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         });
         return base64ToBytes(b64);
       } catch {
-        throw new NetworkError(getPhotoReadMessage(useSettingsStore.getState().lang));
+        throw new NetworkError(PHOTO_READ_MESSAGE);
       }
     }
   }
@@ -282,7 +277,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       try {
         blob = await (await fetchImpl(file.uri)).blob();
       } catch {
-        throw new NetworkError(getPhotoReadMessage(useSettingsStore.getState().lang));
+        throw new NetworkError(PHOTO_READ_MESSAGE);
       }
       form.append('file', blob, name);
     } else {
@@ -331,8 +326,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       });
     } catch (err) {
       const detail = err instanceof Error && err.message ? err.message : String(err ?? '');
-      const base = getNetworkMessage(clientLang());
-      throw new NetworkError(detail ? `${base}: ${detail}` : base);
+      throw new NetworkError(detail ? `${NETWORK_MESSAGE}: ${detail}` : NETWORK_MESSAGE);
     }
     let data: unknown = null;
     if (result.body) {
