@@ -46,7 +46,9 @@ export default function ReviewScreen() {
               <Button
                 title="Исправить"
                 variant="secondary"
-                onPress={() => router.push(`/project/${id}/spread/${issue.pageIndex}`)}
+                onPress={() =>
+                  router.push({ pathname: '/project/[id]/overview', params: { id: String(id), page: String(issue.pageIndex) } })
+                }
               />
             )}
           </Card>

@@ -118,6 +118,12 @@ export default function OverviewScreen() {
           ) : null}
         </>
       ) : null}
+      <Button
+        title="Смотреть результат"
+        variant="secondary"
+        disabled={busy || !draft?.layout?.pages?.length}
+        onPress={() => router.push({ pathname: '/project/[id]/preview', params: { id: String(id) } })}
+      />
       <Button title="Проверить перед заказом" disabled={busy} onPress={() => router.push(`/project/${id}/review`)} />
       {editing && draft?.layout ? (
         <PageEditor
