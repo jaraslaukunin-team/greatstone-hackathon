@@ -25,11 +25,11 @@ describe('каталог', () => {
   const get = async (url: string, token?: string) =>
     app.inject({ method: 'GET', url, headers: token ? { authorization: `Bearer ${token}` } : {} });
 
-  it('гость получает 7 продуктов и ответ проходит схему каталога', async () => {
+  it('гость получает 13 продуктов и ответ проходит схему каталога', async () => {
     const res = await get('/catalog', await guestToken());
     expect(res.statusCode).toBe(200);
     const catalog = catalogSchema.parse(res.json());
-    expect(catalog.products).toHaveLength(7);
+    expect(catalog.products).toHaveLength(13);
     expect(catalog.products.every((p) => p.description.length > 0)).toBe(true);
   });
 

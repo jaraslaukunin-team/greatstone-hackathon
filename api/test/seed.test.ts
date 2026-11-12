@@ -23,8 +23,8 @@ describe('seedDatabase', () => {
 
   it('создаёт каталог, пользователей, промокоды, заказы и обращения', async () => {
     const summary = await seedDatabase(db);
-    // 6 прежних продуктов и «Цифровая печать» (линия digital)
-    expect(summary.products).toBe(7);
+    // 7 прежних продуктов и 6 позиций по прайсу picpac.by
+    expect(summary.products).toBe(13);
     expect(summary.variants).toBeGreaterThanOrEqual(12);
     expect(summary.orders).toBe(5);
     expect(summary.interactions).toBe(2);
