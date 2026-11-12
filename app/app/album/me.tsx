@@ -9,7 +9,7 @@ import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
-const WISH_MAX = 200;
+const WISH_MAX = 120;
 
 /** «Моё пожелание»: имя ученика, пожелание классу и ссылка на видео; всё это печатается на его развороте альбома. */
 export default function MyWishScreen() {
@@ -22,9 +22,12 @@ export default function MyWishScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!projectId || !user) return;
+    setLoadError(false);
     void client
       .get<AlbumProgressDTO>(`/projects/${projectId}/progress`)
       .then((p) => {
@@ -34,10 +37,11 @@ export default function MyWishScreen() {
           setWish(me.wish ?? '');
           setVideoUrl(me.videoUrl ?? '');
         }
+        setLoaded(true);
       })
-      .catch(() => undefined)
-      .finally(() => setLoaded(true));
-  }, [client, projectId, user]);
+      // Не удалось загрузить сохранённое: форму не открываем, иначе «Сохранить» перезапишет пожелание пустым.
+      .catch(() => setLoadError(true));
+  }, [client, projectId, user, attempt]);
 
   async function save() {
     const url = videoUrl.trim();
@@ -93,9 +97,15 @@ export default function MyWishScreen() {
         editable={loaded}
       />
 
+      {loadError ? (
+        <>
+          <Text style={styles.error}>Не удалось загрузить ваши данные. Проверьте соединение.</Text>
+          <Button title="Повторить" variant="secondary" onPress={() => setAttempt((n) => n + 1)} />
+        </>
+      ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <View style={styles.actions}>
-        <Button title="Сохранить" onPress={() => void save()} disabled={busy || !loaded} />
+        <Button title="Сохранить" onPress={() => void save()} disabled={busy || !loaded || loadError} />
         <Button title="Позже" variant="secondary" onPress={() => router.replace('/(tabs)')} />
       </View>
     </ScrollView>

@@ -5,6 +5,7 @@ import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { useCatalog } from '../../src/catalog/useCatalog';
+import { hasContent } from '../../src/editor/reconcileLayout';
 import { useProjectStore } from '../../src/project/projectStore';
 import { ApiRequestError } from '../../src/api/client';
 import { passwordProblem } from '../../src/album/password';
@@ -23,6 +24,7 @@ export default function AlbumScreen() {
   const catalog = useCatalog();
   const [skipped, setSkipped] = useState<string[]>([]);
   const [busyBuild, setBusyBuild] = useState(false);
+  const [confirmRebuild, setConfirmRebuild] = useState(false);
   const { progress } = useAlbumProgress(client, id ?? null);
   const [project, setProject] = useState<ProjectDTO | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
@@ -112,7 +114,7 @@ export default function AlbumScreen() {
     setError(null);
     try {
       // Именная копия: имя ученика на обложке, его разворот первым.
-      const copy = await client.post<ProjectDTO>(`/projects/${id}/duplicate`, { personal: true });
+      const copy = await client.post<ProjectDTO>(`/projects/${id}/duplicate`, isOrganizer ? {} : { personal: true });
       router.push(`/project/${copy.id}/overview`);
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать копию альбома');
@@ -121,31 +123,45 @@ export default function AlbumScreen() {
     }
   }
 
-  /** Автосборка альбома: обложка, общие развороты и личный разворот каждого ученика; результат сохраняется в проект. */
+  /**
+   * Автосборка альбома: обложка, общие развороты и личный разворот каждого ученика; результат сохраняется в проект.
+   * Проект перечитывается перед сохранением (редактор мог поднять версию), а уже собранный вручную макет заменяется
+   * только после подтверждения.
+   */
   async function buildAlbum() {
-    if (!id || !project || !progress) return;
+    if (!id || !progress || !catalog.data) return;
     setBusyBuild(true);
     setError(null);
     try {
+      const fresh = await client.get<ProjectDTO>(`/projects/${id}`);
+      if (hasContent(fresh.layout) && !confirmRebuild) {
+        setConfirmRebuild(true);
+        return;
+      }
       const photos = await client.get<PhotoDTO[]>(`/projects/${id}/photos`);
-      const variant = catalog.data?.products.flatMap((p) => p.variants).find((v) => v.id === project.variantId);
-      const limits = { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 40 };
+      const variant = catalog.data.products.flatMap((p) => p.variants).find((v) => v.id === fresh.variantId);
+      if (!variant) {
+        setError('Не удалось определить формат альбома. Обновите экран и повторите.');
+        return;
+      }
+      const limits = { pagesMin: variant.pagesMin, pagesMax: variant.pagesMax };
       const members = progress.members.slice(1).map((m) => ({
         userId: m.userId,
         childName: m.childName,
         wish: m.wish ?? null,
         videoUrl: m.videoUrl ?? null,
       }));
-      const result = buildAlbumLayout({ title: project.title, members, photos }, limits);
-      const saved = await client.put<{ version: number }>(`/projects/${id}`, { layout: result.layout, version: project.version });
-      const next = { ...project, layout: result.layout, version: saved.version };
+      const result = buildAlbumLayout({ title: fresh.title, members, photos }, limits);
+      const saved = await client.put<{ version: number }>(`/projects/${id}`, { layout: result.layout, version: fresh.version });
+      const next = { ...fresh, layout: result.layout, version: saved.version };
       setProject(next);
       // Редактор берёт локальный черновик, если он есть: подменяем его собранным макетом.
       useProjectStore.getState().setDraft(next);
-      setSkipped(
-        result.skipped.map((userId) => progress.members.find((m) => m.userId === userId)?.childName?.trim() || 'Участник'),
-      );
-      router.push(`/project/${id}/overview`);
+      setConfirmRebuild(false);
+      const names = result.skipped.map((userId) => progress.members.find((m) => m.userId === userId)?.childName?.trim() || 'Участник');
+      setSkipped(names);
+      // Если кто-то не вошёл, остаёмся на экране, чтобы организатор увидел список, и открываем макет отдельной кнопкой.
+      if (names.length === 0) router.push(`/project/${id}/overview`);
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось собрать альбом');
     } finally {
@@ -170,10 +186,24 @@ export default function AlbumScreen() {
         onPress={() => router.push(`/project/${id}/overview`)}
       />
       {isOrganizer && !ordered ? (
-        <Button title="Собрать альбом" disabled={busyBuild || !progress || !project} onPress={() => void buildAlbum()} />
+        <>
+          {confirmRebuild ? (
+            <Text style={styles.error}>
+              Макет уже собран. Пересборка заменит его, ваши ручные правки страниц пропадут. Нажмите ещё раз, чтобы заменить.
+            </Text>
+          ) : null}
+          <Button
+            title={confirmRebuild ? 'Заменить макет' : 'Собрать альбом'}
+            disabled={busyBuild || !progress || !project || !catalog.data}
+            onPress={() => void buildAlbum()}
+          />
+        </>
       ) : null}
       {skipped.length > 0 ? (
-        <Text style={styles.error}>Не вошли в альбом (не хватило страниц): {skipped.join(', ')}</Text>
+        <>
+          <Text style={styles.error}>Не вошли в альбом (не хватило страниц): {skipped.join(', ')}</Text>
+          <Button title="Открыть макет" variant="secondary" onPress={() => router.push(`/project/${id}/overview`)} />
+        </>
       ) : null}
 
       {ordered ? (
@@ -181,7 +211,7 @@ export default function AlbumScreen() {
           <Text style={styles.hint}>
             Организатор уже заказал альбом. Каждый участник может заказать свою печатную копию и оплатить её отдельно.
           </Text>
-          <Button title="Заказать мою именную копию" disabled={busyCopy} onPress={() => void orderOwnCopy()} />
+          <Button title={isOrganizer ? 'Заказать свою копию' : 'Заказать мою именную копию'} disabled={busyCopy} onPress={() => void orderOwnCopy()} />
         </>
       ) : (
         <>

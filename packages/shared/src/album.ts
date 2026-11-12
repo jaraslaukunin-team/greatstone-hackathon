@@ -46,11 +46,13 @@ export function buildAlbumLayout(
   const classPages = Math.min(budget, Math.max(Math.min(MAX_CLASS_PAGES, budget), need));
 
   const first = input.photos[0] ?? null;
+  // Название проекта может быть длиннее, чем разрешает обложка (100 символов).
+  const coverTitle = input.title.slice(0, 100);
   const pages: Page[] = [
     {
       template: 'one',
       cells: [cellFor(first?.id ?? null)],
-      texts: [{ text: input.title, x: 0.5, y: 0.9, style: 'title' }],
+      texts: [{ text: coverTitle, x: 0.5, y: 0.9, style: 'title' }],
     },
   ];
 
@@ -67,17 +69,17 @@ export function buildAlbumLayout(
 
     const texts: NonNullable<Page['texts']> = [{ text: m.childName?.trim() || 'Выпускник', x: 0.5, y: 0.14, style: 'title' }];
     const wish = m.wish?.trim();
-    if (wish) texts.push({ text: wish, x: 0.5, y: 0.42, style: 'quote' });
+    if (wish) texts.push({ text: wish, x: 0.5, y: 0.38, style: 'quote' });
     const right: Page = { template: 'one', cells: [], texts, memberId: m.userId };
     if (m.videoUrl && httpsUrlSchema.safeParse(m.videoUrl).success) {
-      right.qr = { url: m.videoUrl, x: 0.5, y: 0.74, size: 0.3 };
+      right.qr = { url: m.videoUrl.trim(), x: 0.5, y: 0.8, size: 0.26 };
     }
     pages.push(right);
   }
 
   const layout: Layout = {
     pages,
-    cover: { photoId: first?.id ?? null, title: input.title, subtitle: 'Выпускной альбом' },
+    cover: { photoId: first?.id ?? null, title: coverTitle, subtitle: 'Выпускной альбом' },
   };
   return { layout, skipped };
 }
@@ -92,9 +94,11 @@ export function personalizeLayout(layout: Layout, userId: string, childName: str
   const next = JSON.parse(JSON.stringify(layout)) as Layout;
   next.cover = { photoId: null, title: '', ...next.cover, subtitle: name.slice(0, 100) };
   const i = next.pages.findIndex((p) => p.memberId === userId);
-  if (i > 1) {
-    const pairEnd = next.pages[i + 1]?.memberId === userId ? i + 2 : i + 1;
-    const pair = next.pages.splice(i, pairEnd - i);
+  // Двигаем только настоящую пару (две соседние страницы, начало на нечётной позиции): иначе сдвинутся чужие пары
+  // и сломается чётность разворотов, поэтому в таких случаях меняется только обложка.
+  const isPair = i > 1 && i % 2 === 1 && next.pages[i + 1]?.memberId === userId && next.pages[i + 2]?.memberId !== userId;
+  if (isPair) {
+    const pair = next.pages.splice(i, 2);
     next.pages.splice(1, 0, ...pair);
   }
   return next;
