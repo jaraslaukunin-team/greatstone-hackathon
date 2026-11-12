@@ -51,6 +51,25 @@ export function applyTemplate(layout: Layout, pageIndex: number, template: Page[
   return next;
 }
 
+/** Пустая страница на одно фото вставляется перед индексом at; за краем — в конец. */
+export function insertPage(layout: Layout, at: number): Layout {
+  const next = cloneLayout(layout);
+  const index = Math.min(next.pages.length, Math.max(0, at));
+  next.pages.splice(index, 0, {
+    template: 'one',
+    cells: [{ photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 as const } }],
+  });
+  return next;
+}
+
+/** Убирает страницу; индекс вне диапазона и единственная страница книги остаются как есть. */
+export function removePage(layout: Layout, at: number): Layout {
+  const next = cloneLayout(layout);
+  if (at < 0 || at >= next.pages.length || next.pages.length <= 1) return next;
+  next.pages.splice(at, 1);
+  return next;
+}
+
 export function setTheme(layout: Layout, themeId: ThemeId): Layout {
   return { ...cloneLayout(layout), themeId };
 }

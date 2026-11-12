@@ -1,6 +1,8 @@
 import {
   applyTemplate,
+  insertPage,
   moveSpread,
+  removePage,
   replacePhoto,
   setCrop,
   setTheme,
@@ -18,6 +20,43 @@ function layoutWith(photos: Array<string | null>): Layout {
     })),
   };
 }
+
+describe('insertPage / removePage', () => {
+  it('insertPage вставляет пустую страницу one на нужное место', () => {
+    const input = layoutWith(['a', 'b']);
+    const next = insertPage(input, 1);
+    expect(next.pages).toHaveLength(3);
+    expect(next.pages[1]).toEqual({ template: 'one', cells: [{ photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 } }] });
+    expect(next.pages[2]?.cells[0]?.photoId).toBe('b');
+    expect(input.pages).toHaveLength(2);
+  });
+
+  it('insertPage с индексом за краем добавляет в конец', () => {
+    expect(insertPage(layoutWith(['a']), 99).pages).toHaveLength(2);
+  });
+
+  it('removePage убирает страницу', () => {
+    const next = removePage(layoutWith(['a', 'b', 'c']), 0);
+    expect(next.pages.map((p) => p.cells[0]?.photoId)).toEqual(['b', 'c']);
+  });
+
+  it('removePage с индексом вне диапазона ничего не меняет', () => {
+    const input = layoutWith(['a', 'b']);
+    expect(removePage(input, 5)).toEqual(input);
+    expect(removePage(input, -1)).toEqual(input);
+  });
+
+  it('removePage не оставляет книгу без страниц', () => {
+    const input = layoutWith(['a']);
+    expect(removePage(input, 0)).toEqual(input);
+  });
+
+  it('тема сохраняется при вставке и удалении', () => {
+    const themed = { ...layoutWith(['a', 'b']), themeId: 'film' };
+    expect(insertPage(themed, 0).themeId).toBe('film');
+    expect(removePage(themed, 0).themeId).toBe('film');
+  });
+});
 
 describe('setTheme', () => {
   it('ставит тему и не трогает страницы и исходный макет', () => {
