@@ -138,7 +138,11 @@ describe('личные страницы альбома', () => {
   it('updateMyMemberRequestSchema: пожелание до 200 символов, видео только https', () => {
     expect(updateMyMemberRequestSchema.safeParse({ wish: 'ok' }).success).toBe(true);
     expect(updateMyMemberRequestSchema.safeParse({ videoUrl: null }).success).toBe(true);
-    expect(updateMyMemberRequestSchema.safeParse({ wish: 'я'.repeat(201) }).success).toBe(false);
+    expect(updateMyMemberRequestSchema.safeParse({ wish: 'я'.repeat(120) }).success).toBe(true);
+    expect(updateMyMemberRequestSchema.safeParse({ wish: 'я'.repeat(121) }).success).toBe(false);
+    expect(updateMyMemberRequestSchema.safeParse({ videoUrl: 'https://' }).success).toBe(false);
+    expect(updateMyMemberRequestSchema.safeParse({ videoUrl: 'HTTPS://x.by/v' }).success).toBe(true);
+    expect(updateMyMemberRequestSchema.safeParse({ videoUrl: '  https://x.by/v  ' }).success).toBe(true);
     expect(updateMyMemberRequestSchema.safeParse({ videoUrl: 'ftp://x' }).success).toBe(false);
     expect(updateMyMemberRequestSchema.safeParse({ childName: '' }).success).toBe(false);
   });

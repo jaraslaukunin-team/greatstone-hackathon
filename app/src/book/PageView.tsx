@@ -106,7 +106,7 @@ export function PageView({ page, sourceOf, width, height, theme }: Props) {
           <Text
             key={`t${i}`}
             pointerEvents="none"
-            numberOfLines={3}
+            numberOfLines={t.style === 'quote' ? 6 : 3}
             style={{
               position: 'absolute',
               left: Math.min(width - boxW, Math.max(0, t.x * width - boxW / 2)),

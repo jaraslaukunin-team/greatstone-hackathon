@@ -52,14 +52,10 @@ export const pageTextSchema = z.object({
 // Ссылка на видео и QR: только https, чтобы в печатный макет не попадали javascript: и прочие схемы.
 export const httpsUrlSchema = z
   .string()
+  .trim()
   .max(300)
-  .refine((v) => {
-    try {
-      return new URL(v).protocol === 'https:';
-    } catch {
-      return false;
-    }
-  }, 'Нужна ссылка, начинающаяся с https://');
+  // Явная проверка вместо new URL(): одинаково работает на сервере и в приложении (в React Native URL ведёт себя иначе).
+  .refine((v) => /^https:\/\/[^\s/?#]+[^\s]*$/i.test(v), 'Нужна ссылка, начинающаяся с https://');
 export const pageQrSchema = z.object({
   url: httpsUrlSchema,
   x: z.number().min(0).max(1),
@@ -265,7 +261,8 @@ export const albumMemberSchema = z.object({
 });
 export const updateMyMemberRequestSchema = z.object({
   childName: z.string().trim().min(1).max(100).optional(),
-  wish: z.string().trim().max(200).optional(),
+  // 120 символов помещаются на личной странице вместе с QR без обрезки.
+  wish: z.string().trim().max(120).optional(),
   videoUrl: httpsUrlSchema.nullable().optional(),
 });
 export const albumProgressSchema = z.object({

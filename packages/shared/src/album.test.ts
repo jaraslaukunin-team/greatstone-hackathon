@@ -55,7 +55,7 @@ describe('buildAlbumLayout', () => {
     const annRight = personal(layout, 'ann')[1]!;
     expect(annRight.cells).toEqual([]);
     expect(annRight.texts?.map((t) => t.text)).toEqual(['Анна', 'Удачи всем!']);
-    expect(annRight.qr).toMatchObject({ url: 'https://youtu.be/abc', size: 0.3 });
+    expect(annRight.qr).toMatchObject({ url: 'https://youtu.be/abc', size: 0.26 });
     expect(personal(layout, 'bob')[1]!.qr).toBeUndefined();
     const evil = buildAlbumLayout({ title: 'T', members: [member('e', 'Эл', { videoUrl: 'javascript:alert(1)' })], photos }, limits);
     expect(personal(evil.layout, 'e')[1]!.qr).toBeUndefined();
@@ -115,5 +115,21 @@ describe('personalizeLayout', () => {
     const first = personalizeLayout(base, 'ann', 'Анна');
     expect(first.pages[1]!.memberId).toBe('ann');
     expect(personalizeLayout(first, 'ann', 'Анна').pages).toEqual(first.pages);
+  });
+});
+
+describe('правки по ревью', () => {
+  it('длинное название проекта обрезается до 100 символов в обложке', () => {
+    const { layout } = buildAlbumLayout({ title: 'Я'.repeat(150), members: [], photos: [] }, { pagesMin: 4, pagesMax: 40 });
+    expect(layout.cover?.title).toHaveLength(100);
+  });
+
+  it('именная копия: если у участника не пара соседних страниц, порядок страниц не ломается', () => {
+    const cell = { photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 as const } };
+    const page = (memberId?: string) => ({ template: 'one' as const, cells: [cell], ...(memberId ? { memberId } : {}) });
+    const single: Layout = { pages: [page(), page(), page(), page(), page('x'), page(), page()] };
+    const r = personalizeLayout(single, 'x', 'Икс');
+    expect(r.pages.map((p) => p.memberId ?? '-')).toEqual(single.pages.map((p) => p.memberId ?? '-'));
+    expect(r.cover?.subtitle).toBe('Икс');
   });
 });
