@@ -264,6 +264,8 @@ export const interactionMessages = pgTable(
       .references(() => interactions.id, { onDelete: 'cascade' }),
     authorId: uuid('author_id').references(() => profiles.id, { onDelete: 'set null' }),
     body: text('body').notNull(),
+    /** Storage key для вложенного изображения; null — без вложения. */
+    attachmentKey: text('attachment_key'),
     createdAt: createdAt(),
   },
   (t) => [index('interaction_messages_interaction_idx').on(t.interactionId)],
