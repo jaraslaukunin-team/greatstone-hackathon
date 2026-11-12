@@ -307,7 +307,7 @@ describe('переименование и дублирование проект�
       expect(copy.status).toBe('draft');
     });
 
-    it('участник-contributor → 404', async () => {
+    it('участник-contributor на draft → 404', async () => {
       const p = (
         await create(alice, { isShared: true, joinPassword: 'pass12' })
       ).json() as { id: string };
@@ -318,7 +318,27 @@ describe('переименование и дублирование проект�
       expect(res.statusCode).toBe(404);
     });
 
-    it('участник-organizer → 404 (только владелец может дублировать)', async () => {
+    it('участник-contributor после заказа альбома → 201 личная копия', async () => {
+      const p = (
+        await create(alice, { isShared: true, joinPassword: 'pass12', title: '11 Б' })
+      ).json() as { id: string };
+      await db
+        .insert(projectMembers)
+        .values({ projectId: p.id, userId: bob.id, role: 'contributor', childName: 'Маша' });
+      await db.update(projects).set({ status: 'ordered' }).where(eq(projects.id, p.id));
+      const res = await call(bob, 'POST', `/projects/${p.id}/duplicate`);
+      expect(res.statusCode).toBe(201);
+      const copy = projectSchema.parse(res.json());
+      expect(copy).toMatchObject({
+        ownerId: bob.id,
+        isShared: false,
+        status: 'draft',
+        title: '11 Б — копия',
+      });
+      expect(copy.hasPassword).toBe(false);
+    });
+
+    it('участник-organizer на draft → 404 (копия только после заказа)', async () => {
       const p = (
         await create(alice, { isShared: true, joinPassword: 'pass12' })
       ).json() as { id: string };

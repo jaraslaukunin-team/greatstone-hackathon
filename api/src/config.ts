@@ -12,6 +12,8 @@ export type Config = {
   aiaiEditMode: 'images' | 'chat';
   /** AES-256 ключ (64 hex или base64) для файлов на диске; пусто = без шифрования. */
   fileEncryptionKey?: string;
+  /** AES-256 master для envelope клиент↔API (HKDF на userId); пусто = конверт выключен. */
+  payloadEncryptionKey?: string;
   port: number;
   /** Публичный адрес сайта для ссылок-приглашений; без него берётся из заголовков запроса. */
   publicUrl?: string;
@@ -39,6 +41,16 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
   if (aiProvider === 'aiai' && !aiaiBaseUrl.startsWith('https://')) {
     throw new Error('При AI_PROVIDER=aiai переменная AIAI_BASE_URL должна начинаться с https://');
   }
+  const fileEncryptionKey = env.FILE_ENCRYPTION_KEY || undefined;
+  const payloadEncryptionKey = env.PAYLOAD_ENCRYPTION_KEY || undefined;
+  if (aiProvider === 'aiai') {
+    if (!fileEncryptionKey) {
+      throw new Error('При AI_PROVIDER=aiai обязателен FILE_ENCRYPTION_KEY (шифрование файлов на диске)');
+    }
+    if (!payloadEncryptionKey) {
+      throw new Error('При AI_PROVIDER=aiai обязателен PAYLOAD_ENCRYPTION_KEY (конверт клиент↔API)');
+    }
+  }
   return {
     databaseUrl: required(env, 'DATABASE_URL'),
     jwtSecret: required(env, 'JWT_SECRET'),
@@ -51,7 +63,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     aiaiModel: env.AIAI_MODEL || 'qwen-image-edit',
     aiaiChatModel: env.AIAI_CHAT_MODEL || 'gpt-4o-mini',
     aiaiEditMode: editMode,
-    fileEncryptionKey: env.FILE_ENCRYPTION_KEY || undefined,
+    fileEncryptionKey,
+    payloadEncryptionKey,
     port,
     publicUrl: env.PUBLIC_URL || undefined,
   };

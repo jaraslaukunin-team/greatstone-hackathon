@@ -1,3 +1,4 @@
+import type { ProjectDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -9,7 +10,7 @@ import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
-type State = 'accepting' | 'password' | 'done' | 'failed';
+type State = 'accepting' | 'join' | 'done' | 'failed';
 
 export default function InviteScreen() {
   const params = useLocalSearchParams<{ token?: string; url?: string }>();
@@ -17,10 +18,12 @@ export default function InviteScreen() {
   const [state, setState] = useState<State>('accepting');
   const [message, setMessage] = useState<string | null>(null);
   const [password, setPassword] = useState('');
+  const [childName, setChildName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [needsPassword, setNeedsPassword] = useState(true);
   const token = params.token ?? parseInviteUrl(String(params.url ?? '')) ?? null;
 
-  async function accept(withPassword?: string) {
+  async function accept(opts?: { password?: string; childName?: string }) {
     if (!token) {
       setState('failed');
       setMessage('Ссылка недействительна');
@@ -28,18 +31,21 @@ export default function InviteScreen() {
     }
     setBusy(true);
     try {
-      await client.post('/invites/accept', { token, ...(withPassword === undefined ? {} : { password: withPassword }) });
+      const body: { token: string; password?: string; childName?: string } = { token };
+      if (opts?.password !== undefined) body.password = opts.password;
+      if (opts?.childName?.trim()) body.childName = opts.childName.trim();
+      const project = await client.post<ProjectDTO>('/invites/accept', body);
       setState('done');
-      router.replace('/(tabs)/designs');
+      router.replace(`/project/${project.id}/overview`);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 401 && e.code === 'UNAUTHORIZED') {
-        // Приглашение открыли до входа: запоминаем токен, после входа оно откроется само.
         await savePendingInvite(token);
         router.replace('/(auth)/welcome');
         return;
       }
       if (e instanceof ApiRequestError && (e.code === 'PASSWORD_REQUIRED' || e.code === 'PASSWORD_INVALID')) {
-        setState('password');
+        setNeedsPassword(true);
+        setState('join');
         setMessage(e.code === 'PASSWORD_INVALID' ? e.message : null);
       } else {
         setState('failed');
@@ -54,23 +60,51 @@ export default function InviteScreen() {
     void accept();
   }, [client, token]);
 
+  const canJoin =
+    childName.trim().length > 0 && (!needsPassword || password.length > 0) && !busy;
+
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>Приглашение в альбом</Text>
       {state === 'accepting' ? <Text style={styles.sub}>Принимаем приглашение…</Text> : null}
-      {state === 'password' ? (
+      {state === 'join' ? (
         <>
-          <Text style={styles.sub}>Этот альбом защищён паролем. Его вам должен был передать организатор.</Text>
+          <Text style={styles.sub}>
+            {needsPassword
+              ? 'Этот альбом защищён паролем. Укажите имя ученика и пароль от организатора.'
+              : 'Укажите имя ученика, чтобы организатор видел, кто добавил фото.'}
+          </Text>
+          <Text style={styles.label}>Имя ученика</Text>
           <Input
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Пароль альбома"
-            secureTextEntry
-            autoCapitalize="none"
-            autoComplete="off"
+            value={childName}
+            onChangeText={setChildName}
+            placeholder="Как в альбоме"
+            autoCapitalize="words"
           />
+          {needsPassword ? (
+            <>
+              <Text style={styles.label}>Пароль альбома</Text>
+              <Input
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Пароль"
+                secureTextEntry
+                autoCapitalize="none"
+                autoComplete="off"
+              />
+            </>
+          ) : null}
           {message ? <Text style={styles.error}>{message}</Text> : null}
-          <Button title="Вступить" onPress={() => void accept(password)} disabled={busy || password.length === 0} />
+          <Button
+            title="Вступить"
+            onPress={() =>
+              void accept({
+                password: needsPassword ? password : undefined,
+                childName,
+              })
+            }
+            disabled={!canJoin}
+          />
         </>
       ) : null}
       {state === 'failed' ? <Text style={styles.error}>{message ?? 'Не удалось принять приглашение'}</Text> : null}
@@ -82,6 +116,7 @@ export default function InviteScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3], justifyContent: 'center' },
   title: { ...typography.h1, color: lightColors.text },
+  label: { ...typography.bodyStrong, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
   error: { ...typography.caption, color: lightColors.danger },
 });

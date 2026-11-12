@@ -1,3 +1,4 @@
+import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { loadConfig, type Config } from './config.js';
@@ -13,6 +14,7 @@ import { MAX_PHOTO_BYTES } from './modules/catalog/service.js';
 import { registerOperatorRoutes } from './modules/operator/routes.js';
 import { registerOrderRoutes } from './modules/orders/routes.js';
 import { registerPhotoRoutes } from './modules/photos/routes.js';
+import { registerCryptoRoutes } from './modules/crypto/routes.js';
 import { registerPrivacyRoutes } from './modules/privacy/routes.js';
 import { registerProjectRoutes } from './modules/projects/routes.js';
 import { registerQuoteRoutes } from './modules/quote/routes.js';
@@ -38,6 +40,8 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   const app = Fastify({ logger: !silent, trustProxy: (_address, hop) => hop < 1 });
   app.decorate('config', config);
   registerErrorHandling(app);
+  // Expo web (localhost:8081) ходит на API (localhost:3000) — без CORS preflight падает с 404.
+  await app.register(cors, { origin: true });
   // Заголовки безопасности на всех ответах; JSON с данными пользователя не кэшируется ни браузером, ни прокси.
   app.addHook('onSend', async (_req, reply, payload) => {
     reply.header('X-Content-Type-Options', 'nosniff');
@@ -61,6 +65,7 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   registerSupportRoutes(app);
   registerAlbumRoutes(app);
   registerAiRoutes(app);
+  registerCryptoRoutes(app);
   registerPrivacyRoutes(app);
   app.get('/health', async () => ({ status: 'ok' }));
   return app;
