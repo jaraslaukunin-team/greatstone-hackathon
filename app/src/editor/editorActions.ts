@@ -51,6 +51,27 @@ export function applyTemplate(layout: Layout, pageIndex: number, template: Page[
   return next;
 }
 
+/** «Целиком» вписывает фото с полями (кадр сбрасывается), «Заполнить» закрывает ячейку и позволяет двигать кадр. */
+export function setFit(layout: Layout, ref: CellRef, fit: NonNullable<Cell['fit']>): Layout {
+  const next = cloneLayout(layout);
+  const cell = next.pages[ref.pageIndex]?.cells[ref.cellIndex];
+  if (!cell) return next;
+  cell.fit = fit;
+  if (fit === 'contain') cell.crop = { ...cell.crop, x: 0, y: 0, scale: 1 };
+  return next;
+}
+
+/** Убирает фото из ячейки вместе с кадром; само фото остаётся в проекте. */
+export function clearPhoto(layout: Layout, ref: CellRef): Layout {
+  const next = cloneLayout(layout);
+  const cell = next.pages[ref.pageIndex]?.cells[ref.cellIndex];
+  if (!cell) return next;
+  cell.photoId = null;
+  cell.crop = { x: 0, y: 0, scale: 1, rotation: 0 };
+  delete cell.fit;
+  return next;
+}
+
 /** Пустая страница на одно фото вставляется перед индексом at; за краем — в конец. */
 export function insertPage(layout: Layout, at: number): Layout {
   const next = cloneLayout(layout);

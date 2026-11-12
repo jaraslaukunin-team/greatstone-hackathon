@@ -1,10 +1,12 @@
 import {
   applyTemplate,
+  clearPhoto,
   insertPage,
   moveSpread,
   removePage,
   replacePhoto,
   setCrop,
+  setFit,
   setTheme,
   swapCells,
 } from './editorActions';
@@ -20,6 +22,38 @@ function layoutWith(photos: Array<string | null>): Layout {
     })),
   };
 }
+
+describe('setFit / clearPhoto', () => {
+  const ref = { pageIndex: 0, cellIndex: 0 };
+
+  it('setFit cover запоминает режим и оставляет кадр', () => {
+    const input = setCrop(layoutWith(['a']), ref, { x: 0.1, y: 0, scale: 2, rotation: 0 });
+    const next = setFit(input, ref, 'cover');
+    expect(next.pages[0]?.cells[0]?.fit).toBe('cover');
+    expect(next.pages[0]?.cells[0]?.crop).toEqual({ x: 0.1, y: 0, scale: 2, rotation: 0 });
+    expect(input.pages[0]?.cells[0]?.fit).toBeUndefined();
+  });
+
+  it('setFit contain сбрасывает сдвиг и масштаб: фото вписано целиком', () => {
+    const input = setFit(setCrop(layoutWith(['a']), ref, { x: 0.1, y: 0.1, scale: 2, rotation: 90 }), ref, 'cover');
+    const next = setFit(input, ref, 'contain');
+    expect(next.pages[0]?.cells[0]?.fit).toBe('contain');
+    expect(next.pages[0]?.cells[0]?.crop).toEqual({ x: 0, y: 0, scale: 1, rotation: 90 });
+  });
+
+  it('setFit с несуществующей ячейкой ничего не меняет', () => {
+    const input = layoutWith(['a']);
+    expect(setFit(input, { pageIndex: 3, cellIndex: 0 }, 'cover')).toEqual(input);
+  });
+
+  it('clearPhoto убирает фото и сбрасывает кадр, остальные ячейки целы', () => {
+    const input = setCrop(layoutWith(['a', 'b']), ref, { x: 0.2, y: 0, scale: 3, rotation: 0 });
+    const next = clearPhoto(input, ref);
+    expect(next.pages[0]?.cells[0]).toMatchObject({ photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 } });
+    expect(next.pages[1]?.cells[0]?.photoId).toBe('b');
+    expect(input.pages[0]?.cells[0]?.photoId).toBe('a');
+  });
+});
 
 describe('insertPage / removePage', () => {
   it('insertPage вставляет пустую страницу one на нужное место', () => {

@@ -78,10 +78,9 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage }: Props
   const [curL, curR] = spreads[index]!;
 
   // Тап по странице: сообщаем её индекс и положение в окне, чтобы правка «выросла» из этого места.
-  function openPage() {
-    const p = curR ?? curL;
+  function openPage(fromRight = curR !== null) {
+    const p = fromRight ? curR : curL;
     if (p === null || !onOpenPage) return;
-    const fromRight = curR !== null;
     bookRef.current?.measureInWindow((x, y, w, h) => {
       onOpenPage(p, { x: fromRight ? x + w / 2 : x, y, width: w / 2, height: h });
     });
@@ -115,10 +114,22 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage }: Props
       {...pan.panHandlers}
     >
       <View ref={bookRef as never} collapsable={false} style={[styles.book, { height: pageH }]}>
-        <View style={[styles.half, { width: pageW, height: pageH }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Править левую страницу"
+          disabled={isCover || curL === null}
+          onPress={() => openPage(false)}
+          style={[styles.half, { width: pageW, height: pageH }]}
+        >
           {isCover ? <View style={[styles.sheet, { width: pageW, height: pageH }]} /> : leftContent}
-        </View>
-        <View style={[styles.half, { width: pageW, height: pageH }]}>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isCover ? 'Править первую страницу' : 'Править правую страницу'}
+          disabled={curR === null}
+          onPress={() => openPage(true)}
+          style={[styles.half, { width: pageW, height: pageH }]}
+        >
           {isCover ? (
             <View style={[styles.cover, { width: pageW, height: pageH, backgroundColor: theme.coverBg }]}>
               {theme.cover === 'full-photo' && curR !== null && page(curR) ? view(curR) : null}
@@ -143,7 +154,7 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage }: Props
           ) : (
             rightContent
           )}
-        </View>
+        </Pressable>
         {flip ? (
           <Animated.View style={sheetStyle} pointerEvents="none">
             <View style={[styles.face, styles.front]}>{view(forward ? curR : curL)}</View>
@@ -160,7 +171,7 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage }: Props
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Открыть страницу в редакторе"
-          onPress={openPage}
+          onPress={() => openPage()}
         >
           <Text style={styles.counter}>
             {index === 0 ? 'Обложка' : `Разворот ${index} из ${spreads.length - 1}`}
