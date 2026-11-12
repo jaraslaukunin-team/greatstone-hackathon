@@ -1,21 +1,42 @@
 import type { ProjectDTO } from '@picpac/shared';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
+import { useCatalog } from '../../src/catalog/useCatalog';
+import { ProjectMenu, type ProjectMenuAction } from '../../src/designs/ProjectMenu';
+import { projectKind, projectKindLabel } from '../../src/project/projectKind';
 import { useProjectStore } from '../../src/project/projectStore';
-import { Card } from '../../src/ui/Card';
-import { StateBanner } from '../../src/ui/StateBanner';
-import { lightColors, space, typography } from '../../src/theme/theme';
-import { EmptyState } from '../../src/ui/EmptyState';
 import { Button } from '../../src/ui/Button';
+import { Card } from '../../src/ui/Card';
+import { ConfirmDialog } from '../../src/ui/ConfirmDialog';
+import { EmptyState } from '../../src/ui/EmptyState';
+import { Input } from '../../src/ui/Input';
+import { StateBanner } from '../../src/ui/StateBanner';
+import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
 export default function DesignsScreen() {
   const client = useApiClient();
+  const catalog = useCatalog();
   const { draft, syncState, setDraft } = useProjectStore();
   const [items, setItems] = useState<ProjectDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [menuProject, setMenuProject] = useState<ProjectDTO | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectDTO | null>(null);
+  const [renameTarget, setRenameTarget] = useState<ProjectDTO | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -34,6 +55,86 @@ export default function DesignsScreen() {
     void load();
   }, [client]);
 
+  function openProject(project: ProjectDTO) {
+    setDraft(project);
+    router.push(`/project/${project.id}/overview`);
+  }
+
+  async function handleMenuAction(action: ProjectMenuAction) {
+    const project = menuProject;
+    setMenuProject(null);
+    if (!project) return;
+
+    if (action === 'open') {
+      openProject(project);
+      return;
+    }
+    if (action === 'rename') {
+      setRenameValue(project.title);
+      setRenameTarget(project);
+      return;
+    }
+    if (action === 'delete') {
+      setDeleteTarget(project);
+      return;
+    }
+    if (action === 'duplicate') {
+      setBusy(true);
+      try {
+        const copy = await client.post<ProjectDTO>(`/projects/${project.id}/duplicate`);
+        setItems((prev) => [copy, ...prev]);
+        openProject(copy);
+      } catch {
+        Alert.alert('Не удалось дублировать проект');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (action === 'share') {
+      try {
+        const invite = await client.post<{ token: string; url: string }>(`/projects/${project.id}/invites`);
+        await Share.share({ message: invite.url }).catch(() => undefined);
+      } catch {
+        Alert.alert('Не удалось создать ссылку');
+      }
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setBusy(true);
+    try {
+      await client.delete(`/projects/${deleteTarget.id}`);
+      setItems((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      if (draft?.project.id === deleteTarget.id) {
+        useProjectStore.getState().clear();
+      }
+      setDeleteTarget(null);
+    } catch {
+      Alert.alert('Не удалось удалить проект');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmRename() {
+    if (!renameTarget) return;
+    const title = renameValue.trim();
+    if (!title) return;
+    setBusy(true);
+    try {
+      const updated = await client.patch<ProjectDTO>(`/projects/${renameTarget.id}`, { title });
+      setItems((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      if (draft?.project.id === updated.id) setDraft(updated);
+      setRenameTarget(null);
+    } catch {
+      Alert.alert('Не удалось переименовать');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Мои дизайны</Text>
@@ -51,30 +152,114 @@ export default function DesignsScreen() {
           </Link>
         </EmptyState>
       ) : null}
-      {items.map((project) => (
-        <Link
-          key={project.id}
-          href={`/project/${project.id}/overview`}
-          onPress={() => setDraft(project)}
-          asChild
-        >
-          <Card chevron>
-            <Text style={styles.cardTitle}>{project.title}</Text>
-            <Text style={styles.cardSub}>
-              {project.status === 'draft' ? 'Черновик' : 'В заказе'} · v{project.version}
-            </Text>
-          </Card>
-        </Link>
-      ))}
+
+      {items.map((project) => {
+        const kind = projectKindLabel(projectKind(project, catalog.data));
+        return (
+          <View key={project.id} style={styles.row}>
+            <Pressable
+              style={styles.cardPress}
+              onPress={() => openProject(project)}
+              accessibilityRole="link"
+              accessibilityLabel={project.title}
+            >
+              <Card chevron style={styles.card}>
+                <Text style={styles.cardTitle}>{project.title}</Text>
+                <Text style={styles.cardSub}>
+                  {kind} · {project.status === 'draft' ? 'Черновик' : 'В заказе'} · v{project.version}
+                </Text>
+              </Card>
+            </Pressable>
+            <Pressable
+              style={styles.menuBtn}
+              onPress={() => setMenuProject(project)}
+              accessibilityRole="button"
+              accessibilityLabel="Меню проекта"
+              disabled={busy}
+            >
+              <Text style={styles.menuDots}>⋯</Text>
+            </Pressable>
+          </View>
+        );
+      })}
+
+      <ProjectMenu
+        visible={!!menuProject}
+        project={menuProject}
+        onClose={() => setMenuProject(null)}
+        onAction={(a) => void handleMenuAction(a)}
+      />
+
+      <ConfirmDialog
+        visible={!!deleteTarget}
+        title="Удалить проект?"
+        message={deleteTarget ? `«${deleteTarget.title}» будет удалён без возможности восстановления.` : undefined}
+        confirmLabel="Удалить"
+        destructive
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => void confirmDelete()}
+      />
+
+      <Modal
+        visible={!!renameTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameTarget(null)}
+      >
+        <Pressable style={styles.renameBackdrop} onPress={() => setRenameTarget(null)}>
+          <Pressable style={styles.renameBox} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.renameTitle}>Переименовать</Text>
+            <Input value={renameValue} onChangeText={setRenameValue} placeholder="Название" autoFocus />
+            <View style={styles.renameActions}>
+              <Button title="Отмена" variant="secondary" onPress={() => setRenameTarget(null)} style={styles.renameBtn} />
+              <Button
+                title="Сохранить"
+                variant="dark"
+                disabled={!renameValue.trim() || busy}
+                onPress={() => void confirmRename()}
+                style={styles.renameBtn}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg },
-  content: { padding: space[4], gap: space[3], paddingTop: space[7] },
+  content: { padding: space[4], gap: space[3], paddingTop: space[7], paddingBottom: space[7] },
   title: { ...typography.h1, color: lightColors.text },
-  sub: { ...typography.body, color: lightColors.textSecondary },
+  row: { position: 'relative' },
+  cardPress: { flex: 1 },
+  card: { paddingRight: space[4] + 48 },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
+  menuBtn: {
+    position: 'absolute',
+    right: space[2],
+    top: 0,
+    bottom: 0,
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  menuDots: { ...typography.h2, color: lightColors.text, lineHeight: 28 },
+  renameBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(26, 36, 34, 0.45)',
+    justifyContent: 'center',
+    padding: space[5],
+  },
+  renameBox: {
+    backgroundColor: lightColors.surface,
+    borderRadius: radius.sheet,
+    padding: space[5],
+    gap: space[3],
+  },
+  renameTitle: { ...typography.h3, color: lightColors.text },
+  renameActions: { flexDirection: 'row', gap: space[3] },
+  renameBtn: { flex: 1 },
 });
