@@ -1,3 +1,12 @@
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(() => Promise.resolve(null)),
+    setItem: jest.fn(() => Promise.resolve()),
+    removeItem: jest.fn(() => Promise.resolve()),
+  },
+}));
+
 import { createOrderPoller } from './useOrderPolling';
 import type { OrderDTO } from '@picpac/shared';
 
@@ -10,6 +19,8 @@ function order(status: OrderDTO['status']): OrderDTO {
     totalKop: 8790,
     currency: 'BYN',
     delivery: 'belpost',
+    payment: 'card',
+    eripNumber: null,
     createdAt: '2026-11-11T12:00:00.000Z',
     history: [],
     interactionIds: [],
