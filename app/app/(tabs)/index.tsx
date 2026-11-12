@@ -1,5 +1,8 @@
-import { Link } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Link, router } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCatalog } from '../../src/catalog/useCatalog';
+import { projectKind, projectKindLabel } from '../../src/project/projectKind';
+import { useProjectStore } from '../../src/project/projectStore';
 import { Card } from '../../src/ui/Card';
 import { PrintStack } from '../../src/ui/PrintStack';
 import { Wordmark } from '../../src/ui/Wordmark';
@@ -10,6 +13,11 @@ import { useT } from '../../src/i18n/useT';
 
 export default function HomeScreen() {
   const t = useT();
+  const draft = useProjectStore((s) => s.draft);
+  const catalog = useCatalog();
+  const continueKind = draft
+    ? projectKindLabel(projectKind(draft.project, catalog.data))
+    : null;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -17,6 +25,23 @@ export default function HomeScreen() {
         <Wordmark />
         <Text style={styles.slogan}>{t.home.slogan}</Text>
       </View>
+
+      {draft ? (
+        <Pressable
+          onPress={() => router.push(`/project/${draft.project.id}/overview`)}
+          accessibilityRole="link"
+          accessibilityLabel="Продолжить проект"
+        >
+          <Card tone="sky" chevron>
+            <Text style={styles.continueEyebrow}>Продолжить проект</Text>
+            <Text style={styles.cardTitle}>{draft.project.title}</Text>
+            <Text style={styles.cardSub}>
+              {continueKind}
+              {draft.project.status === 'draft' ? ' · Черновик' : ''}
+            </Text>
+          </Card>
+        </Pressable>
+      ) : null}
 
       <ShowcaseStrip />
 
@@ -65,6 +90,7 @@ const styles = StyleSheet.create({
   content: { padding: space[4], gap: space[3], paddingBottom: space[7] },
   header: { marginTop: space[5], marginBottom: space[2], gap: 2 },
   slogan: { ...typography.caption, color: lightColors.textSecondary },
+  continueEyebrow: { ...typography.label, color: lightColors.textSecondary },
   hero: {
     flexDirection: 'row',
     alignItems: 'center',
