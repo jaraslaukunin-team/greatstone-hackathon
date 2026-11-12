@@ -6,6 +6,7 @@ import {
   setCover,
   removePageText,
   setPageBg,
+  setPageGap,
   updatePageText,
   insertPage,
   moveSpread,
@@ -293,5 +294,18 @@ describe('setCover: цвет', () => {
     const withColor = setCover({ pages: [] }, { color: '#EDD5D5' }, 'Т');
     expect(withColor.cover?.color).toBe('#EDD5D5');
     expect(setCover(withColor, { color: '' }).cover).not.toHaveProperty('color');
+  });
+});
+
+describe('setPageGap', () => {
+  const l = (): Layout => ({ pages: [{ template: 'two', cells: [] }] });
+  it('ставит отступы, ограничивает 0..0.12 и удаляет поле при null', () => {
+    expect(setPageGap(l(), 0, 0.05).pages[0]?.gap).toBe(0.05);
+    expect(setPageGap(l(), 0, 0.5).pages[0]?.gap).toBe(0.12);
+    expect(setPageGap(l(), 0, -1).pages[0]?.gap).toBe(0);
+    expect(setPageGap(setPageGap(l(), 0, 0.05), 0, null).pages[0]).not.toHaveProperty('gap');
+  });
+  it('несуществующая страница — макет без изменений', () => {
+    expect(setPageGap(l(), 3, 0.05)).toEqual(l());
   });
 });

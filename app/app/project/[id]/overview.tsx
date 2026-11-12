@@ -238,9 +238,12 @@ export default function OverviewScreen() {
               <Button
                 title="Редактировать разворот"
                 onPress={() => {
-                  const [l, r] = spreadsOf(pageCount)[viewIndex] ?? [null, null];
-                  const pageIndex = r ?? l ?? 0;
-                  setEditing({ pageIndex, rect: { x: winW / 2 - 80, y: winH / 2 - 80, width: 160, height: 160 } });
+                  // Первая страница (разворот 0) правится в редакторе страницы, развороты — на экране расстановки фото.
+                  if (viewIndex === 0) {
+                    setEditing({ pageIndex: 0, rect: { x: winW / 2 - 80, y: winH / 2 - 80, width: 160, height: 160 } });
+                    return;
+                  }
+                  router.push({ pathname: '/project/[id]/place', params: { id: String(id), spread: String(viewIndex) } });
                 }}
               />
               {viewIndex >= 1 ? (

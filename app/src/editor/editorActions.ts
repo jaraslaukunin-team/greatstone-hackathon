@@ -118,6 +118,18 @@ export function setPageBg(layout: Layout, pageIndex: number, bg: string | null):
   return next;
 }
 
+export const MAX_PAGE_GAP = 0.12;
+
+/** Отступы страницы (доля ширины, 0..0.12); null возвращает отступы темы. */
+export function setPageGap(layout: Layout, pageIndex: number, gap: number | null): Layout {
+  const next = cloneLayout(layout);
+  const page = next.pages[pageIndex];
+  if (!page) return next;
+  if (gap === null) delete page.gap;
+  else page.gap = Math.min(MAX_PAGE_GAP, Math.max(0, gap));
+  return next;
+}
+
 export const MAX_PAGE_TEXTS = 20;
 
 export function addPageText(layout: Layout, pageIndex: number, text: PageText): Layout {
