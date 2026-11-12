@@ -126,6 +126,10 @@ export const projects = pgTable(
     status: projectStatusEnum('status').notNull().default('draft'),
     layout: jsonb('layout'),
     isShared: boolean('is_shared').notNull().default(false),
+    /** Общий пул фото события (не заказной); личные книги ссылаются через sourceProjectId. */
+    isPool: boolean('is_pool').notNull().default(false),
+    // FK на projects(id) ON DELETE SET NULL — в миграции 0011 (self-ref в drizzle ломает вывод типов).
+    sourceProjectId: uuid('source_project_id'),
     expectedMembers: integer('expected_members'),
     // scrypt-хеш пароля входа в общий альбом (соль:хеш); null — вход по одному приглашению.
     joinPasswordHash: text('join_password_hash'),
@@ -136,6 +140,9 @@ export const projects = pgTable(
   (t) => [
     index('projects_owner_idx').on(t.ownerId),
     index('projects_variant_idx').on(t.variantId),
+    uniqueIndex('projects_owner_source_uq')
+      .on(t.ownerId, t.sourceProjectId)
+      .where(sql`${t.sourceProjectId} is not null`),
     check('projects_expected_members_chk', sql`${t.expectedMembers} is null or ${t.expectedMembers} >= 0`),
   ],
 );
@@ -154,6 +161,8 @@ export const projectPhotos = pgTable(
     height: integer('height').notNull(),
     takenAt: ts('taken_at'),
     source: photoSourceEnum('source').notNull().default('gallery'),
+    /** Фото пула, из которого скопирована эта запись (личная книга). */
+    sourcePhotoId: uuid('source_photo_id'),
     createdAt: createdAt(),
   },
   (t) => [index('project_photos_project_idx').on(t.projectId)],
