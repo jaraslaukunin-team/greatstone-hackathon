@@ -8,7 +8,9 @@ import {
   assertProjectAccess,
   createProject,
   deleteProject,
+  duplicateProject,
   listProjects,
+  renameProject,
   saveLayout,
   setJoinPassword,
   toProjectDTO,
@@ -23,6 +25,7 @@ const createSchema = z.object({
 });
 const passwordSchema = z.object({ password: z.string().min(4).max(64) });
 const saveSchema = z.object({ layout: z.unknown(), version: z.number().int().positive() });
+const renameSchema = z.object({ title: z.string().trim().min(1).max(200) });
 
 export function registerProjectRoutes(app: FastifyInstance): void {
   const auth = { preHandler: requireAuth };
@@ -59,5 +62,17 @@ export function registerProjectRoutes(app: FastifyInstance): void {
     const { id } = req.params as { id: string };
     await deleteProject(req.server.db, req.server.storage, req.user!, id);
     return reply.code(204).send();
+  });
+
+  app.patch('/projects/:id', auth, async (req) => {
+    const { id } = req.params as { id: string };
+    const body = parse(renameSchema, req.body);
+    return renameProject(req.server.db, req.user!, id, body.title);
+  });
+
+  app.post('/projects/:id/duplicate', auth, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    reply.code(201);
+    return duplicateProject(req.server, req.user!, id);
   });
 }
