@@ -1,5 +1,6 @@
 import { THEMES, type BookTheme, type ThemeId } from '@picpac/shared';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ThemeDecor } from '../book/ThemeDecor';
 import { fonts, lightColors, radius, space, typography } from './theme';
 
 type Props = {
@@ -44,6 +45,7 @@ function PagePreview({ theme }: { theme: BookTheme }) {
   const { margin, gap } = previewMetrics(theme);
   return (
     <View style={[styles.page, { backgroundColor: theme.pageBg, padding: margin, gap }]}>
+      <ThemeDecor decor={theme.decor} color={theme.decorColor} width={PAGE} height={PAGE} />
       <View style={[styles.row, { gap }]}>
         <Tile theme={theme} color={SAMPLE_PHOTOS[0]!} style={styles.fill} />
         <Tile theme={theme} color={SAMPLE_PHOTOS[1]!} style={styles.fill} />

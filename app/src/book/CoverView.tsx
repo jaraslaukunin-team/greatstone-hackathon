@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { fonts, lightColors, space, typography } from '../theme/theme';
 import type { SourceOf } from './imageSource';
 import { PageView } from './PageView';
+import { ThemeDecor } from './ThemeDecor';
 
 type Props = {
   title: string;
@@ -22,6 +23,9 @@ export function CoverView({ title, subtitle, page, sourceOf, theme, color, width
   const titleStyle = { fontFamily: fonts[theme.titleFont], color: theme.titleColor };
   return (
     <View style={[styles.cover, { width, height, backgroundColor: color ?? theme.coverBg }]}>
+      {theme.cover !== 'full-photo' ? (
+        <ThemeDecor decor={theme.decor} color={theme.titleColor} width={width} height={height} />
+      ) : null}
       {theme.cover === 'full-photo' && page ? (
         <PageView page={page} sourceOf={sourceOf} width={width} height={height} theme={theme} />
       ) : null}

@@ -1,5 +1,6 @@
 export * from './money';
 export * from './themes';
+export * from './themeDecor';
 export * from './types';
 export * from './schemas';
 export * from './delivery';

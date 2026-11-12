@@ -5,7 +5,9 @@ import { cellRects } from './cellRects';
 import { frameRect } from './layers';
 import { QrCode } from './QrCode';
 import type { SourceOf } from './imageSource';
+import { fonts } from '../theme/theme';
 import { TEXT_STYLES } from './textStyles';
+import { ThemeDecor } from './ThemeDecor';
 
 type Props = {
   page: Page | null;
@@ -69,6 +71,7 @@ export function PageView({ page, sourceOf, width, height, theme }: Props) {
   const rects = page ? cellRects(page.template, width, height, page.cells.length, theme, page.gap) : [];
   return (
     <View style={[styles.sheet, { width, height, backgroundColor: page?.bg ?? theme.pageBg }]}>
+      <ThemeDecor decor={theme.decor} color={theme.decorColor} width={width} height={height} />
       {page?.cells.map((cell, i) => {
         if (cell.hidden) return null;
         // Свободный слой рисуется в своей рамке, остальные ячейки — по шаблону.
@@ -114,7 +117,8 @@ export function PageView({ page, sourceOf, width, height, theme }: Props) {
               width: boxW,
               textAlign: 'center',
               ...(t.rot ? { transform: [{ rotate: `${t.rot}deg` }] } : null),
-              fontFamily: style.font,
+              // Заголовок и подписи берут шрифт темы; дата и цитата остаются как заданы стилем.
+              fontFamily: t.style === 'title' ? fonts[theme.titleFont] : t.style === 'caption' ? fonts[theme.captionFont] : style.font,
               fontSize: size,
               lineHeight: size * 1.25,
               color: theme.textColor,

@@ -3,6 +3,8 @@
  * но продублированы здесь: shared не может импортировать код приложения.
  */
 
+import type { DecorId } from './themeDecor';
+
 export type ThemeId = 'minimal' | 'film' | 'travel' | 'holiday' | 'graduation';
 
 export type BookTheme = {
@@ -26,6 +28,12 @@ export type BookTheme = {
   coverText: string;
   /** Цвет подписей на страницах: подобран под лист темы, чтобы текст читался. */
   textColor: string;
+  /** Украшения страниц и обложки по краям листа. */
+  decor: DecorId;
+  /** Цвет украшений страницы. */
+  decorColor: string;
+  /** Шрифт подписей на страницах: у каждой темы свой характер. */
+  captionFont: 'demi' | 'light' | 'book' | 'medium';
   /** Цвет корешка и рамок на витрине. */
   spine: string;
   /** Акцентный цвет темы: кнопки и метки на витрине. */
@@ -48,6 +56,9 @@ export const THEMES: readonly BookTheme[] = [
     titleColor: '#FFFFFF',
     coverText: '#FFFFFF',
     textColor: '#364C49',
+    decor: 'none',
+    decorColor: '#364C49',
+    captionFont: 'book',
     spine: '#CCC7BF',
     accent: '#364C49',
   },
@@ -66,6 +77,9 @@ export const THEMES: readonly BookTheme[] = [
     titleColor: '#364C49',
     coverText: '#364C49',
     textColor: '#5A4636',
+    decor: 'filmstrip',
+    decorColor: '#B9A68F',
+    captionFont: 'light',
     spine: '#C9B9A6',
     accent: '#DD5757',
   },
@@ -84,6 +98,9 @@ export const THEMES: readonly BookTheme[] = [
     titleColor: '#FFFFFF',
     coverText: '#FFFFFF',
     textColor: '#25414F',
+    decor: 'route',
+    decorColor: '#4A7A96',
+    captionFont: 'medium',
     spine: '#A8C0CE',
     accent: '#4A7A96',
   },
@@ -102,6 +119,9 @@ export const THEMES: readonly BookTheme[] = [
     titleColor: '#FFFFFF',
     coverText: '#FFFFFF',
     textColor: '#8A2F2F',
+    decor: 'confetti',
+    decorColor: '#DD5757',
+    captionFont: 'demi',
     spine: '#D4A5A5',
     accent: '#DD5757',
   },
@@ -120,6 +140,9 @@ export const THEMES: readonly BookTheme[] = [
     titleColor: '#F6EFE6',
     coverText: '#F6EFE6',
     textColor: '#2F2A45',
+    decor: 'ribbon',
+    decorColor: '#B79B52',
+    captionFont: 'book',
     spine: '#B8B0CC',
     accent: '#7B6FA0',
   },
