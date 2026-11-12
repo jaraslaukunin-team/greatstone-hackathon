@@ -17,7 +17,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.jaraslau.dev"
+        "EXPO_PUBLIC_API_URL": "https://picpac.jaraslau.dev"
       }
     },
     "production": {
@@ -25,7 +25,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.jaraslau.dev"
+        "EXPO_PUBLIC_API_URL": "https://picpac.jaraslau.dev"
       }
     }
   },
