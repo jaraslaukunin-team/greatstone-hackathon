@@ -38,12 +38,15 @@ export const pageSchema = z.object({
   copies: z.number().int().positive().optional(),
   bg: z.string().max(20).optional(),
   texts: z.array(pageTextSchema).max(20).optional(),
+  // Отступы страницы (доля ширины): заменяют поле и зазор темы.
+  gap: z.number().min(0).max(0.12).optional(),
 });
 export const coverSchema = z.object({
   photoId: z.string().nullable(),
   title: z.string().max(100),
   subtitle: z.string().max(100).optional(),
   spine: z.string().max(60).optional(),
+  color: z.string().max(20).optional(),
 });
 // themeId и cover необязательны: старые макеты без них рисуются в теме по умолчанию и с первой страницей на обложке.
 export const layoutSchema = z.object({

@@ -117,6 +117,19 @@ describe('переименование и дублирование проект�
       expect(dup.layout.pages[0]!.cells[0]!.photoId).toBe(newPhotoId);
     });
 
+    it('цвет обложки и отступы страницы переходят в копию', async () => {
+      const p = (await create(alice)).json() as { id: string; version: number };
+      const crop = { x: 0, y: 0, scale: 1, rotation: 0 as const };
+      const layout: Layout = {
+        cover: { photoId: null, title: 'Цвет', color: '#CFE0DB' },
+        pages: [{ template: 'two', gap: 0.05, cells: [{ photoId: null, crop }, { photoId: null, crop }] }],
+      };
+      expect((await call(alice, 'PUT', `/projects/${p.id}`, { layout, version: p.version })).statusCode).toBe(200);
+      const dup = projectSchema.parse((await call(alice, 'POST', `/projects/${p.id}/duplicate`)).json());
+      expect(dup.layout.cover?.color).toBe('#CFE0DB');
+      expect(dup.layout.pages[0]!.gap).toBe(0.05);
+    });
+
     it('обложка без фото копируется как есть', async () => {
       const p = (await create(alice)).json() as { id: string; version: number };
       const layout: Layout = { cover: { photoId: null, title: 'Без фото' }, pages: [] };

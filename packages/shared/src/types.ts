@@ -19,9 +19,10 @@ export type Cell = { photoId: string | null; crop: Crop; fit?: 'contain' | 'cove
 export type PageTextStyle = 'title' | 'caption' | 'date' | 'quote';
 /** Подпись на странице: x, y — центр текста в долях страницы (0..1). */
 export type PageText = { text: string; x: number; y: number; style: PageTextStyle };
-export type Page = { template: Template; cells: Cell[]; copies?: number; bg?: string; texts?: PageText[] };
+/** gap — отступы страницы (доля ширины, 0..0.12): заменяют поле и зазор темы. */
+export type Page = { template: Template; cells: Cell[]; copies?: number; bg?: string; texts?: PageText[]; gap?: number };
 /** Обложка: фото (null — первая страница книги), название, подзаголовок и текст на корешке (от 40 страниц). */
-export type Cover = { photoId: string | null; title: string; subtitle?: string; spine?: string };
+export type Cover = { photoId: string | null; title: string; subtitle?: string; spine?: string; color?: string };
 export type Layout = { pages: Page[]; themeId?: string; cover?: Cover; seen?: string[] };
 
 export type UserDTO = {
