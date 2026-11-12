@@ -18,6 +18,7 @@ import { syncProject } from '../../../src/project/syncProject';
 import { Button } from '../../../src/ui/Button';
 import { BookViewer } from '../../../src/book/BookViewer';
 import { projectSource } from '../../../src/book/imageSource';
+import { CoverEditor } from '../../../src/book/CoverEditor';
 import { PageEditor } from '../../../src/book/PageEditor';
 import { lightColors, space, typography } from '../../../src/theme/theme';
 
@@ -30,6 +31,7 @@ export default function OverviewScreen() {
   const [message, setMessage] = useState('Собираем вашу книгу…');
   const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
   const [showThemes, setShowThemes] = useState(false);
+  const [editingCover, setEditingCover] = useState(false);
   const [editing, setEditing] = useState<{ pageIndex: number; rect: Rect } | null>(null);
   const [limits, setLimits] = useState({ min: 20, max: 60, widthCm: 20 });
   const [viewIndex, setViewIndex] = useState(0);
@@ -168,6 +170,7 @@ export default function OverviewScreen() {
       <Text style={styles.hint}>Листайте свайпом или стрелками. Нажмите на страницу, чтобы править её.</Text>
       {draft?.layout?.pages?.length ? (
         <>
+          <Button title="Обложка" variant="secondary" onPress={() => setEditingCover(true)} />
           <Button title={showThemes ? 'Скрыть оформление' : 'Оформление'} variant="secondary" onPress={() => setShowThemes((v) => !v)} />
           {showThemes ? (
             <ThemePicker
@@ -190,6 +193,17 @@ export default function OverviewScreen() {
         onPress={() => router.push({ pathname: '/project/[id]/preview', params: { id: String(id) } })}
       />
       <Button title="Проверить перед заказом" disabled={busy} onPress={() => router.push(`/project/${id}/review`)} />
+      {editingCover && draft?.layout ? (
+        <CoverEditor
+          layout={draft.layout}
+          projectTitle={draft.project.title}
+          photos={photoList}
+          sourceOf={sourceOf}
+          theme={themeById(draft.layout.themeId)}
+          onChange={setLayout}
+          onClose={() => setEditingCover(false)}
+        />
+      ) : null}
       {editing && draft?.layout ? (
         <PageEditor
           pageIndex={editing.pageIndex}
