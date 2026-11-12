@@ -1,6 +1,10 @@
 import {
+  addPageText,
   applyTemplate,
   clearPhoto,
+  removePageText,
+  setPageBg,
+  updatePageText,
   insertPage,
   moveSpread,
   moveSpreadBy,
@@ -23,6 +27,57 @@ function layoutWith(photos: Array<string | null>): Layout {
     })),
   };
 }
+
+describe('шаблоны three и spread-one', () => {
+  it("applyTemplate('three') даёт три ячейки и сохраняет первые фото", () => {
+    const next = applyTemplate(layoutWith(['a']), 0, 'three');
+    expect(next.pages[0]?.template).toBe('three');
+    expect(next.pages[0]?.cells.map((c) => c.photoId)).toEqual(['a', null, null]);
+  });
+
+  it("applyTemplate('spread-one') даёт одну ячейку", () => {
+    expect(applyTemplate(layoutWith(['a']), 0, 'spread-one').pages[0]?.cells).toHaveLength(1);
+  });
+
+  it("applyTemplate('four') по-прежнему даёт четыре", () => {
+    expect(applyTemplate(layoutWith(['a']), 0, 'four').pages[0]?.cells).toHaveLength(4);
+  });
+});
+
+describe('фон и тексты страницы', () => {
+  const text = { text: 'Лето', x: 0.5, y: 0.9, style: 'caption' as const };
+
+  it('setPageBg ставит и снимает цвет, исходный макет цел', () => {
+    const input = layoutWith(['a']);
+    const colored = setPageBg(input, 0, '#EDD5D5');
+    expect(colored.pages[0]?.bg).toBe('#EDD5D5');
+    expect(input.pages[0]?.bg).toBeUndefined();
+    expect('bg' in (setPageBg(colored, 0, null).pages[0] ?? {})).toBe(false);
+  });
+
+  it('addPageText добавляет подпись, updatePageText меняет, removePageText убирает', () => {
+    let l = addPageText(layoutWith(['a']), 0, text);
+    expect(l.pages[0]?.texts).toEqual([text]);
+    l = updatePageText(l, 0, 0, { x: 0.2, text: 'Осень' });
+    expect(l.pages[0]?.texts?.[0]).toEqual({ ...text, x: 0.2, text: 'Осень' });
+    l = removePageText(l, 0, 0);
+    expect(l.pages[0]?.texts).toEqual([]);
+  });
+
+  it('несуществующая страница или подпись ничего не меняют', () => {
+    const input = addPageText(layoutWith(['a']), 0, text);
+    expect(setPageBg(input, 5, '#fff')).toEqual(input);
+    expect(addPageText(input, 5, text)).toEqual(input);
+    expect(updatePageText(input, 0, 3, { x: 0.1 })).toEqual(input);
+    expect(removePageText(input, 0, 3)).toEqual(input);
+  });
+
+  it('подписи не больше 20 на страницу', () => {
+    let l = layoutWith(['a']);
+    for (let i = 0; i < 25; i++) l = addPageText(l, 0, text);
+    expect(l.pages[0]?.texts).toHaveLength(20);
+  });
+});
 
 describe('moveSpreadBy', () => {
   const ids = (l: Layout) => l.pages.map((p) => p.cells[0]?.photoId);

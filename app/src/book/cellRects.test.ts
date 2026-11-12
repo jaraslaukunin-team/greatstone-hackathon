@@ -25,6 +25,22 @@ describe('cellRects', () => {
     expect(cellRects('one', 200, 200, 0, theme)).toEqual([{ x: 10, y: 10, width: 180, height: 180 }]);
   });
 
+  it('three: одно высокое фото слева и два справа друг над другом', () => {
+    const r = cellRects('three', 200, 200, 3, theme);
+    expect(r).toHaveLength(3);
+    expect(r[0]).toEqual({ x: 10, y: 10, width: 88, height: 180 });
+    expect(r[1]).toEqual({ x: 102, y: 10, width: 88, height: 88 });
+    expect(r[2]).toEqual({ x: 102, y: 102, width: 88, height: 88 });
+  });
+
+  it('spread-one: фото во всю страницу без полей', () => {
+    expect(cellRects('spread-one', 200, 160, 1, theme)).toEqual([{ x: 0, y: 0, width: 200, height: 160 }]);
+  });
+
+  it('three при недостатке ячеек рисуется одной', () => {
+    expect(cellRects('three', 200, 200, 2, theme)).toHaveLength(1);
+  });
+
   it('если ячеек меньше, чем нужно шаблону, рисуется одна', () => {
     expect(cellRects('four', 200, 200, 2, theme)).toHaveLength(1);
   });

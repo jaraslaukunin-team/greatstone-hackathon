@@ -200,6 +200,7 @@ export default function OverviewScreen() {
           originRect={editing.rect}
           pagesMin={limits.min}
           pagesMax={limits.max}
+          pageWidthCm={limits.widthCm}
           onChange={setLayout}
           canEditPhoto={(p) => draft.project.ownerId === user?.id || p.uploadedBy === user?.id}
           onOpenPhotoEditor={(photoId, ref) => {

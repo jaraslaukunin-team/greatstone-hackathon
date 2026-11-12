@@ -24,10 +24,19 @@ export const cropSchema = z.object({
 export const fitModeSchema = z.enum(['contain', 'cover']);
 // fit необязателен: старые макеты без него читаются как contain.
 export const cellSchema = z.object({ photoId: z.string().nullable(), crop: cropSchema, fit: fitModeSchema.optional() });
+export const pageTextSchema = z.object({
+  text: z.string().max(200),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  style: z.enum(['title', 'caption', 'date', 'quote']),
+});
+// bg и texts необязательны: старые макеты без них читаются как раньше.
 export const pageSchema = z.object({
-  template: z.enum(['one', 'two', 'four', 'spread-one']),
+  template: z.enum(['one', 'two', 'three', 'four', 'spread-one']),
   cells: z.array(cellSchema),
   copies: z.number().int().positive().optional(),
+  bg: z.string().max(20).optional(),
+  texts: z.array(pageTextSchema).max(20).optional(),
 });
 // themeId необязателен: старые макеты без него рисуются в теме по умолчанию.
 export const layoutSchema = z.object({ pages: z.array(pageSchema), themeId: z.string().optional() });

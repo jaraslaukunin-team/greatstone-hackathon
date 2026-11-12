@@ -1,4 +1,4 @@
-import type { Cell, Layout, Page, ThemeId } from '@picpac/shared';
+import type { Cell, Layout, Page, PageText, ThemeId } from '@picpac/shared';
 import { spreadsOf } from '../book/flip';
 
 export type CellRef = { pageIndex: number; cellIndex: number };
@@ -43,7 +43,7 @@ export function applyTemplate(layout: Layout, pageIndex: number, template: Page[
   const page = next.pages[pageIndex];
   if (!page) return next;
   const keep = page.cells.map((c) => c.photoId);
-  const count = template === 'one' || template === 'spread-one' ? 1 : template === 'two' ? 2 : 4;
+  const count = { one: 1, 'spread-one': 1, two: 2, three: 3, four: 4 }[template];
   page.template = template;
   page.cells = Array.from({ length: count }, (_, i) => ({
     photoId: keep[i] ?? null,
@@ -87,6 +87,44 @@ export function clearPhoto(layout: Layout, ref: CellRef): Layout {
   cell.photoId = null;
   cell.crop = { x: 0, y: 0, scale: 1, rotation: 0 };
   delete cell.fit;
+  return next;
+}
+
+/** Цвет фона страницы; null возвращает цвет темы. */
+export function setPageBg(layout: Layout, pageIndex: number, bg: string | null): Layout {
+  const next = cloneLayout(layout);
+  const page = next.pages[pageIndex];
+  if (!page) return next;
+  if (bg === null) delete page.bg;
+  else page.bg = bg;
+  return next;
+}
+
+export const MAX_PAGE_TEXTS = 20;
+
+export function addPageText(layout: Layout, pageIndex: number, text: PageText): Layout {
+  const next = cloneLayout(layout);
+  const page = next.pages[pageIndex];
+  if (!page) return next;
+  const texts = page.texts ?? [];
+  if (texts.length >= MAX_PAGE_TEXTS) return next;
+  page.texts = [...texts, { ...text }];
+  return next;
+}
+
+export function updatePageText(layout: Layout, pageIndex: number, index: number, patch: Partial<PageText>): Layout {
+  const next = cloneLayout(layout);
+  const current = next.pages[pageIndex]?.texts?.[index];
+  if (!current) return next;
+  Object.assign(current, patch);
+  return next;
+}
+
+export function removePageText(layout: Layout, pageIndex: number, index: number): Layout {
+  const next = cloneLayout(layout);
+  const page = next.pages[pageIndex];
+  if (!page?.texts?.[index]) return next;
+  page.texts = page.texts.filter((_, i) => i !== index);
   return next;
 }
 
