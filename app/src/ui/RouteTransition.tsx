@@ -2,8 +2,8 @@ import { usePathname } from 'expo-router';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Animated, Easing, Platform, StyleSheet } from 'react-native';
 
-/** Параметры перехода: короткий выезд справа с проявлением. */
-export const ROUTE_ANIMATION = { duration: 260, offset: 18 } as const;
+/** Параметры перехода: лёгкое проявление без сдвига, чтобы шапка и нижняя панель не «ездили». */
+export const ROUTE_ANIMATION = { duration: 220, from: 0.55 } as const;
 
 function WebRouteTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -28,8 +28,7 @@ function WebRouteTransition({ children }: { children: ReactNode }) {
     <Animated.View
       style={[
         styles.fill,
-        { opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.15, 1] }) },
-        { transform: [{ translateX: v.interpolate({ inputRange: [0, 1], outputRange: [ROUTE_ANIMATION.offset, 0] }) }] },
+        { opacity: v.interpolate({ inputRange: [0, 1], outputRange: [ROUTE_ANIMATION.from, 1] }) },
       ]}
     >
       {children}
@@ -39,7 +38,7 @@ function WebRouteTransition({ children }: { children: ReactNode }) {
 
 /**
  * Анимация смены экрана. На телефоне её делает сам навигатор (slide/fade), а на вебе у навигатора
- * переходов нет, поэтому плавно проявляем и сдвигаем содержимое при смене адреса.
+ * переходов нет, поэтому плавно проявляем содержимое при смене адреса.
  */
 export function RouteTransition({ children }: { children: ReactNode }) {
   if (Platform.OS !== 'web') return <>{children}</>;

@@ -15,7 +15,7 @@ export function FadeIn({ children, delay = 0, style }: Props) {
   useEffect(() => {
     const a = Animated.timing(v, {
       toValue: 1,
-      duration: 360,
+      duration: 320,
       delay,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: USE_NATIVE_DRIVER,
@@ -27,7 +27,7 @@ export function FadeIn({ children, delay = 0, style }: Props) {
     <Animated.View
       style={[
         style,
-        { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] },
+        { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] },
       ]}
     >
       {children}

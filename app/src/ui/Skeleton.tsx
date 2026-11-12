@@ -19,8 +19,8 @@ export function Skeleton({
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(v, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.quad), useNativeDriver: USE_NATIVE_DRIVER }),
-        Animated.timing(v, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.quad), useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(v, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(v, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: USE_NATIVE_DRIVER }),
       ]),
     );
     loop.start();
@@ -30,7 +30,7 @@ export function Skeleton({
     <Animated.View
       style={[
         { width, height, borderRadius: round, backgroundColor: lightColors.border },
-        { opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] }) },
+        { opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.65, 1] }) },
         style,
       ]}
     />
