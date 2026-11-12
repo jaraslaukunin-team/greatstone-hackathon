@@ -75,12 +75,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cover: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
   },
   coverScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.28)',
   },
   mark: {

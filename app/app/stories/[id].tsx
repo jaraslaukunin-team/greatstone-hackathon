@@ -264,7 +264,7 @@ function StoryViewer({ storyId, startAtEnd }: { storyId: string; startAtEnd: boo
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   bgImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
   },
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   },
   missingText: { ...typography.h3, color: lightColors.text },
   copy: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'flex-end',
     paddingHorizontal: space[5],
     paddingBottom: space[7] + 56,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   slideTitle: { ...typography.display, fontSize: 32, lineHeight: 38 },
   slideBody: { ...typography.body, opacity: 0.95, maxWidth: 420 },
   tapLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     flexDirection: 'row',
     zIndex: 2,
   },
