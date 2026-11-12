@@ -1,5 +1,5 @@
-// Кладёт canvaskit.wasm (движок Skia для браузера, ~7 МБ) в public/assets, откуда его отдаёт сайт.
-// Путь /assets уже раздаётся Caddy как статика, поэтому Caddyfile менять не нужно.
+// Кладёт canvaskit.wasm (движок Skia для браузера, ~7 МБ) в public/, откуда его отдаёт Expo/сайт.
+// Не кладём в public/assets/: префикс /assets/ на Expo web занят Metro → 404.
 // Запускается перед start, web и web:build; сам файл в git не хранится.
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -16,7 +16,7 @@ if (!existsSync(source)) {
   console.error('canvaskit.wasm не найден:', source);
   process.exit(1);
 }
-const targetDir = join(root, 'public', 'assets');
-mkdirSync(targetDir, { recursive: true });
-copyFileSync(source, join(targetDir, 'canvaskit.wasm'));
-console.log('canvaskit.wasm скопирован в public/assets');
+const publicDir = join(root, 'public');
+mkdirSync(publicDir, { recursive: true });
+copyFileSync(source, join(publicDir, 'canvaskit.wasm'));
+console.log('canvaskit.wasm скопирован в public/canvaskit.wasm');

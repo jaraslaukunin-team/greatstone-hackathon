@@ -1,10 +1,12 @@
-import type { PhotoDTO } from '@picpac/shared';
+import type { CatalogDTO, PhotoDTO, ProjectDTO } from '@picpac/shared';
 import { Canvas, useTypeface } from '@shopify/react-native-skia';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { ApiRequestError } from '../api/client';
 import { useApiClient } from '../api/hooks';
+import { pickPhotos } from '../photos/pickPhotos';
+import { useProjectStore } from '../project/projectStore';
 import { lightColors, radius, space, typography } from '../theme/theme';
 import { EditScene } from './EditScene';
 import { editReducer, initialHistory, type Stroke, type TextItem } from './editState';
@@ -41,13 +43,23 @@ function confirmDiscard(): Promise<boolean> {
 }
 
 export default function EditorScreen() {
-  const { projectId, photoId, requestId } = useLocalSearchParams<{ projectId: string; photoId: string; requestId: string }>();
+  const params = useLocalSearchParams<{ projectId?: string; photoId?: string; requestId?: string }>();
   const client = useApiClient();
   const { width: winW, height: winH } = useWindowDimensions();
   const [history, dispatch] = useReducer(editReducer, undefined, initialHistory);
   const state = history.present;
+  const [projectId, setProjectId] = useState<string | null>(
+    typeof params.projectId === 'string' && params.projectId ? params.projectId : null,
+  );
+  const [photoId, setPhotoId] = useState<string | null>(
+    typeof params.photoId === 'string' && params.photoId ? params.photoId : null,
+  );
+  const [requestId] = useState(
+    () => (typeof params.requestId === 'string' && params.requestId ? params.requestId : `edit-${Date.now()}`),
+  );
   const [photo, setPhoto] = useState<PhotoDTO | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [tab, setTab] = useState<Tab>('crop');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -56,7 +68,9 @@ export default function EditorScreen() {
   const [brush, setBrush] = useState<BrushSettings>({ color: EDIT_COLORS[0], width: BRUSH_WIDTHS[1] });
 
   useEffect(() => {
+    if (!projectId || !photoId) return;
     let cancelled = false;
+    setLoadError(null);
     client
       .get<PhotoDTO[]>(`/projects/${projectId}/photos`)
       .then((list) => {
@@ -70,6 +84,46 @@ export default function EditorScreen() {
       cancelled = true;
     };
   }, [client, projectId, photoId]);
+
+  async function ensureProject(): Promise<string> {
+    if (projectId) return projectId;
+    const draftId = useProjectStore.getState().draft?.project.id;
+    if (draftId) {
+      setProjectId(draftId);
+      return draftId;
+    }
+    const catalog = await client.get<CatalogDTO>('/catalog');
+    const variantId =
+      catalog.products.find((p) => p.kind === 'photobook')?.variants[0]?.id ??
+      catalog.products[0]?.variants[0]?.id;
+    if (!variantId) throw new Error('Каталог пуст, попробуйте позже');
+    const project = await client.post<ProjectDTO>('/projects', {
+      variantId,
+      title: 'Черновик для редактора',
+      isShared: false,
+    });
+    useProjectStore.getState().setDraft(project);
+    setProjectId(project.id);
+    return project.id;
+  }
+
+  async function onUploadPhoto() {
+    setUploading(true);
+    setLoadError(null);
+    try {
+      const picked = await pickPhotos();
+      const first = picked[0];
+      if (!first) return;
+      const pid = await ensureProject();
+      const uploaded = await client.upload<PhotoDTO>(`/projects/${pid}/photos`, { uri: first.uri });
+      setPhotoId(uploaded.id);
+      setPhoto(uploaded);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить фото');
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const { image, error: imageError } = useSkiaImage(photo ? client.resolveUrl(photo.url) : null);
   const typeface = useTypeface(require('../../assets/fonts/futura-pt/FuturaPT-Demi.ttf'));
@@ -153,7 +207,7 @@ export default function EditorScreen() {
   }
 
   async function save() {
-    if (!image || !hasChanges || saving) return;
+    if (!image || !projectId || !hasChanges || saving) return;
     setSaving(true);
     setSaveError(null);
     try {
@@ -172,10 +226,41 @@ export default function EditorScreen() {
     }
   }
 
+  // Нет фото: предлагаем загрузить прямо в редакторе (вход с таба без photoId).
+  if (!photo && !photoId) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyTitle}>Редактор фото</Text>
+        <Text style={styles.emptySub}>Загрузите фотографию, чтобы кадрировать, настроить цвет и добавить текст.</Text>
+        {loadError ? <Text style={styles.error}>{loadError}</Text> : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Загрузить фотографию"
+          disabled={uploading}
+          onPress={() => void onUploadPhoto()}
+          style={[styles.uploadBtn, uploading && styles.off]}
+        >
+          <Text style={styles.uploadBtnText}>{uploading ? 'Загружаем…' : 'Загрузить фотографию'}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.back}>
+          <Text style={styles.backText}>Назад</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   if (loadError || imageError) {
     return (
       <View style={styles.center}>
         <Text style={styles.error}>{loadError ?? 'Не удалось открыть фото'}</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void onUploadPhoto()}
+          style={styles.uploadBtn}
+          disabled={uploading}
+        >
+          <Text style={styles.uploadBtnText}>Выбрать другое фото</Text>
+        </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>Назад</Text>
         </Pressable>
@@ -263,4 +348,16 @@ const styles = StyleSheet.create({
   panelContent: { padding: space[4] },
   back: { minHeight: 44, paddingHorizontal: space[4], borderRadius: radius.button, borderWidth: 1.5, borderColor: lightColors.borderStrong, backgroundColor: lightColors.surface, alignItems: 'center', justifyContent: 'center' },
   backText: { ...typography.bodyStrong, color: lightColors.text },
+  emptyTitle: { ...typography.h1, color: lightColors.text, textAlign: 'center' },
+  emptySub: { ...typography.body, color: lightColors.textSecondary, textAlign: 'center', maxWidth: 360 },
+  uploadBtn: {
+    minHeight: 48,
+    minWidth: 220,
+    paddingHorizontal: space[5],
+    borderRadius: radius.button,
+    backgroundColor: lightColors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadBtnText: { ...typography.button, color: lightColors.textOnAccent },
 });

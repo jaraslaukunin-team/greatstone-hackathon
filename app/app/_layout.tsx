@@ -91,6 +91,10 @@ export default function RootLayout() {
               <Stack.Screen name="operator" />
               <Stack.Screen name="profile" />
               <Stack.Screen name="showcase" />
+              <Stack.Screen
+                name="stories"
+                options={{ presentation: 'modal', headerShown: false, animation: 'fade' }}
+              />
             </Stack>
           </DeepLinkBridge>
         </ApiBridge>

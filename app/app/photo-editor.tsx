@@ -3,8 +3,15 @@ import { useEffect, useState, type ComponentType } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { lightColors, radius, space, typography } from '../src/theme/theme';
 
-/** Движок Skia для браузера (~8 МБ): лежит в public/assets и раздаётся тем же сайтом. */
-const CANVASKIT_URL = '/assets/canvaskit.wasm';
+/** Движок Skia для браузера (~8 МБ): public/canvaskit.wasm (не /assets/ — там Metro). */
+const CANVASKIT_PATH = '/canvaskit.wasm';
+
+function canvaskitUrl(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}${CANVASKIT_PATH}`;
+  }
+  return CANVASKIT_PATH;
+}
 
 /**
  * Фоторедактор грузится лениво: на вебе сначала подгружается CanvasKit, и только потом код редактора,
@@ -21,7 +28,7 @@ export default function PhotoEditorRoute() {
       try {
         if (Platform.OS === 'web') {
           const { LoadSkiaWeb } = await import('@shopify/react-native-skia/lib/module/web');
-          await LoadSkiaWeb({ locateFile: () => CANVASKIT_URL });
+          await LoadSkiaWeb({ locateFile: () => canvaskitUrl() });
         }
         const mod = await import('../src/photoEditor/EditorScreen');
         if (!cancelled) setEditor(() => mod.default);

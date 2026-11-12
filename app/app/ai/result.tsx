@@ -76,7 +76,7 @@ export default function AiResultScreen() {
           <Button title="Напечатать это фото" onPress={print} disabled={!projectId} />
           <Button title="Доработать" variant="secondary" onPress={refine} disabled={!projectId} />
           <Button title="Обработать ещё раз" variant="secondary" onPress={() => router.replace('/ai/edit')} />
-          <Button title="К ассистенту" variant="text" onPress={() => router.push('/(tabs)/assistant')} />
+          <Button title="К редактору" variant="text" onPress={() => router.push('/(tabs)/editor')} />
         </>
       ) : null}
     </ScrollView>

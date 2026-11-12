@@ -2,7 +2,7 @@ export type Strings = {
   tabs: {
     home: string;
     designs: string;
-    assistant: string;
+    editor: string;
     cart: string;
     orders: string;
     profile: string;
@@ -91,7 +91,7 @@ export const ru: Strings = {
   tabs: {
     home: 'Главная',
     designs: 'Мои',
-    assistant: 'AI',
+    editor: 'Редактор',
     cart: 'Корзина',
     orders: 'Заказы',
     profile: 'Профиль',
@@ -230,7 +230,7 @@ export const be: Strings = {
   tabs: {
     home: 'Галоўная',
     designs: 'Мае',
-    assistant: 'AI',
+    editor: 'Рэдактар',
     cart: 'Кошык',
     orders: 'Заказы',
     profile: 'Профіль',
