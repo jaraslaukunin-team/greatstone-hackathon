@@ -1,8 +1,11 @@
-import type { ProjectDTO } from '@picpac/shared';
+import { buildAlbumLayout, type PhotoDTO, type ProjectDTO } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
+import { useAuth } from '../../src/auth/AuthProvider';
+import { useCatalog } from '../../src/catalog/useCatalog';
+import { useProjectStore } from '../../src/project/projectStore';
 import { ApiRequestError } from '../../src/api/client';
 import { passwordProblem } from '../../src/album/password';
 import { progressText } from '../../src/album/progressText';
@@ -16,6 +19,10 @@ import { lightColors, space, typography } from '../../src/theme/theme';
 export default function AlbumScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const client = useApiClient();
+  const { user } = useAuth();
+  const catalog = useCatalog();
+  const [skipped, setSkipped] = useState<string[]>([]);
+  const [busyBuild, setBusyBuild] = useState(false);
   const { progress } = useAlbumProgress(client, id ?? null);
   const [project, setProject] = useState<ProjectDTO | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
@@ -104,7 +111,8 @@ export default function AlbumScreen() {
     setBusyCopy(true);
     setError(null);
     try {
-      const copy = await client.post<ProjectDTO>(`/projects/${id}/duplicate`);
+      // Именная копия: имя ученика на обложке, его разворот первым.
+      const copy = await client.post<ProjectDTO>(`/projects/${id}/duplicate`, { personal: true });
       router.push(`/project/${copy.id}/overview`);
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать копию альбома');
@@ -113,7 +121,40 @@ export default function AlbumScreen() {
     }
   }
 
+  /** Автосборка альбома: обложка, общие развороты и личный разворот каждого ученика; результат сохраняется в проект. */
+  async function buildAlbum() {
+    if (!id || !project || !progress) return;
+    setBusyBuild(true);
+    setError(null);
+    try {
+      const photos = await client.get<PhotoDTO[]>(`/projects/${id}/photos`);
+      const variant = catalog.data?.products.flatMap((p) => p.variants).find((v) => v.id === project.variantId);
+      const limits = { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 40 };
+      const members = progress.members.slice(1).map((m) => ({
+        userId: m.userId,
+        childName: m.childName,
+        wish: m.wish ?? null,
+        videoUrl: m.videoUrl ?? null,
+      }));
+      const result = buildAlbumLayout({ title: project.title, members, photos }, limits);
+      const saved = await client.put<{ version: number }>(`/projects/${id}`, { layout: result.layout, version: project.version });
+      const next = { ...project, layout: result.layout, version: saved.version };
+      setProject(next);
+      // Редактор берёт локальный черновик, если он есть: подменяем его собранным макетом.
+      useProjectStore.getState().setDraft(next);
+      setSkipped(
+        result.skipped.map((userId) => progress.members.find((m) => m.userId === userId)?.childName?.trim() || 'Участник'),
+      );
+      router.push(`/project/${id}/overview`);
+    } catch (e) {
+      setError(e instanceof ApiRequestError ? e.message : 'Не удалось собрать альбом');
+    } finally {
+      setBusyBuild(false);
+    }
+  }
+
   const members = memberRows(progress);
+  const isOrganizer = !!project && !!user && project.ownerId === user.id;
   const ordered = project?.status === 'ordered';
   const hasPassword = project?.hasPassword ?? null;
 
@@ -128,13 +169,19 @@ export default function AlbumScreen() {
         variant="secondary"
         onPress={() => router.push(`/project/${id}/overview`)}
       />
+      {isOrganizer && !ordered ? (
+        <Button title="Собрать альбом" disabled={busyBuild || !progress || !project} onPress={() => void buildAlbum()} />
+      ) : null}
+      {skipped.length > 0 ? (
+        <Text style={styles.error}>Не вошли в альбом (не хватило страниц): {skipped.join(', ')}</Text>
+      ) : null}
 
       {ordered ? (
         <>
           <Text style={styles.hint}>
             Организатор уже заказал альбом. Каждый участник может заказать свою печатную копию и оплатить её отдельно.
           </Text>
-          <Button title="Заказать свою копию" disabled={busyCopy} onPress={() => void orderOwnCopy()} />
+          <Button title="Заказать мою именную копию" disabled={busyCopy} onPress={() => void orderOwnCopy()} />
         </>
       ) : (
         <>
@@ -168,7 +215,11 @@ export default function AlbumScreen() {
                 color={row.done ? lightColors.success : lightColors.textMuted}
               />
               <Text style={[styles.memberName, row.done && styles.memberDone]}>{row.name}</Text>
-              <Text style={styles.memberPhotos}>{row.photos > 0 ? `${row.photos} фото` : '—'}</Text>
+              <Text style={styles.memberPhotos}>
+                {row.photos > 0 ? `${row.photos} фото` : '—'}
+                {row.hasWish ? ' · пожелание' : ''}
+                {row.hasVideo ? ' · видео' : ''}
+              </Text>
             </View>
           ))}
         </View>

@@ -4,6 +4,9 @@ export type MemberRow = {
   name: string;
   photos: number;
   done: boolean;
+  /** Заполнено пожелание / указана ссылка на видео (для личного разворота). */
+  hasWish: boolean;
+  hasVideo: boolean;
 };
 
 /**
@@ -23,6 +26,12 @@ export function memberRows(progress: AlbumProgress | null): MemberRow[] {
     } else {
       name = m.childName?.trim() || `Участник ${i}`;
     }
-    return { name, photos: m.photosCount, done: m.photosCount > 0 };
+    return {
+      name,
+      photos: m.photosCount,
+      done: m.photosCount > 0,
+      hasWish: Boolean(m.wish?.trim()),
+      hasVideo: Boolean(m.videoUrl?.trim()),
+    };
   });
 }
