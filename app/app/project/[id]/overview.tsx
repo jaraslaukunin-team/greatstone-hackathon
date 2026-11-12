@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import { autoLayoutLocal, unplacedPhotos } from '../../../src/editor/autoLayoutLocal';
+import { blankLayout } from '../../../src/project/blankLayout';
 import { useProjectStore } from '../../../src/project/projectStore';
+import { useThemeChoiceStore } from '../../../src/project/themeChoiceStore';
 import { syncProject } from '../../../src/project/syncProject';
 import { Button } from '../../../src/ui/Button';
 import { BookViewer } from '../../../src/book/BookViewer';
@@ -14,6 +16,7 @@ export default function OverviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const client = useApiClient();
   const { draft, setDraft, setLayout, setSyncState } = useProjectStore();
+  const { mode, themeId } = useThemeChoiceStore();
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState('Собираем вашу книгу…');
   const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
@@ -31,9 +34,15 @@ export default function OverviewScreen() {
       const previous = stored?.project.id === project.id ? stored.layout : project.layout;
       const keep =
         previous.pages.some((pg) => pg.cells.some((c) => c.photoId)) && unplacedPhotos(previous, photos).length === 0;
+      // В ручном режиме и при пустом макете — создаём шаблон без автораскладки.
+      const buildMode = useThemeChoiceStore.getState().mode;
+      const buildThemeId = useThemeChoiceStore.getState().themeId;
+      const isEmpty = !previous.pages.some((pg) => pg.cells.some((c) => c.photoId));
       const layout = keep
         ? previous
-        : autoLayoutLocal(photos, { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 60 });
+        : buildMode === 'manual' && isEmpty
+          ? blankLayout(variant?.pagesMin ?? 20, buildThemeId)
+          : autoLayoutLocal(photos, { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 60 });
       if (cancelled) return;
       setDraft({ ...project, layout });
       setLayout(layout);
