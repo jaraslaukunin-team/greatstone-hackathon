@@ -55,6 +55,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     paddingBottom: space[2],
     zIndex: 10,
+    overflow: 'visible',
   },
   row: {
     minHeight: PROFILE_SIZE,

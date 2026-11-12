@@ -189,7 +189,7 @@ export default function PrintFramesScreen() {
                 />
               </View>
               <Button title="Редактор" variant="text" onPress={() => openEditor(index)} />
-              <Button title="Нейросеть" variant="text" onPress={() => openAi(index)} />
+              <Button title="Редактировать с AI" variant="text" onPress={() => openAi(index)} />
             </View>
           </View>
         </Card>
