@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { useCatalog, useVariantPrice } from '../../src/catalog/useCatalog';
+import { useEditResult } from '../../src/photoEditor/editResultStore';
 import { pickPhotos } from '../../src/photos/pickPhotos';
 import { frameSizeOf, orientFrame } from '../../src/print/frame';
 import { useProjectStore } from '../../src/project/projectStore';
@@ -24,6 +25,8 @@ export default function PrintFramesScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const project = useRef<ProjectDTO | null>(null);
   const started = useRef(false);
+  const pendingEdit = useRef<{ requestId: string; photoId: string } | null>(null);
+  const editResults = useEditResult((s) => s.results);
   const [frames, setFrames] = useState<Frame[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +83,24 @@ export default function PrintFramesScreen() {
   function update(index: number, patch: Partial<Frame>) {
     setFrames((list) => list.map((f, i) => (i === index ? { ...f, ...patch } : f)));
   }
+
+  // Правка кадра в фоторедакторе: готовое фото встаёт на место прежнего, оригинал остаётся в проекте.
+  function openEditor(index: number) {
+    const current = project.current;
+    const frame = frames[index];
+    if (!current || !frame) return;
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    pendingEdit.current = { requestId, photoId: frame.photo.id };
+    router.push({ pathname: '/photo-editor', params: { projectId: current.id, photoId: frame.photo.id, requestId } });
+  }
+
+  useEffect(() => {
+    const pending = pendingEdit.current;
+    if (!pending || !editResults[pending.requestId]) return;
+    const photo = useEditResult.getState().take(pending.requestId);
+    pendingEdit.current = null;
+    if (photo) setFrames((list) => list.map((f) => (f.photo.id === pending.photoId ? { ...f, photo } : f)));
+  }, [editResults]);
 
   async function toCart() {
     const current = project.current;
@@ -143,6 +164,7 @@ export default function PrintFramesScreen() {
                   onPress={() => update(index, { fit: 'cover' })}
                 />
               </View>
+              <Button title="Редактор" variant="text" onPress={() => openEditor(index)} />
             </View>
           </View>
         </Card>
