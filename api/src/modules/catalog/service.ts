@@ -24,6 +24,7 @@ type VariantRow = typeof productVariants.$inferSelect;
 const toProduct = (p: ProductRow, variants: VariantRow[]): ProductDTO => ({
   id: p.id,
   kind: p.kind,
+  line: p.line ?? null,
   title: p.title,
   description: p.description,
   variants: variants

@@ -22,6 +22,7 @@ const createdAt = () => ts('created_at').notNull().defaultNow();
 
 export const roleEnum = pgEnum('role', ['customer', 'operator']);
 export const productKindEnum = pgEnum('product_kind', ['photobook', 'prints', 'graduation']);
+export const productLineEnum = pgEnum('product_line', ['photo', 'digital']);
 export const projectStatusEnum = pgEnum('project_status', ['draft', 'ordered']);
 export const photoSourceEnum = pgEnum('photo_source', ['gallery', 'ai']);
 export const memberRoleEnum = pgEnum('member_role', ['organizer', 'contributor']);
@@ -67,6 +68,8 @@ export const authCodes = pgTable(
 export const products = pgTable('products', {
   id: id(),
   kind: productKindEnum('kind').notNull(),
+  /** Линейка печати: 'photo' — фотопечать, 'digital' — цифровая, null — не применимо (книги). */
+  line: productLineEnum('line'),
   title: text('title').notNull(),
   description: text('description').notNull().default(''),
   leadTimeDays: integer('lead_time_days').notNull(),
