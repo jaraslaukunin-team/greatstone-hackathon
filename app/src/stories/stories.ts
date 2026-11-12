@@ -1,3 +1,4 @@
+import type { ImageSourcePropType } from 'react-native';
 import { lightColors } from '../theme/theme';
 
 export type StoryCta = {
@@ -10,6 +11,8 @@ export type StorySlide = {
   body: string;
   bg: string;
   textColor?: string;
+  /** Полноэкранное фото слайда; при наличии текст читается поверх тёмного оверлея. */
+  image?: ImageSourcePropType;
   cta?: StoryCta;
 };
 
@@ -32,15 +35,17 @@ export const STORIES: CompanyStory[] = [
     slides: [
       {
         title: '−15% на первую фотокнигу',
-        body: 'Для новых клиентов PicPac: оформите первую книгу и получите скидку на заказ.',
+        body: 'Для новых клиентов PicPac: оформите первую фотокнигу и получите скидку на заказ. Акция действует при первом оформлении в приложении.',
         bg: lightColors.accent,
         textColor: lightColors.textOnAccent,
+        image: require('../../assets/stories/discounts-1.jpg'),
       },
       {
         title: 'Выпускной сезон',
-        body: 'Общая фотокнига класса — выгоднее, чем печатать по одной. Соберите фото вместе и закажите копии.',
+        body: 'Общая фотокнига класса — выгоднее, чем печатать по одной. Соберите фото вместе и закажите копии каждому участнику.',
         bg: '#C44545',
         textColor: lightColors.textOnAccent,
+        image: require('../../assets/stories/discounts-2.jpg'),
         cta: { label: 'Создать фотокнигу', href: '/album/create' },
       },
     ],
@@ -56,12 +61,14 @@ export const STORIES: CompanyStory[] = [
         body: 'Итог считается в приложении: формат, число страниц, бумага и тираж. Тарифы не зашиты в интерфейс — только из каталога.',
         bg: lightColors.action,
         textColor: lightColors.textOnAccent,
+        image: require('../../assets/stories/price-1.jpg'),
       },
       {
         title: 'Смотрите варианты',
         body: 'Выберите фотокнигу или печать — сразу увидите ориентир по стоимости и сможете собрать макет.',
         bg: '#283837',
         textColor: lightColors.textOnAccent,
+        image: require('../../assets/stories/price-2.jpg'),
         cta: { label: 'Открыть каталог', href: '/catalog/books' },
       },
     ],
@@ -74,15 +81,17 @@ export const STORIES: CompanyStory[] = [
     slides: [
       {
         title: 'Темы под настроение',
-        body: 'Кино, путешествия, праздник, выпускной — готовые стили обложки и разворотов.',
+        body: 'Кино, путешествия, праздник, выпускной — готовые стили обложки и разворотов для вашей фотокниги.',
         bg: lightColors.fillMint,
         textColor: lightColors.text,
+        image: require('../../assets/stories/designs-1.jpg'),
       },
       {
         title: 'Правьте как хотите',
-        body: 'Автораскладка — старт. Потом меняйте фото, подписи и фон страниц под себя.',
+        body: 'Автораскладка — старт. Потом меняйте фото, подписи и фон страниц: макет остаётся вашим.',
         bg: lightColors.fillSand,
         textColor: lightColors.text,
+        image: require('../../assets/stories/designs-2.jpg'),
         cta: { label: 'Выбрать книгу', href: '/catalog/books' },
       },
     ],
@@ -95,15 +104,17 @@ export const STORIES: CompanyStory[] = [
     slides: [
       {
         title: 'Печатаем в Беларуси',
-        body: 'Собственное производство: контроль цвета, бумаги и переплёта на каждом тираже.',
+        body: 'Собственное производство: контроль цвета, бумаги и переплёта на каждом тираже фотокниги.',
         bg: lightColors.fillSky,
         textColor: lightColors.text,
+        image: require('../../assets/stories/production-1.jpg'),
       },
       {
         title: 'Качество на ощупь',
         body: 'Плотная бумага, аккуратный корешок, обложка, которая не боится полок и переездов.',
         bg: '#3D5A73',
         textColor: lightColors.textOnAccent,
+        image: require('../../assets/stories/production-2.jpg'),
       },
     ],
   },
@@ -118,18 +129,21 @@ export const STORIES: CompanyStory[] = [
         body: 'Фотокнига, печать или общая выпускная фотокнига — старт из каталога или раздела «Фотокнига».',
         bg: lightColors.fillLilac,
         textColor: lightColors.text,
+        image: require('../../assets/stories/howto-1.jpg'),
       },
       {
         title: '2. Загрузите фото',
         body: 'С телефона или из облака. Мы подскажем, где качество слабое, до отправки в печать.',
         bg: '#D4C8E8',
         textColor: lightColors.text,
+        image: require('../../assets/stories/howto-2.jpg'),
       },
       {
         title: '3. Оплатите и ждите',
         body: 'Макет уходит в производство. Статус заказа смотрите во вкладке «Заказы».',
         bg: lightColors.action,
         textColor: lightColors.textOnAccent,
+        image: require('../../assets/stories/howto-3.jpg'),
         cta: { label: 'Начать', href: '/catalog/books' },
       },
     ],
@@ -142,15 +156,17 @@ export const STORIES: CompanyStory[] = [
     slides: [
       {
         title: 'По всей Беларуси',
-        body: 'Курьер или пункт выдачи — способ выбираете при оформлении заказа.',
+        body: 'Курьер или пункт выдачи — способ выбираете при оформлении заказа фотокниги.',
         bg: lightColors.fillSand,
         textColor: lightColors.text,
+        image: require('../../assets/stories/delivery-1.jpg'),
       },
       {
         title: 'Бережная упаковка',
         body: 'Книги едут в защитной упаковке, чтобы углы и обложка доехали целыми.',
         bg: '#E8996C',
         textColor: lightColors.text,
+        image: require('../../assets/stories/delivery-2.jpg'),
       },
     ],
   },
@@ -165,12 +181,14 @@ export const STORIES: CompanyStory[] = [
         body: 'Родители класса загрузили фото по ссылке — получилась общая фотокнига и копии для каждого.',
         bg: lightColors.fillRose,
         textColor: lightColors.text,
+        image: require('../../assets/stories/reviews-1.jpg'),
       },
       {
         title: '«Цвета как на экране»',
-        body: 'Заказывали книгу путешествий — бумага плотная, печать ровная, переплёт крепкий.',
+        body: 'Заказывали фотокнигу путешествий — бумага плотная, печать ровная, переплёт крепкий.',
         bg: lightColors.accent,
         textColor: lightColors.textOnAccent,
+        image: require('../../assets/stories/reviews-2.jpg'),
         cta: { label: 'Сделать свою', href: '/catalog/books' },
       },
     ],
@@ -185,4 +203,10 @@ export function nextStoryId(id: string): string | undefined {
   const i = STORIES.findIndex((s) => s.id === id);
   if (i < 0 || i >= STORIES.length - 1) return undefined;
   return STORIES[i + 1]?.id;
+}
+
+export function prevStoryId(id: string): string | undefined {
+  const i = STORIES.findIndex((s) => s.id === id);
+  if (i <= 0) return undefined;
+  return STORIES[i - 1]?.id;
 }

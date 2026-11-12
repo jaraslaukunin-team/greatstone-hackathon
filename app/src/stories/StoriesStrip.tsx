@@ -1,5 +1,5 @@
 import { Link } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { lightColors, space, typography } from '../theme/theme';
 import { STORIES } from './stories';
 
@@ -16,24 +16,33 @@ export function StoriesStrip() {
       contentContainerStyle={styles.scroll}
       accessibilityLabel="Истории PicPac"
     >
-      {STORIES.map((story) => (
-        <Link key={story.id} href={`/stories/${story.id}`} asChild>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`История: ${story.title}`}
-            style={styles.item}
-          >
-            <View style={[styles.tileOuter, { borderColor: story.accent }]}>
-              <View style={[styles.tile, { backgroundColor: story.accent }]}>
-                <Text style={styles.mark}>{story.mark}</Text>
+      {STORIES.map((story) => {
+        const cover = story.slides[0]?.image;
+        return (
+          <Link key={story.id} href={`/stories/${story.id}`} asChild>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`История: ${story.title}`}
+              style={styles.item}
+            >
+              <View style={[styles.tileOuter, { borderColor: story.accent }]}>
+                <View style={[styles.tile, !cover && { backgroundColor: story.accent }]}>
+                  {cover ? (
+                    <>
+                      <Image source={cover} style={styles.cover} resizeMode="cover" />
+                      <View style={styles.coverScrim} />
+                    </>
+                  ) : null}
+                  <Text style={styles.mark}>{story.mark}</Text>
+                </View>
               </View>
-            </View>
-            <Text style={styles.label} numberOfLines={1}>
-              {story.title}
-            </Text>
-          </Pressable>
-        </Link>
-      ))}
+              <Text style={styles.label} numberOfLines={1}>
+                {story.title}
+              </Text>
+            </Pressable>
+          </Link>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -63,12 +72,23 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cover: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  coverScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.28)',
   },
   mark: {
     ...typography.h2,
     color: lightColors.textOnAccent,
     fontSize: 24,
     lineHeight: 28,
+    zIndex: 1,
   },
   label: {
     ...typography.caption,
