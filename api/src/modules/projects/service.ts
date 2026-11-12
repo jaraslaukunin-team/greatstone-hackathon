@@ -212,9 +212,11 @@ export async function duplicateProject(app: FastifyInstance, user: AuthUser, pro
   const db = app.db;
   const storage = app.storage;
 
-  // Только владелец может дублировать проект.
+  // Владелец — всегда. Участник общего альбома — только когда альбом уже заказан («своя копия»).
   const src = await assertProjectAccess(db, user, projectId, 'read');
-  if (src.ownerId !== user.id) {
+  const isOwner = src.ownerId === user.id;
+  const memberMayCopy = src.isShared && src.status === 'ordered';
+  if (!isOwner && !memberMayCopy) {
     await audit(db, {
       userId: user.id,
       action: 'access.denied',

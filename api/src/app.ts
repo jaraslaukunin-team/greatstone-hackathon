@@ -1,3 +1,4 @@
+import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { loadConfig, type Config } from './config.js';
@@ -39,6 +40,8 @@ export async function buildApp(overrides: Partial<Config> = {}): Promise<Fastify
   const app = Fastify({ logger: !silent, trustProxy: (_address, hop) => hop < 1 });
   app.decorate('config', config);
   registerErrorHandling(app);
+  // Expo web (localhost:8081) ходит на API (localhost:3000) — без CORS preflight падает с 404.
+  await app.register(cors, { origin: true });
   // Заголовки безопасности на всех ответах; JSON с данными пользователя не кэшируется ни браузером, ни прокси.
   app.addHook('onSend', async (_req, reply, payload) => {
     reply.header('X-Content-Type-Options', 'nosniff');
