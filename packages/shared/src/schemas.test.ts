@@ -69,6 +69,23 @@ describe('layoutSchema', () => {
     expect(layoutSchema.parse({ pages }).seen).toBeUndefined();
     expect(layoutSchema.safeParse({ pages, seen: [1] }).success).toBe(false);
   });
+  it('принимает цвет обложки и отступы страницы; без них макет валиден', () => {
+    const r = layoutSchema.parse({
+      pages: [{ template: 'one', cells: [cell], gap: 0.05 }],
+      cover: { photoId: null, title: '', color: '#EDD5D5' },
+    });
+    expect(r.cover?.color).toBe('#EDD5D5');
+    expect(r.pages[0]?.gap).toBe(0.05);
+    const plain = layoutSchema.parse({ pages: [{ template: 'one', cells: [cell] }] });
+    expect(plain.pages[0]?.gap).toBeUndefined();
+  });
+  it('отклоняет gap вне 0..0.12 и слишком длинный цвет обложки', () => {
+    const page = (gap: number) => ({ pages: [{ template: 'one', cells: [cell], gap }] });
+    expect(layoutSchema.safeParse(page(0.5)).success).toBe(false);
+    expect(layoutSchema.safeParse(page(-0.1)).success).toBe(false);
+    const pages = [{ template: 'one', cells: [cell] }];
+    expect(layoutSchema.safeParse({ pages, cover: { photoId: null, title: '', color: 'x'.repeat(21) } }).success).toBe(false);
+  });
   it('отклоняет слишком длинное название обложки', () => {
     const pages = [{ template: 'one', cells: [cell] }];
     expect(layoutSchema.safeParse({ pages, cover: { photoId: null, title: 'я'.repeat(101) } }).success).toBe(false);
