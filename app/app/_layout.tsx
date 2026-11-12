@@ -79,7 +79,7 @@ export default function RootLayout() {
               <Stack.Screen name="orders" />
               <Stack.Screen name="print" />
               <Stack.Screen name="album" />
-              <Stack.Screen name="invite" />
+              <Stack.Screen name="invite/[token]" />
               <Stack.Screen name="ai" />
               <Stack.Screen name="operator" />
               <Stack.Screen name="profile" />

@@ -13,6 +13,8 @@ type Props = {
   theme: BookTheme;
   /** Тап по странице: индекс страницы и её прямоугольник в окне (для анимации увеличения). */
   onOpenPage?: (pageIndex: number, rect: Rect) => void;
+  /** Разворот сменился: нужен просмотру результата, чтобы показать «Заказать» на последнем. */
+  onIndexChange?: (index: number, total: number) => void;
 };
 
 const FLIP_MS = 450;
@@ -21,7 +23,7 @@ const FLIP_MS = 450;
  * Листание книги: обложка, затем развороты. Переворот страницы поворачивает лист вокруг корешка;
  * при включённом «уменьшении движения» разворот меняется без анимации.
  */
-export function BookViewer({ title, layout, sourceOf, theme, onOpenPage }: Props) {
+export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndexChange }: Props) {
   const spreads = useMemo(() => spreadsOf(layout.pages.length), [layout.pages.length]);
   // Типы View в RN 0.88 не знают measureInWindow через ref, поэтому описываем нужный кусок сами.
   const bookRef = useRef<{ measureInWindow(cb: (x: number, y: number, w: number, h: number) => void): void } | null>(null);
@@ -35,6 +37,9 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage }: Props
   useEffect(() => {
     void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => undefined);
   }, []);
+  useEffect(() => {
+    onIndexChange?.(index, spreads.length);
+  }, [index, spreads.length, onIndexChange]);
 
   const pageW = boxWidth / 2;
   const pageH = pageW; // страницы квадратные: форматы книги в каталоге близки к квадрату
