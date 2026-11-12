@@ -4,6 +4,7 @@ import { takePendingInvite } from '../../src/album/pendingInvite';
 import { StyleSheet, Text, View } from 'react-native';
 import { Icon, type IconName } from '../../src/ui/Icon';
 import { lightColors, typography } from '../../src/theme/theme';
+import { useT } from '../../src/i18n/useT';
 
 function TabLabel({ label, icon, focused }: { label: string; icon: IconName; focused: boolean }) {
   return (
@@ -14,17 +15,29 @@ function TabLabel({ label, icon, focused }: { label: string; icon: IconName; foc
   );
 }
 
-const items = [
-  { name: 'index', title: 'Главная', icon: 'home' },
-  { name: 'designs', title: 'Мои', icon: 'folder' },
-  { name: 'assistant', title: 'AI', icon: 'star' },
-  { name: 'cart', title: 'Корзина', icon: 'cart' },
-  { name: 'orders', title: 'Заказы', icon: 'doc' },
-  { name: 'profile', title: 'Профиль', icon: 'user' },
-] as const;
+const tabNames = ['index', 'designs', 'assistant', 'cart', 'orders', 'profile'] as const;
+const tabIcons: Record<typeof tabNames[number], IconName> = {
+  index: 'home',
+  designs: 'folder',
+  assistant: 'star',
+  cart: 'cart',
+  orders: 'doc',
+  profile: 'user',
+};
 
 export default function TabsLayout() {
-  // Приглашение, открытое до входа, принимаем сразу после входа.
+  const t = useT();
+
+  const tabTitles: Record<typeof tabNames[number], string> = {
+    index: t.tabs.home,
+    designs: t.tabs.designs,
+    assistant: t.tabs.assistant,
+    cart: t.tabs.cart,
+    orders: t.tabs.orders,
+    profile: t.tabs.profile,
+  };
+
+  // Accept pending album invite right after login.
   useEffect(() => {
     void takePendingInvite().then((token) => {
       if (token) router.replace({ pathname: '/album/invite', params: { token } });
@@ -35,7 +48,6 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        // иконка рисуется внутри tabBarLabel, стандартный слот скрываем
         tabBarIcon: () => null,
         tabBarIconStyle: { display: 'none' },
         tabBarActiveTintColor: lightColors.text,
@@ -49,13 +61,15 @@ export default function TabsLayout() {
         },
       }}
     >
-      {items.map((item) => (
+      {tabNames.map((name) => (
         <Tabs.Screen
-          key={item.name}
-          name={item.name}
+          key={name}
+          name={name}
           options={{
-            title: item.title,
-            tabBarLabel: ({ focused }) => <TabLabel label={item.title} icon={item.icon} focused={focused} />,
+            title: tabTitles[name],
+            tabBarLabel: ({ focused }) => (
+              <TabLabel label={tabTitles[name]} icon={tabIcons[name]} focused={focused} />
+            ),
           }}
         />
       ))}

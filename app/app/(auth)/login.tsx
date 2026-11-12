@@ -5,6 +5,7 @@ import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { useRoleMode } from '../../src/auth/roleStore';
+import { useT } from '../../src/i18n/useT';
 import { lightColors, space, typography } from '../../src/theme/theme';
 import { ApiRequestError } from '../../src/api/client';
 import { BackButton } from '../../src/ui/BackButton';
@@ -13,6 +14,7 @@ export default function LoginScreen() {
   const { requestCode, loginAsGuest } = useAuth();
   const staff = useRoleMode((s) => s.mode) === 'staff';
   const demoHint = process.env.EXPO_PUBLIC_DEMO_HINT === '1';
+  const t = useT();
   const [contact, setContact] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,21 +37,28 @@ export default function LoginScreen() {
       <View style={styles.back}>
         <BackButton fallback="/(auth)/role" />
       </View>
-      <Text style={styles.title}>{staff ? 'Вход для сотрудников' : 'Рады видеть вас'}</Text>
-      <Text style={styles.sub}>
-        {staff ? 'Войдите по рабочему e-mail или телефону' : 'Войдите или начните без регистрации'}
-      </Text>
-      {staff && demoHint ? <Text style={styles.sub}>Демо: operator@test.local, код 000000</Text> : null}
+      <Text style={styles.title}>{staff ? t.login.titleStaff : t.login.titleCustomer}</Text>
+      <Text style={styles.sub}>{staff ? t.login.subStaff : t.login.subCustomer}</Text>
+      {staff && demoHint ? <Text style={styles.sub}>{t.login.demoHint}</Text> : null}
       <Input
-       
-        placeholder="Телефон или e-mail"
+        placeholder={t.login.placeholder}
         autoCapitalize="none"
         value={contact}
         onChangeText={setContact}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Получить код" onPress={() => void onSubmit()} disabled={loading || !contact.trim()} />
-      {staff ? null : <Button title="Продолжить как гость" variant="text" onPress={() => void loginAsGuest()} />}
+      <Button
+        title={t.login.send}
+        onPress={() => void onSubmit()}
+        disabled={loading || !contact.trim()}
+      />
+      {staff ? null : (
+        <Button
+          title={t.login.continueGuest}
+          variant="text"
+          onPress={() => void loginAsGuest()}
+        />
+      )}
     </View>
   );
 }
