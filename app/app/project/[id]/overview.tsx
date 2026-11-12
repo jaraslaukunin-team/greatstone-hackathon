@@ -1,10 +1,12 @@
 import { DEFAULT_THEME_ID, themeById, type CatalogDTO, type PhotoDTO, type ProjectDTO, type Rect } from '@picpac/shared';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import { autoLayoutLocal, unplacedPhotos } from '../../../src/editor/autoLayoutLocal';
-import { setTheme } from '../../../src/editor/editorActions';
+import { replacePhoto, setTheme, type CellRef } from '../../../src/editor/editorActions';
+import { useAuth } from '../../../src/auth/AuthProvider';
+import { useEditResult } from '../../../src/photoEditor/editResultStore';
 import { useProjectStore } from '../../../src/project/projectStore';
 import { useDebouncedSync } from '../../../src/project/useDebouncedSync';
 import { useThemeChoice } from '../../../src/project/themeChoiceStore';
@@ -28,10 +30,37 @@ export default function OverviewScreen() {
   const [editing, setEditing] = useState<{ pageIndex: number; rect: Rect } | null>(null);
   const [limits, setLimits] = useState({ min: 20, max: 60 });
   const [paramHandled, setParamHandled] = useState(false);
+  const { user } = useAuth();
+  // Фоторедактор открывается отдельным экраном: помним, какую ячейку правили, и вернём правку страницы по возвращении.
+  const pendingEdit = useRef<{ requestId: string; ref: CellRef } | null>(null);
+  const resume = useRef<{ pageIndex: number; rect: Rect } | null>(null);
+  const editResults = useEditResult((s) => s.results);
   const sourceOf = useMemo(() => projectSource(photoMap, client.resolveUrl), [photoMap, client.resolveUrl]);
   const photoList = useMemo(() => Array.from(photoMap.values()), [photoMap]);
   // Правки уходят на сервер через секунду после последнего изменения, без кнопки «Сохранить».
   useDebouncedSync(client, id, !busy);
+
+  // Готовое фото из редактора ставится в ту же ячейку; оригинал остаётся в проекте.
+  useEffect(() => {
+    const pending = pendingEdit.current;
+    const layout = draft?.layout;
+    if (!pending || !layout || !editResults[pending.requestId]) return;
+    const photo = useEditResult.getState().take(pending.requestId);
+    pendingEdit.current = null;
+    if (!photo) return;
+    setPhotoMap((m) => new Map(m).set(photo.id, photo));
+    setLayout(replacePhoto(layout, pending.ref, photo.id));
+  }, [editResults, draft, setLayout]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const r = resume.current;
+      if (r) {
+        resume.current = null;
+        setEditing(r);
+      }
+    }, []),
+  );
 
   // Ссылка вида ?page=N открывает правку этой страницы сразу после загрузки книги.
   useEffect(() => {
@@ -136,6 +165,15 @@ export default function OverviewScreen() {
           pagesMin={limits.min}
           pagesMax={limits.max}
           onChange={setLayout}
+          canEditPhoto={(p) => draft.project.ownerId === user?.id || p.uploadedBy === user?.id}
+          onOpenPhotoEditor={(photoId, ref) => {
+            const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            pendingEdit.current = { requestId, ref };
+            resume.current = editing;
+            // Окно правки закрывается: оно лежит поверх всех экранов и закрыло бы редактор.
+            setEditing(null);
+            router.push({ pathname: '/photo-editor', params: { projectId: String(id), photoId, requestId } });
+          }}
           onGoto={(pageIndex) => setEditing((e) => (e ? { ...e, pageIndex } : e))}
           onClose={() => setEditing(null)}
         />

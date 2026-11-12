@@ -80,6 +80,7 @@ export default function RootLayout() {
               <Stack.Screen name="print" />
               <Stack.Screen name="album" />
               <Stack.Screen name="invite/[token]" />
+              <Stack.Screen name="photo-editor" options={{ presentation: 'modal', title: 'Редактор фото', headerShown: false }} />
               <Stack.Screen name="ai" />
               <Stack.Screen name="operator" />
               <Stack.Screen name="profile" />
