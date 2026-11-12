@@ -90,7 +90,8 @@ export default function PlaceScreen() {
         {pageIdx.map((pi) => {
           const page = layout.pages[pi]!;
           const view = gapPreview === null ? page : { ...page, gap: gapPreview };
-          const rects = cellRects(view.template, pageW, pageW, view.cells.length, theme, view.gap);
+          // У текстовой страницы без ячеек выбирать нечего.
+          const rects = view.cells.length === 0 ? [] : cellRects(view.template, pageW, pageW, view.cells.length, theme, view.gap);
           return (
             <View key={pi} style={{ width: pageW, height: pageW }}>
               <PageView page={view} sourceOf={sourceOf} width={pageW} height={pageW} theme={theme} />
