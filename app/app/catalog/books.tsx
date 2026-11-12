@@ -1,6 +1,6 @@
 import { formatByn } from '@picpac/shared';
 import { Link } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog } from '../../src/catalog/useCatalog';
 import { Card } from '../../src/ui/Card';
 import { StateBanner } from '../../src/ui/StateBanner';
@@ -33,13 +33,28 @@ export default function BooksScreen() {
       <Text style={styles.sub}>Выберите, какой будет ваша история</Text>
       {books.map((product) => {
         const variant = product.variants[0];
+        const formats = product.variants.map((v) => v.format);
         return (
           <Link key={product.id} href={`/catalog/${product.id}`} asChild>
             <Card chevron>
               <Text style={styles.cardTitle}>{product.title}</Text>
               <Text style={styles.cardSub}>{product.description}</Text>
+              {formats.length > 0 ? (
+                <View style={styles.chips}>
+                  {formats.map((f) => (
+                    <View key={f} style={styles.chip}>
+                      <Text style={styles.chipText}>{f}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               {variant ? (
-                <Text style={styles.price}>от {formatByn(variant.basePriceKop)}</Text>
+                <View style={styles.row}>
+                  <Text style={styles.price}>от {formatByn(variant.basePriceKop)}</Text>
+                  {variant.leadTimeDays > 0 ? (
+                    <Text style={styles.lead}>{variant.leadTimeDays} дн.</Text>
+                  ) : null}
+                </View>
               ) : null}
             </Card>
           </Link>
@@ -56,5 +71,15 @@ const styles = StyleSheet.create({
   sub: { ...typography.body, color: lightColors.textSecondary, marginBottom: space[2] },
   cardTitle: { ...typography.h2, color: lightColors.text },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
-  price: { ...typography.price, color: lightColors.text, marginTop: space[2] },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1], marginTop: space[2] },
+  chip: {
+    backgroundColor: lightColors.canvas,
+    borderRadius: 999,
+    paddingHorizontal: space[3],
+    paddingVertical: 3,
+  },
+  chipText: { ...typography.label, color: lightColors.text },
+  row: { flexDirection: 'row', alignItems: 'baseline', gap: space[2], marginTop: space[2] },
+  price: { ...typography.price, color: lightColors.text },
+  lead: { ...typography.caption, color: lightColors.textSecondary },
 });

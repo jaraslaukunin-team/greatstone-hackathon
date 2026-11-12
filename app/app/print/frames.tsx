@@ -111,7 +111,7 @@ export default function PrintFramesScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Ваши отпечатки</Text>
       <Text style={styles.sub}>
-        {variant ? `${variant.format}. ` : ''}Фото печатается целиком с белыми полями; «Заполнить» обрежет края под формат.
+        {variant ? `${variant.format}. ` : ''}«С полями» сохраняет всё фото; «Без полей» обрежет края под формат.
       </Text>
       {frames.map((frame, index) => (
         <Card key={frame.photo.id}>
@@ -133,12 +133,12 @@ export default function PrintFramesScreen() {
               </View>
               <View style={styles.counter}>
                 <Button
-                  title="Целиком"
+                  title="С полями"
                   variant={frame.fit === 'contain' ? 'primary' : 'secondary'}
                   onPress={() => update(index, { fit: 'contain' })}
                 />
                 <Button
-                  title="Заполнить"
+                  title="Без полей"
                   variant={frame.fit === 'cover' ? 'primary' : 'secondary'}
                   onPress={() => update(index, { fit: 'cover' })}
                 />
