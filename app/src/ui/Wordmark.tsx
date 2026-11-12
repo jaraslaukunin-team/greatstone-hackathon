@@ -27,7 +27,7 @@ export function Wordmark({
       accessibilityLabel="Pic Pac"
     >
       {logoPaths.map((p, i) => (
-        <Path key={i} d={p.d} fill={color} fillRule={p.evenOdd ? 'evenodd' : 'nonzero'} />
+        <Path key={i} d={p.d} fill={p.fill ?? color} fillRule={p.evenOdd ? 'evenodd' : 'nonzero'} />
       ))}
     </Svg>
   );
