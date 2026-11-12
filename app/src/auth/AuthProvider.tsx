@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { createApiClient } from '../api/client';
 import { API_URL } from '../config';
+import { sessionTokenRef } from './sessionToken';
 import { authStorage } from './storage';
 import { createTokenStore } from './tokenStore';
 
@@ -47,10 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         const me = await client.get<UserDTO>('/me');
         if (!cancelled) {
+          sessionTokenRef.current = saved;
           setToken(saved);
           setUser(me);
         }
       } catch {
+        sessionTokenRef.current = null;
         await tokenStore.clear();
       } finally {
         if (!cancelled) setReady(true);
@@ -63,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySession = useCallback(async (nextToken: string, nextUser: UserDTO) => {
     await tokenStore.set(nextToken);
+    sessionTokenRef.current = nextToken;
     setToken(nextToken);
     setUser(nextUser);
   }, []);
@@ -92,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await tokenStore.clear();
+    sessionTokenRef.current = null;
     setToken(null);
     setUser(null);
   }, []);

@@ -1,6 +1,9 @@
+import { getNetworkMessage, getPhotoReadMessage, getUnknownMessage } from '../i18n/localizeError';
+import { useSettingsStore } from '../settings/settingsStore';
 import {
   encryptAesGcm,
   encryptJson,
+  hasAesGcm,
   importRawAesKey,
   base64ToBytes,
   bytesToBase64,
@@ -23,8 +26,16 @@ export class ApiRequestError extends Error {
   }
 }
 
+function clientLang() {
+  try {
+    return useSettingsStore.getState().lang;
+  } catch {
+    return 'ru' as const;
+  }
+}
+
 export class NetworkError extends Error {
-  constructor(message = 'Нет соединения с сервером') {
+  constructor(message = getNetworkMessage(clientLang())) {
     super(message);
     this.name = 'NetworkError';
   }
@@ -109,8 +120,10 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         headers: nextHeaders,
         body: payload,
       });
-    } catch {
-      throw new NetworkError();
+    } catch (err) {
+      const detail = err instanceof Error && err.message ? err.message : String(err ?? '');
+      const base = getNetworkMessage(clientLang());
+      throw new NetworkError(detail && detail !== 'Network request failed' ? `${base}: ${detail}` : base);
     }
 
     const text = await response.text();
@@ -130,12 +143,17 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     throw new ApiRequestError(
       status,
       err?.error?.code ?? 'UNKNOWN',
-      err?.error?.message ?? 'Неизвестная ошибка',
+      err?.error?.message ?? getUnknownMessage(clientLang()),
     );
   }
 
   async function resolvePayloadKey(): Promise<CryptoKey | null> {
     if (opts.disablePayloadEncryption || keyUnavailable) return null;
+    // Expo Go / React Native: без crypto.subtle шлём фото и AI-тела открытым текстом (API это допускает).
+    if (!hasAesGcm()) {
+      keyUnavailable = true;
+      return null;
+    }
     const token = opts.getToken();
     if (!token) return null;
     if (keyCache?.token === token) return keyCache.key;
@@ -151,9 +169,14 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       keyUnavailable = true;
       return null;
     }
-    const key = await importRawAesKey(keyB64);
-    keyCache = { token, key };
-    return key;
+    try {
+      const key = await importRawAesKey(keyB64);
+      keyCache = { token, key };
+      return key;
+    } catch {
+      keyUnavailable = true;
+      return null;
+    }
   }
 
   async function request<T>(
@@ -186,7 +209,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         const buf = await (await fetchImpl(uri)).arrayBuffer();
         return new Uint8Array(buf);
       } catch {
-        throw new NetworkError('Не удалось прочитать выбранное фото');
+        throw new NetworkError(getPhotoReadMessage(useSettingsStore.getState().lang));
       }
     }
     // React Native: читаем через fetch file:// или FileSystem, если доступен.
@@ -206,7 +229,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
         });
         return base64ToBytes(b64);
       } catch {
-        throw new NetworkError('Не удалось прочитать выбранное фото');
+        throw new NetworkError(getPhotoReadMessage(useSettingsStore.getState().lang));
       }
     }
   }
@@ -259,14 +282,68 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       try {
         blob = await (await fetchImpl(file.uri)).blob();
       } catch {
-        throw new NetworkError('Не удалось прочитать выбранное фото');
+        throw new NetworkError(getPhotoReadMessage(useSettingsStore.getState().lang));
       }
       form.append('file', blob, name);
     } else {
-      form.append('file', { uri: file.uri, name, type } as unknown as Blob);
+      // Expo Go / RN: нативный multipart надёжнее, чем FormData+fetch с { uri }.
+      try {
+        return await uploadNativeMultipart<T>(path, { uri: file.uri, name, type });
+      } catch (e) {
+        if (!(e instanceof NetworkError)) throw e;
+        form.append('file', { uri: file.uri, name, type } as unknown as Blob);
+      }
     }
 
     return request<T>('POST', path, form);
+  }
+
+  async function uploadNativeMultipart<T>(
+    path: string,
+    file: { uri: string; name: string; type: string },
+  ): Promise<T> {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const FileSystem = require('expo-file-system/legacy') as {
+      uploadAsync(
+        url: string,
+        fileUri: string,
+        options: {
+          httpMethod: string;
+          uploadType: number;
+          fieldName: string;
+          mimeType?: string;
+          headers?: Record<string, string>;
+        },
+      ): Promise<{ status: number; body: string }>;
+      FileSystemUploadType: { MULTIPART: number };
+    };
+    const token = opts.getToken();
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    let result: { status: number; body: string };
+    try {
+      result = await FileSystem.uploadAsync(`${opts.baseUrl}${path}`, file.uri, {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName: 'file',
+        mimeType: file.type,
+        headers,
+      });
+    } catch (err) {
+      const detail = err instanceof Error && err.message ? err.message : String(err ?? '');
+      const base = getNetworkMessage(clientLang());
+      throw new NetworkError(detail ? `${base}: ${detail}` : base);
+    }
+    let data: unknown = null;
+    if (result.body) {
+      try {
+        data = JSON.parse(result.body) as unknown;
+      } catch {
+        data = null;
+      }
+    }
+    if (result.status < 200 || result.status >= 300) throwIfError(result.status, data);
+    return data as T;
   }
 
   return {
