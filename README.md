@@ -1,13 +1,29 @@
-# PicPac Mobile
+<p align="center">
+  <img src="app/assets/brand/picpac-hero.png" alt="PicPac mobile — от фотографий до готовой фотокниги" width="720" />
+</p>
 
-**От фотографий в телефоне — до готового заказа фотокниги.**
+<p align="center">
+  <strong>От фотографий в телефоне — до готового заказа фотокниги.</strong><br/>
+  Мобильное приложение для заказа фотопродукции
+  <a href="https://picpac.by/">picPac.by</a> (ООО «Фотопринт»)<br/>
+  <em>Space Hackathon with Great Stone &amp; Photoprint — трек 2</em>
+</p>
 
-Мобильное приложение для заказа фотопродукции [picPac.by](https://picpac.by/) (ООО «Фотопринт»), разработанное для **Space Hackathon with Great Stone & Photoprint — трек 2**.
+<p align="center">
+  <a href="https://picpac.jaraslau.dev"><img src="https://img.shields.io/badge/demo-picpac.jaraslau.dev-DD5757?style=flat-square&labelColor=1A2422" alt="demo" /></a>
+  <a href=".github/workflows/deploy.yml"><img src="https://img.shields.io/github/actions/workflow/status/jaraslaukunin-team/greatstone-hackathon/deploy.yml?branch=main&style=flat-square&label=deploy&color=7AA45A&labelColor=1A2422" alt="deploy" /></a>
+  <img src="https://img.shields.io/badge/Node.js-20%2B-DD5757?style=flat-square&labelColor=1A2422&logo=nodedotjs&logoColor=white" alt="Node.js 20+" />
+  <img src="https://img.shields.io/badge/TypeScript-5-DD5757?style=flat-square&labelColor=1A2422&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Expo-SDK%2058-DD5757?style=flat-square&labelColor=1A2422&logo=expo&logoColor=white" alt="Expo SDK 58" />
+  <img src="https://img.shields.io/badge/Android%20%7C%20iOS%20%7C%20Web-7AA45A?style=flat-square&labelColor=1A2422" alt="Android | iOS | Web" />
+  <a href="https://github.com/jaraslaukunin-team/greatstone-hackathon/stargazers"><img src="https://img.shields.io/github/stars/jaraslaukunin-team/greatstone-hackathon?style=flat-square&label=stars&color=DD5757&labelColor=1A2422&logo=github&logoColor=white" alt="stars" /></a>
+</p>
 
 PicPac Mobile объединяет каталог, загрузку фотографий, автоматическую вёрстку, редактирование, проверку качества, оформление заказа и отслеживание статуса в одном понятном сценарии.
 
-> **[Открыть работающую демоверсию](https://picpac.jaraslau.dev)**  
-> Вход: **«Продолжить как гость»** или любой контакт и код **`000000`** (`DEMO_MODE`). Оплата демонстрационная — реальные деньги не списываются.
+> **[Открыть работающую демоверсию →](https://picpac.jaraslau.dev)**  
+> Вход: **«Продолжить как гость»** или любой контакт и код **`000000`** (`DEMO_MODE`).  
+> Оплата демонстрационная — реальные деньги не списываются.
 
 ### Что реализовано
 
@@ -462,11 +478,16 @@ npx tsc --noEmit -p api             # типы API
 
 ## Документация
 
-- [Отчёт о тестировании](docs/test-report.md) — критерии ТЗ и чем они подтверждены.
-- [Сценарий демо](docs/demo-script.md) — обязательный путь и дополнительные сценарии на 5–7 минут.
-- [Дизайн](docs/specs/2026-11-11-picpac-mobile-design.md) и [UX/UI](docs/specs/2026-11-11-picpac-mobile-ux.md).
-- [Заметки по интеграции](docs/integration-notes.md) — как переключить приложение на другой API.
-- [`SECURITY.md`](SECURITY.md) — политика безопасности.
+| Документ | О чём |
+|---|---|
+| [Отчёт о тестировании](docs/test-report.md) | Критерии ТЗ и чем они подтверждены |
+| [Сценарий демо](docs/demo-script.md) | Обязательный путь и доп. сценарии на 5–7 минут |
+| [Дизайн](docs/specs/2026-11-11-picpac-mobile-design.md) | Визуальная спецификация |
+| [UX/UI](docs/specs/2026-11-11-picpac-mobile-ux.md) | Экраны и жесты |
+| [Заметки по интеграции](docs/integration-notes.md) | Как переключить приложение на другой API |
+| [`SECURITY.md`](SECURITY.md) | Политика безопасности |
+| [`LICENSES.md`](LICENSES.md) | Лицензии зависимостей (`npm run licenses`) |
+| [`AGENTS.md`](AGENTS.md) | Гайд для агентов по стеку и правилам репозитория |
 
 ## Ограничения
 
@@ -478,4 +499,4 @@ npx tsc --noEmit -p api             # типы API
 - **Права в коде, без RLS.** Проверки покрыты тестами, но политики базы не дублируют их.
 - **AI.** Без `AIAI_API_KEY` работают заглушки; с ключом — aiai.by. Конверт клиент↔API и шифрование файлов
   включаются ключами `PAYLOAD_ENCRYPTION_KEY` и `FILE_ENCRYPTION_KEY`.
-- **Общий альбом:** книга собирается главами по дням съёмки (UTC)
+- **Общий альбом:** книга собирается главами по дням съёмки (UTC); сам пул не заказывается — только личная книга участника.
