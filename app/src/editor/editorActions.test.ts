@@ -3,6 +3,7 @@ import {
   moveSpread,
   replacePhoto,
   setCrop,
+  setTheme,
   swapCells,
 } from './editorActions';
 import type { Layout } from '@picpac/shared';
@@ -17,6 +18,20 @@ function layoutWith(photos: Array<string | null>): Layout {
     })),
   };
 }
+
+describe('setTheme', () => {
+  it('ставит тему и не трогает страницы и исходный макет', () => {
+    const input = layoutWith(['a', 'b']);
+    const next = setTheme(input, 'film');
+    expect(next.themeId).toBe('film');
+    expect(next.pages).toEqual(input.pages);
+    expect(input.themeId).toBeUndefined();
+  });
+
+  it('меняет тему повторно', () => {
+    expect(setTheme(setTheme(layoutWith(['a']), 'film'), 'travel').themeId).toBe('travel');
+  });
+});
 
 describe('editorActions', () => {
   it('swapCells меняет фото местами и не трогает остальное', () => {

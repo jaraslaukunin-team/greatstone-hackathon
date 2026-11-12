@@ -1,4 +1,4 @@
-import type { ProjectDTO } from '@picpac/shared';
+import type { ProjectDTO, ThemeId } from '@picpac/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -6,6 +6,8 @@ import { ApiRequestError } from '../../src/api/client';
 import { useApiClient } from '../../src/api/hooks';
 import { passwordProblem } from '../../src/album/password';
 import { useCatalog } from '../../src/catalog/useCatalog';
+import { useThemeChoice } from '../../src/project/themeChoiceStore';
+import { ThemePicker } from '../../src/theme/ThemePicker';
 import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
 import { lightColors, space, typography } from '../../src/theme/theme';
@@ -16,6 +18,7 @@ export default function CreateAlbumScreen() {
   const [title, setTitle] = useState('11 Б, 2027');
   const [expected, setExpected] = useState('25');
   const [password, setPassword] = useState('');
+  const [themeId, setThemeId] = useState<ThemeId>('graduation');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const graduation = catalog.data?.products.find((p) => p.kind === 'graduation');
@@ -38,6 +41,7 @@ export default function CreateAlbumScreen() {
         expectedMembers: Number(expected) || 1,
         joinPassword: password,
       });
+      useThemeChoice.getState().set(project.id, themeId);
       router.push(`/album/${project.id}`);
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать альбом');
@@ -50,6 +54,8 @@ export default function CreateAlbumScreen() {
     <View style={styles.screen}>
       <Text style={styles.title}>Выпускной альбом</Text>
       <Input value={title} onChangeText={setTitle} />
+      <Text style={styles.label}>Оформление</Text>
+      <ThemePicker value={themeId} onChange={setThemeId} />
       <Input value={expected} onChangeText={setExpected} keyboardType="number-pad" placeholder="Число учеников" />
       <Input
         value={password}
@@ -72,6 +78,7 @@ export default function CreateAlbumScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
+  label: { ...typography.bodyStrong, color: lightColors.text },
   hint: { ...typography.caption, color: lightColors.textSecondary },
   error: { ...typography.caption, color: lightColors.danger },
 });

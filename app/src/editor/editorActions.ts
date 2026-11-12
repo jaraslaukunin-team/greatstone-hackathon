@@ -1,4 +1,4 @@
-import type { Cell, Layout, Page } from '@picpac/shared';
+import type { Cell, Layout, Page, ThemeId } from '@picpac/shared';
 
 export type CellRef = { pageIndex: number; cellIndex: number };
 
@@ -49,6 +49,10 @@ export function applyTemplate(layout: Layout, pageIndex: number, template: Page[
     crop: { x: 0, y: 0, scale: 1, rotation: 0 as const },
   }));
   return next;
+}
+
+export function setTheme(layout: Layout, themeId: ThemeId): Layout {
+  return { ...cloneLayout(layout), themeId };
 }
 
 export function replacePhoto(layout: Layout, ref: CellRef, photoId: string): Layout {
