@@ -22,7 +22,7 @@ export default function HomeScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Wordmark />
+        <Wordmark height={40} />
         <Text style={styles.slogan}>{t.home.slogan}</Text>
       </View>
 
