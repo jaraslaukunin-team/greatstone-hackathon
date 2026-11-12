@@ -143,7 +143,7 @@ describe('фото-вложения в обращениях', () => {
     expect(dto.messages).toHaveLength(2);
     const photoMsg = dto.messages[1]!;
     expect(photoMsg.attachmentUrl).toMatch(
-      new RegExp(`^/interactions/${interactionId}/attachments/[0-9a-f-]{36}$`),
+      new RegExp(`^/interactions/${interactionId}/attachments/[0-9a-f-]{36}\\?exp=\\d+&sig=[0-9a-f]{64}$`),
     );
     expect(photoMsg.body).toBe('Смотрите на фото');
     // Старое текстовое сообщение — attachmentUrl null.
@@ -170,6 +170,52 @@ describe('фото-вложения в обращениях', () => {
     expect(fileRes.statusCode).toBe(200);
     expect(fileRes.headers['content-type']).toBe('image/jpeg');
     expect(fileRes.rawPayload.length).toBeGreaterThan(0);
+  });
+
+  it('своё обращение не открывает вложение чужого: 404 и запись access.denied', async () => {
+    const aliceInteraction = await openInteraction(alice, await makeOrder(alice));
+    const bobInteraction = await openInteraction(bob, await makeOrder(bob));
+    const bobDto = interactionSchema.parse((await uploadPhoto(bob, bobInteraction, fixture('photo-small.jpg'))).json());
+    const bobMessageId = bobDto.messages[1]!.attachmentUrl!.split('/attachments/')[1]!.split('?')[0]!;
+
+    const res = await call(alice, 'GET', `/interactions/${aliceInteraction}/attachments/${bobMessageId}`);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('подписанная ссылка открывается без токена и отдаёт картинку', async () => {
+    const interactionId = await openInteraction(alice, await makeOrder(alice));
+    const dto = interactionSchema.parse((await uploadPhoto(alice, interactionId, fixture('photo-small.jpg'))).json());
+    const res = await app.inject({ method: 'GET', url: dto.messages[1]!.attachmentUrl! });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('image/jpeg');
+  });
+
+  it('ссылка без подписи или с чужой подписью без токена не открывается', async () => {
+    const interactionId = await openInteraction(alice, await makeOrder(alice));
+    const dto = interactionSchema.parse((await uploadPhoto(alice, interactionId, fixture('photo-small.jpg'))).json());
+    const url = dto.messages[1]!.attachmentUrl!;
+    const bare = url.split('?')[0]!;
+    expect((await app.inject({ method: 'GET', url: bare })).statusCode).toBe(401);
+    const tampered = url.replace(/sig=[0-9a-f]/, (m) => `sig=${m.endsWith('0') ? '1' : '0'}`);
+    expect((await app.inject({ method: 'GET', url: tampered })).statusCode).toBe(403);
+  });
+
+  it('подпись вложения привязана к обращению и сообщению: от другого сообщения не подходит', async () => {
+    const interactionId = await openInteraction(alice, await makeOrder(alice));
+    const first = interactionSchema.parse((await uploadPhoto(alice, interactionId, fixture('photo-small.jpg'))).json());
+    const second = interactionSchema.parse((await uploadPhoto(alice, interactionId, fixture('photo-ok.jpg'))).json());
+    const urlA = first.messages[1]!.attachmentUrl!;
+    const urlB = second.messages[2]!.attachmentUrl!;
+    const forged = `${urlA.split('?')[0]!.replace(/[0-9a-f-]{36}$/, urlB.split('/attachments/')[1]!.split('?')[0]!)}?${urlA.split('?')[1]}`;
+    expect((await app.inject({ method: 'GET', url: forged })).statusCode).toBe(403);
+  });
+
+  it('просроченная подписанная ссылка не открывается', async () => {
+    const interactionId = await openInteraction(alice, await makeOrder(alice));
+    const dto = interactionSchema.parse((await uploadPhoto(alice, interactionId, fixture('photo-small.jpg'))).json());
+    const url = dto.messages[1]!.attachmentUrl!;
+    app.clock.now = () => new Date(Date.now() + 48 * 3600 * 1000);
+    expect((await app.inject({ method: 'GET', url })).statusCode).toBe(403);
   });
 
   it('оператор тоже может загрузить фото и скачать вложение', async () => {
@@ -209,7 +255,8 @@ describe('фото-вложения в обращениях', () => {
     const uploadRes = await uploadPhoto(alice, interactionId, jpeg);
     expect(uploadRes.statusCode).toBe(201);
     const dto = interactionSchema.parse(uploadRes.json());
-    const url = dto.messages[1]!.attachmentUrl!;
+    // Без подписи: подписанная ссылка — это право доступа само по себе, поэтому проверяем путь с токеном.
+    const url = dto.messages[1]!.attachmentUrl!.split('?')[0]!;
 
     const fileRes = await app.inject({
       method: 'GET',

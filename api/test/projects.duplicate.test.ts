@@ -84,6 +84,48 @@ describe('переименование и дублирование проект�
     )[0]!.id;
   });
 
+  describe('POST /projects/:id/duplicate сохраняет оформление', () => {
+    it('тема, обложка (с новым photoId), фон и подписи страницы переходят в копию', async () => {
+      const p = (await create(alice)).json() as { id: string; version: number };
+      const photo = (await upload(alice, p.id, 'a.jpg', fixture('photo-ok.jpg'))).json() as { id: string };
+      const crop = { x: 0, y: 0, scale: 1, rotation: 0 as const };
+      const layout: Layout = {
+        themeId: 'holiday',
+        cover: { photoId: photo.id, title: 'Лето', subtitle: '2026', spine: 'Лето' },
+        pages: [
+          {
+            template: 'one',
+            bg: '#EDD5D5',
+            texts: [{ text: 'Привет', x: 0.5, y: 0.9, style: 'caption' }],
+            cells: [{ photoId: photo.id, crop }],
+          },
+        ],
+      };
+      const saved = await call(alice, 'PUT', `/projects/${p.id}`, { layout, version: p.version });
+      expect(saved.statusCode).toBe(200);
+
+      const dup = projectSchema.parse((await call(alice, 'POST', `/projects/${p.id}/duplicate`)).json());
+      expect(dup.layout.themeId).toBe('holiday');
+      expect(dup.layout.pages[0]!.bg).toBe('#EDD5D5');
+      expect(dup.layout.pages[0]!.texts).toEqual(layout.pages[0]!.texts);
+      expect(dup.layout.cover).toMatchObject({ title: 'Лето', subtitle: '2026', spine: 'Лето' });
+
+      const copiedPhotos = await db.select().from(projectPhotos).where(eq(projectPhotos.projectId, dup.id));
+      const newPhotoId = copiedPhotos[0]!.id;
+      expect(newPhotoId).not.toBe(photo.id);
+      expect(dup.layout.cover?.photoId).toBe(newPhotoId);
+      expect(dup.layout.pages[0]!.cells[0]!.photoId).toBe(newPhotoId);
+    });
+
+    it('обложка без фото копируется как есть', async () => {
+      const p = (await create(alice)).json() as { id: string; version: number };
+      const layout: Layout = { cover: { photoId: null, title: 'Без фото' }, pages: [] };
+      await call(alice, 'PUT', `/projects/${p.id}`, { layout, version: p.version });
+      const dup = projectSchema.parse((await call(alice, 'POST', `/projects/${p.id}/duplicate`)).json());
+      expect(dup.layout.cover).toEqual({ photoId: null, title: 'Без фото' });
+    });
+  });
+
   // ─── RENAME ────────────────────────────────────────────────────────────────
 
   describe('PATCH /projects/:id (переименование)', () => {

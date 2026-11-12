@@ -193,15 +193,18 @@ export async function renameProject(db: Db, user: AuthUser, projectId: string, t
   return toProjectDTO(updated ?? { ...project, title, updatedAt: new Date() });
 }
 
+/** Копия макета на новые фото: тема, обложка, фон и подписи страниц сохраняются, id фото переназначаются. */
 function remapLayout(layout: Layout, idMap: Map<string, string>): Layout {
+  const remap = (id: string | null): string | null => (id != null && idMap.has(id) ? idMap.get(id)! : id);
+  const { pages, cover, seen, ...rest } = layout;
   return {
-    pages: layout.pages.map((page) => ({
+    ...rest,
+    pages: pages.map((page) => ({
       ...page,
-      cells: page.cells.map((cell) => ({
-        ...cell,
-        photoId: cell.photoId != null && idMap.has(cell.photoId) ? idMap.get(cell.photoId)! : cell.photoId,
-      })),
+      cells: page.cells.map((cell) => ({ ...cell, photoId: remap(cell.photoId) })),
     })),
+    ...(cover ? { cover: { ...cover, photoId: remap(cover.photoId) } } : {}),
+    ...(seen ? { seen: seen.map((id) => remap(id) ?? id) } : {}),
   };
 }
 
@@ -231,7 +234,8 @@ export async function duplicateProject(app: FastifyInstance, user: AuthUser, pro
 
   // Скопировать файлы в памяти (до создания БД-записей), чтобы можно было откатиться без сирот.
   const newProjectId = randomUUID();
-  const copies: Array<{ newId: string; key: string; data: Buffer; src: typeof srcPhotos[number] }> = [];
+  // Буферы фото не храним: копируем по одному и держим только ключи, иначе большая книга целиком оказывается в памяти API.
+  const copies: Array<{ newId: string; key: string; src: typeof srcPhotos[number] }> = [];
   try {
     for (const photo of srcPhotos) {
       let data: Buffer;
@@ -243,7 +247,7 @@ export async function duplicateProject(app: FastifyInstance, user: AuthUser, pro
       const newId = randomUUID();
       const key = storageKey(newProjectId, newId);
       await storage.put(key, data);
-      copies.push({ newId, key, data, src: photo });
+      copies.push({ newId, key, src: photo });
     }
   } catch (e) {
     // Откат: удалить все уже скопированные файлы.

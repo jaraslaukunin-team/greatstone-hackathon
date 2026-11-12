@@ -22,7 +22,7 @@ export type PageText = { text: string; x: number; y: number; style: PageTextStyl
 export type Page = { template: Template; cells: Cell[]; copies?: number; bg?: string; texts?: PageText[] };
 /** Обложка: фото (null — первая страница книги), название, подзаголовок и текст на корешке (от 40 страниц). */
 export type Cover = { photoId: string | null; title: string; subtitle?: string; spine?: string };
-export type Layout = { pages: Page[]; themeId?: string; cover?: Cover };
+export type Layout = { pages: Page[]; themeId?: string; cover?: Cover; seen?: string[] };
 
 export type UserDTO = {
   id: string;

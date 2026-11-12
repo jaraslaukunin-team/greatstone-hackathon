@@ -12,7 +12,14 @@ const DELAY_MS = 1000;
  * Пока enabled = false (книга ещё собирается), изменения не отправляются; при включении текущий макет
  * принимается за исходный. При закрытии экрана последняя правка уходит сразу.
  */
-export function useDebouncedSync(client: ApiClient, projectId: string | undefined, enabled: boolean) {
+export function useDebouncedSync(
+  client: ApiClient,
+  projectId: string | undefined,
+  enabled: boolean,
+  onRejected?: (code: 'PROJECT_ORDERED' | 'LAYOUT_INVALID') => void,
+) {
+  const rejectedRef = useRef(onRejected);
+  rejectedRef.current = onRejected;
   const layout = useProjectStore((s) => s.draft?.layout);
   const setSyncState = useProjectStore((s) => s.setSyncState);
   const baseline = useRef<Layout | undefined>(undefined);
@@ -39,7 +46,15 @@ export function useDebouncedSync(client: ApiClient, projectId: string | undefine
             s.draft ? { draft: { ...s.draft, project: { ...s.draft.project, version: server.version } } } : s,
           );
           if (retried) setSyncState('local-only');
-          else await save(next, true);
+          else {
+            // Повторяем с самым свежим макетом: пока шёл запрос, человек мог ещё править.
+            const latest = useProjectStore.getState().draft?.layout ?? next;
+            await save(latest, true);
+          }
+        },
+        onRejected: (code) => {
+          setSyncState('local-only');
+          rejectedRef.current?.(code);
         },
       });
     }
