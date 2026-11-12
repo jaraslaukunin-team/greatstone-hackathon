@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog, useVariantPrice } from '../../src/catalog/useCatalog';
+import { goodsPriceKop } from '../../src/checkout/goodsPrice';
 import { useApiClient } from '../../src/api/hooks';
 import { useThemeChoice, useThemeChoiceStore } from '../../src/project/themeChoiceStore';
 import { ThemePicker } from '../../src/theme/ThemePicker';
@@ -103,7 +104,7 @@ export default function ProductScreen() {
           <Text style={styles.lead}>Срок: {variant.leadTimeDays} рабочих дней</Text>
         ) : null}
         <Text style={styles.price}>
-          {quote.data ? formatByn(quote.data.totalKop) : '…'}
+          {quote.data ? formatByn(goodsPriceKop(quote.data)) : '…'}
           {quote.stale ? ' · устарело' : ''}
         </Text>
       </Card>

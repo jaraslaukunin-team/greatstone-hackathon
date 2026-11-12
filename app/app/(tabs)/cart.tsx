@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { ensureIdempotencyKey } from '../../src/checkout/idempotency';
 import { freeDeliveryHint } from '../../src/checkout/freeDelivery';
+import { goodsPriceKop } from '../../src/checkout/goodsPrice';
 import { billablePages } from '../../src/project/billablePages';
 import { useProjectStore } from '../../src/project/projectStore';
 import { useCatalog } from '../../src/catalog/useCatalog';
@@ -25,7 +26,7 @@ export default function CartScreen() {
 
   const delivery = catalog.data?.delivery.find((d) => d.id === 'belpost') ?? null;
   // В корзине показываем товар со скидкой без доставки; доставка — только на подтверждении.
-  const goodsKop = quote ? quote.itemsKop - quote.discountKop : null;
+  const goodsKop = quote ? goodsPriceKop(quote) : null;
   const hint =
     goodsKop != null && delivery?.freeFromKop
       ? freeDeliveryHint(goodsKop, delivery.freeFromKop)

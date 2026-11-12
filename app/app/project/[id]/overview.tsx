@@ -14,6 +14,7 @@ import { useApiClient } from '../../../src/api/hooks';
 import { hasContent, markSeen, reconcileLayout } from '../../../src/editor/reconcileLayout';
 import { addSpread, moveSpreadBy, replacePhoto, setCover, setTheme, type CellRef } from '../../../src/editor/editorActions';
 import { useVariantPrice } from '../../../src/catalog/useCatalog';
+import { goodsPriceKop } from '../../../src/checkout/goodsPrice';
 import { spreadIssues } from '../../../src/book/spreadIssues';
 import { useAuth } from '../../../src/auth/AuthProvider';
 import { useEditResult } from '../../../src/photoEditor/editResultStore';
@@ -339,7 +340,7 @@ export default function OverviewScreen() {
         onPress={() => router.push({ pathname: '/project/[id]/preview', params: { id: String(id) } })}
       />
       <Button
-        title={`Проверить${pageCount > 0 && quote.data ? ` · ${formatByn(quote.data.totalKop)}` : ''}`}
+        title={`Проверить${pageCount > 0 && quote.data ? ` · ${formatByn(goodsPriceKop(quote.data))}` : ''}`}
         disabled={busy}
         onPress={() => router.push(`/project/${id}/review`)}
       />
