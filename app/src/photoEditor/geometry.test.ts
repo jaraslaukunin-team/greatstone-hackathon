@@ -1,4 +1,41 @@
-import { exportSize, FULL_CROP, rotateCropQuarter, toFrameFractions } from './geometry';
+import { cropForAspect, exportSize, FULL_CROP, rotateCropQuarter, toFrameFractions } from './geometry';
+
+describe('cropForAspect', () => {
+  it('квадрат из горизонтального фото 6000×4000: вся высота, по центру', () => {
+    const c = cropForAspect(6000, 4000, 1);
+    expect(c.h).toBe(1);
+    expect(c.w).toBeCloseTo(2 / 3, 9);
+    expect(c.x).toBeCloseTo(1 / 6, 9);
+    expect(c.y).toBe(0);
+  });
+
+  it('16:9 из вертикального 4000×6000: вся ширина, по центру по высоте', () => {
+    const c = cropForAspect(4000, 6000, 16 / 9);
+    expect(c.w).toBe(1);
+    expect(c.h).toBeCloseTo(0.375, 9);
+    expect(c.y).toBeCloseTo(0.3125, 9);
+    expect(c.x).toBe(0);
+  });
+
+  it('пропорции фото дают целый кадр', () => {
+    const c = cropForAspect(6000, 4000, 3 / 2);
+    expect(c.x).toBeCloseTo(0, 9);
+    expect(c.y).toBeCloseTo(0, 9);
+    expect(c.w).toBeCloseTo(1, 9);
+    expect(c.h).toBeCloseTo(1, 9);
+  });
+
+  it('сдвиг двигает рамку вдоль свободной оси и не выпускает её за фото', () => {
+    expect(cropForAspect(6000, 4000, 1, 0).x).toBe(0);
+    expect(cropForAspect(6000, 4000, 1, 1).x).toBeCloseTo(1 - 2 / 3, 9);
+    expect(cropForAspect(6000, 4000, 1, 7).x).toBeCloseTo(1 - 2 / 3, 9);
+    expect(cropForAspect(6000, 4000, 1, -3).x).toBe(0);
+  });
+
+  it('нулевой размер фото не ломает расчёт', () => {
+    expect(cropForAspect(0, 0, 1)).toEqual(FULL_CROP);
+  });
+});
 
 describe('exportSize', () => {
   it('большое фото 6000×4000 ужимается до 4096 по длинной стороне с теми же пропорциями', () => {

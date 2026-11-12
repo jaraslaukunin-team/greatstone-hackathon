@@ -15,10 +15,12 @@
   "dependencies": {
     "@picpac/shared": "*",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/slider": "5.2.1",
     "@shopify/react-native-skia": "2.14.0",
     "@tanstack/react-query": "^5.62.8",
     "expo": "~58.0.23",
     "expo-constants": "~58.0.15",
+    "expo-file-system": "~58.0.13",
     "expo-font": "~58.0.11",
     "expo-image-manipulator": "~14.0.7",
     "expo-image-picker": "~17.0.8",

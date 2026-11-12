@@ -22,6 +22,23 @@ export function exportSize(
   return { width: Math.max(1, Math.round(w * scale)), height: Math.max(1, Math.round(h * scale)) };
 }
 
+/**
+ * Самая большая рамка заданных пропорций (ширина к высоте) внутри фото.
+ * offset 0..1 двигает её вдоль свободной оси: 0 — к левому/верхнему краю, 0.5 — по центру, 1 — к правому/нижнему.
+ */
+export function cropForAspect(srcW: number, srcH: number, aspect: number, offset = 0.5): CropRect {
+  if (srcW <= 0 || srcH <= 0 || aspect <= 0) return { ...FULL_CROP };
+  const t = Math.min(1, Math.max(0, offset));
+  const photoAspect = srcW / srcH;
+  if (aspect < photoAspect) {
+    // Рамка уже фото: вся высота, свободна ось X.
+    const w = (srcH * aspect) / srcW;
+    return { x: (1 - w) * t, y: 0, w, h: 1 };
+  }
+  const h = srcW / aspect / srcH;
+  return { x: 0, y: (1 - h) * t, w: 1, h };
+}
+
 /** Рамка обрезки после поворота снимка на 90° по часовой стрелке (рамка остаётся на том же месте фото). */
 export function rotateCropQuarter(crop: CropRect): CropRect {
   return { x: 1 - (crop.y + crop.h), y: crop.x, w: crop.h, h: crop.w };
