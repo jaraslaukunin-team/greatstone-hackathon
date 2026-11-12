@@ -28,6 +28,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?задайте JWT_SECRET в .env}
       FILE_URL_SECRET: ${FILE_URL_SECRET:?задайте FILE_URL_SECRET в .env}
       FILE_ENCRYPTION_KEY: ${FILE_ENCRYPTION_KEY:-}
+      PAYLOAD_ENCRYPTION_KEY: ${PAYLOAD_ENCRYPTION_KEY:-}
       UPLOAD_DIR: /data/uploads
       DEMO_MODE: ${DEMO_MODE:-false}
       AI_PROVIDER: ${AI_PROVIDER:-stub}

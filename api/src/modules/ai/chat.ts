@@ -9,6 +9,9 @@ import { auditLog, consents, orders, productVariants, products } from '../../db/
 import { AppError } from '../../errors.js';
 import { AI_HOURLY_LIMIT } from './service.js';
 import { isPromptAllowed } from './promptFilter.js';
+import { sanitizeForExternalLlm } from './sanitize.js';
+
+export { sanitizeForExternalLlm };
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -18,6 +21,14 @@ function wantsCatalog(text: string): boolean {
 
 function wantsOrders(text: string): boolean {
   return /заказ|статус|где|доставк|когда|готов/i.test(text);
+}
+
+function deanonymizeReply(reply: string, map: { ref: string; number: string }[]): string {
+  let out = reply;
+  for (const m of map) {
+    out = out.split(m.ref).join(m.number);
+  }
+  return out;
 }
 
 export async function chatAssist(
@@ -95,6 +106,7 @@ export async function chatAssist(
             .join('\n');
   }
 
+  const refMap: { ref: string; number: string }[] = [];
   let ordersBlock = 'Заказы не запрошены.';
   if (askOrders) {
     const recentOrders = await app.db
@@ -106,10 +118,18 @@ export async function chatAssist(
       .where(eq(orders.customerId, user.id))
       .orderBy(desc(orders.createdAt))
       .limit(8);
-    ordersBlock =
-      recentOrders.length === 0
-        ? 'Заказов пока нет.'
-        : recentOrders.map((o) => `- ${o.number}: ${o.status}`).join('\n');
+    if (recentOrders.length === 0) {
+      ordersBlock = 'Заказов пока нет.';
+    } else {
+      ordersBlock = recentOrders
+        .map((o, i) => {
+          const ref = `ORD-${i + 1}`;
+          refMap.push({ ref, number: o.number });
+          // Во внешний LLM — только техническая метка и статус, без номера заказа и сумм.
+          return `- ${ref}: ${o.status}`;
+        })
+        .join('\n');
+    }
   }
 
   let orderExtra = '';
@@ -121,32 +141,44 @@ export async function chatAssist(
     if (!focused) {
       throw new AppError(404, 'NOT_FOUND', 'Заказ не найден');
     }
-    orderExtra = `\nСейчас пользователь спрашивает про заказ ${focused.number}, статус ${focused.status}.`;
+    let ref = refMap.find((m) => m.number === focused.number)?.ref;
+    if (!ref) {
+      ref = `ORD-${refMap.length + 1}`;
+      refMap.push({ ref, number: focused.number });
+    }
+    orderExtra = `\nСейчас пользователь спрашивает про ${ref}, статус ${focused.status}. Не называй реальные номера заказов — только метки ORD-N.`;
   }
 
   const system = [
     'Ты — текстовый ассистент интернет-магазина фотопродукции picPac (Беларусь, BYN).',
     'Помогай отслеживать заказы, предлагать товары из каталога и консультировать по доставке.',
-    'Не выдумывай цены и статусы: опирайся только на данные ниже. Не проси и не раскрывай персональные данные сверх необходимого.',
+    'Не выдумывай цены и статусы: опирайся только на данные ниже.',
+    'Не проси и не упоминай ФИО, телефон, email, адрес, паспорт и реальные номера заказов — только метки ORD-N.',
     'Отвечай по-русски, кратко и дружелюбно. Не проси API-ключи и не обсуждай внутреннюю реализацию.',
     '',
     'Каталог:',
     catalogBlock,
     '',
-    'Заказы пользователя:',
+    'Заказы пользователя (обезличенные метки):',
     ordersBlock,
     orderExtra,
   ].join('\n');
+
+  const externalMessages: AiChatMessage[] = input.messages.map((m) => ({
+    role: m.role,
+    content: sanitizeForExternalLlm(m.content),
+  }));
 
   const messageHash = createHash('sha256').update(last.content, 'utf8').digest('hex');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45_000);
   try {
-    const reply = await app.ai.chat.complete({
+    const rawReply = await app.ai.chat.complete({
       system,
-      messages: input.messages,
+      messages: externalMessages,
       signal: controller.signal,
     });
+    const reply = deanonymizeReply(rawReply, refMap);
     await audit(app.db, {
       userId: user.id,
       action: 'ai.chat',

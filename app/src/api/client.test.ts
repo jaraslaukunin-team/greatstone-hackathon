@@ -66,7 +66,12 @@ describe('createApiClient', () => {
       calls.push({ url: String(input), init });
       return new Response(JSON.stringify({ id: 'p1' }), { status: 201, headers: { 'Content-Type': 'application/json' } });
     };
-    const client = createApiClient({ baseUrl: 'http://localhost:3000', getToken: () => 't', fetchImpl });
+    const client = createApiClient({
+      baseUrl: 'http://localhost:3000',
+      getToken: () => 't',
+      fetchImpl,
+      disablePayloadEncryption: true,
+    });
 
     await client.upload('/projects/x/photos', { uri: 'file:///a.jpg' });
 

@@ -68,10 +68,18 @@ describe('loadConfig', () => {
     ).toThrow(/AIAI_EDIT_MODE/);
   });
 
-  it('при AI_PROVIDER=aiai требует https AIAI_BASE_URL', () => {
+  it('при AI_PROVIDER=aiai требует https AIAI_BASE_URL и ключи шифрования', () => {
+    const keys = {
+      FILE_ENCRYPTION_KEY: 'a'.repeat(64),
+      PAYLOAD_ENCRYPTION_KEY: 'b'.repeat(64),
+    };
     const base = { DATABASE_URL: 'd', JWT_SECRET: 'j', FILE_URL_SECRET: 'f', AI_PROVIDER: 'aiai' };
-    expect(() => loadConfig({ ...base, AIAI_BASE_URL: 'http://insecure.local/v1' })).toThrow(/https/);
-    expect(loadConfig({ ...base, AIAI_BASE_URL: 'https://api.aiai.by/v1' }).aiaiBaseUrl).toBe(
+    expect(() => loadConfig({ ...base, AIAI_BASE_URL: 'http://insecure.local/v1', ...keys })).toThrow(/https/);
+    expect(() => loadConfig({ ...base, AIAI_BASE_URL: 'https://api.aiai.by/v1' })).toThrow(/FILE_ENCRYPTION_KEY/);
+    expect(() =>
+      loadConfig({ ...base, AIAI_BASE_URL: 'https://api.aiai.by/v1', FILE_ENCRYPTION_KEY: keys.FILE_ENCRYPTION_KEY }),
+    ).toThrow(/PAYLOAD_ENCRYPTION_KEY/);
+    expect(loadConfig({ ...base, AIAI_BASE_URL: 'https://api.aiai.by/v1', ...keys }).aiaiBaseUrl).toBe(
       'https://api.aiai.by/v1',
     );
   });

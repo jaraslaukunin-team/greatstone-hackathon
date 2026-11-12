@@ -21,7 +21,8 @@ export async function prepareAiEgress(source: Buffer): Promise<AiEgressPayload> 
   const height = meta.height ?? 1024;
   const fontSize = Math.max(12, Math.round(Math.min(width, height) * 0.028));
   const pad = Math.max(8, Math.round(fontSize * 0.4));
-  const label = 'picPac';
+  const mark = sha256.slice(0, 6);
+  const label = `picPac · ${mark}`;
   const textWidth = Math.ceil(label.length * fontSize * 0.62);
   const boxW = textWidth + pad * 2;
   const boxH = fontSize + pad * 2;
