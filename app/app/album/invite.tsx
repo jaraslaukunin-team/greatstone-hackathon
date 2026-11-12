@@ -36,7 +36,8 @@ export default function InviteScreen() {
       if (opts?.childName?.trim()) body.childName = opts.childName.trim();
       const project = await client.post<ProjectDTO>('/invites/accept', body);
       setState('done');
-      router.replace(`/project/${project.id}/overview`);
+      // Участник приходит загружать свои фото, а не собирать книгу: ведём сразу на загрузку.
+      router.replace(`/project/${project.id}/photos`);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 401 && e.code === 'UNAUTHORIZED') {
         await savePendingInvite(token);

@@ -1,9 +1,11 @@
-import type { PhotoDTO } from '@picpac/shared';
+import type { PhotoDTO, ProjectDTO } from '@picpac/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { doneRoute } from '../../../src/album/doneRoute';
 import { useApiClient } from '../../../src/api/hooks';
+import { useAuth } from '../../../src/auth/AuthProvider';
 import { pickPhotos } from '../../../src/photos/pickPhotos';
 import { UploadQueue } from '../../../src/photos/UploadQueue';
 import { Button } from '../../../src/ui/Button';
@@ -12,6 +14,8 @@ import { lightColors, radius, space, typography } from '../../../src/theme/theme
 export default function PhotosScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const client = useApiClient();
+  const { user } = useAuth();
+  const [project, setProject] = useState<ProjectDTO | null>(null);
   const [photos, setPhotos] = useState<PhotoDTO[]>([]);
   const [pending, setPending] = useState(0);
   const [failed, setFailed] = useState(0);
@@ -30,6 +34,13 @@ export default function PhotosScreen() {
       }),
     [client],
   );
+
+  useEffect(() => {
+    void client
+      .get<ProjectDTO>(`/projects/${id}`)
+      .then(setProject)
+      .catch(() => undefined);
+  }, [client, id]);
 
   useEffect(() => {
     // Фото, загруженные раньше, показываем сразу: можно вернуться на этот экран и добавить ещё.
@@ -86,7 +97,7 @@ export default function PhotosScreen() {
         title={`Готово · ${photos.length} фото`}
         variant="secondary"
         disabled={photos.length === 0 || pending > 0}
-        onPress={() => router.push(`/project/${id}/overview`)}
+        onPress={() => router.replace(doneRoute(project, user?.id) ?? `/project/${id}/overview`)}
       />
     </ScrollView>
   );
