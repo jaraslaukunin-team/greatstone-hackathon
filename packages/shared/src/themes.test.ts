@@ -39,7 +39,7 @@ describe('themes', () => {
 
   it('все цвета темы — корректные hex-значения', () => {
     for (const theme of THEMES) {
-      for (const field of ['pageBg', 'frameColor', 'coverBg', 'titleColor', 'coverText', 'spine', 'accent'] as const) {
+      for (const field of ['pageBg', 'frameColor', 'coverBg', 'titleColor', 'coverText', 'spine', 'accent', 'textColor'] as const) {
         expect(theme[field], `${theme.id}.${field}`).toMatch(HEX_RE);
       }
     }
@@ -51,5 +51,31 @@ describe('themes', () => {
       expect(theme.name).toBe(theme.title);
       expect(theme.coverText).toBe(theme.titleColor);
     }
+  });
+
+  // Контраст по WCAG: подписи на листе темы должны читаться (не ниже 4,5).
+  const luminance = (hex: string): number => {
+    const n = parseInt(hex.slice(1, 7), 16);
+    const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * ch[0]! + 0.7152 * ch[1]! + 0.0722 * ch[2]!;
+  };
+  const contrast = (a: string, b: string): number => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi! + 0.05) / (lo! + 0.05);
+  };
+
+  it('цвет подписей темы читается на её листе (контраст не ниже 4,5)', () => {
+    for (const t of THEMES) expect(contrast(t.textColor, t.pageBg), t.id).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('подписи тем отличаются друг от друга: пять разных цветов', () => {
+    expect(new Set(THEMES.map((t) => t.textColor)).size).toBe(THEMES.length);
+  });
+
+  it('у minimal цвет подписей прежний, как до появления textColor', () => {
+    expect(themeById('minimal').textColor).toBe('#364C49');
   });
 });

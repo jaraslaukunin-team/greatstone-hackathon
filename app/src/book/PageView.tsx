@@ -117,7 +117,7 @@ export function PageView({ page, sourceOf, width, height, theme }: Props) {
               fontFamily: style.font,
               fontSize: size,
               lineHeight: size * 1.25,
-              color: lightColors.text,
+              color: theme.textColor,
             }}
           >
             {t.text}

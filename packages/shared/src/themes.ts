@@ -24,6 +24,8 @@ export type BookTheme = {
   titleColor: string;
   /** Цвет надписей на обложке (то же, что titleColor): так называют его экраны витрины. */
   coverText: string;
+  /** Цвет подписей на страницах: подобран под лист темы, чтобы текст читался. */
+  textColor: string;
   /** Цвет корешка и рамок на витрине. */
   spine: string;
   /** Акцентный цвет темы: кнопки и метки на витрине. */
@@ -45,6 +47,7 @@ export const THEMES: readonly BookTheme[] = [
     titleFont: 'demi',
     titleColor: '#FFFFFF',
     coverText: '#FFFFFF',
+    textColor: '#364C49',
     spine: '#CCC7BF',
     accent: '#364C49',
   },
@@ -62,6 +65,7 @@ export const THEMES: readonly BookTheme[] = [
     titleFont: 'light',
     titleColor: '#364C49',
     coverText: '#364C49',
+    textColor: '#5A4636',
     spine: '#C9B9A6',
     accent: '#DD5757',
   },
@@ -79,6 +83,7 @@ export const THEMES: readonly BookTheme[] = [
     titleFont: 'demi',
     titleColor: '#FFFFFF',
     coverText: '#FFFFFF',
+    textColor: '#25414F',
     spine: '#A8C0CE',
     accent: '#4A7A96',
   },
@@ -96,6 +101,7 @@ export const THEMES: readonly BookTheme[] = [
     titleFont: 'demi',
     titleColor: '#FFFFFF',
     coverText: '#FFFFFF',
+    textColor: '#8A2F2F',
     spine: '#D4A5A5',
     accent: '#DD5757',
   },
@@ -113,6 +119,7 @@ export const THEMES: readonly BookTheme[] = [
     titleFont: 'book',
     titleColor: '#F6EFE6',
     coverText: '#F6EFE6',
+    textColor: '#2F2A45',
     spine: '#B8B0CC',
     accent: '#7B6FA0',
   },
