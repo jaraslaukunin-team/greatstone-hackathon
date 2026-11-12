@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createOrderRequestSchema, layoutSchema } from './schemas';
+import { albumMemberSchema, createOrderRequestSchema, layoutSchema, updateMyMemberRequestSchema } from './schemas';
 import { formatByn } from './money';
 
 const uuid = '3f2b8c1e-9d4a-4e6b-8a1f-2c7d5e9b0a11';
@@ -117,5 +117,34 @@ describe('layoutSchema', () => {
 describe('formatByn', () => {
   it('форматирует копейки', () => {
     expect(formatByn(8740)).toBe('87,40 BYN');
+  });
+});
+
+describe('личные страницы альбома', () => {
+  const cell = { photoId: null, crop: { x: 0, y: 0, scale: 1, rotation: 0 } };
+  const page = (extra: object) => ({ pages: [{ template: 'one', cells: [cell], ...extra }] });
+  it('страница принимает memberId и qr с https-ссылкой', () => {
+    const r = layoutSchema.parse(page({ memberId: 'u1', qr: { url: 'https://youtu.be/abc', x: 0.5, y: 0.7, size: 0.3 } }));
+    expect(r.pages[0]).toMatchObject({ memberId: 'u1', qr: { size: 0.3 } });
+  });
+  it('qr отклоняет не-https ссылки, слишком длинные и неверный размер', () => {
+    const qr = (over: object) => page({ qr: { url: 'https://x.by/v', x: 0.5, y: 0.7, size: 0.3, ...over } });
+    expect(layoutSchema.safeParse(qr({ url: 'javascript:alert(1)' })).success).toBe(false);
+    expect(layoutSchema.safeParse(qr({ url: 'http://x.by/v' })).success).toBe(false);
+    expect(layoutSchema.safeParse(qr({ url: 'https://x.by/' + 'a'.repeat(300) })).success).toBe(false);
+    expect(layoutSchema.safeParse(qr({ size: 0.9 })).success).toBe(false);
+    expect(layoutSchema.safeParse(qr({ size: 0.05 })).success).toBe(false);
+  });
+  it('updateMyMemberRequestSchema: пожелание до 200 символов, видео только https', () => {
+    expect(updateMyMemberRequestSchema.safeParse({ wish: 'ok' }).success).toBe(true);
+    expect(updateMyMemberRequestSchema.safeParse({ videoUrl: null }).success).toBe(true);
+    expect(updateMyMemberRequestSchema.safeParse({ wish: 'я'.repeat(201) }).success).toBe(false);
+    expect(updateMyMemberRequestSchema.safeParse({ videoUrl: 'ftp://x' }).success).toBe(false);
+    expect(updateMyMemberRequestSchema.safeParse({ childName: '' }).success).toBe(false);
+  });
+  it('albumMemberSchema принимает wish и videoUrl (в том числе null)', () => {
+    const m = { userId: 'u', childName: null, role: 'contributor', photosCount: 0 };
+    expect(albumMemberSchema.safeParse({ ...m, wish: null, videoUrl: null }).success).toBe(true);
+    expect(albumMemberSchema.safeParse({ ...m, wish: 'Удачи', videoUrl: 'https://x.by/v' }).success).toBe(true);
   });
 });

@@ -23,7 +23,10 @@ export type PageTextStyle = 'title' | 'caption' | 'date' | 'quote';
 /** Подпись на странице: x, y — центр текста в долях страницы (0..1). */
 export type PageText = { text: string; x: number; y: number; style: PageTextStyle; rot?: number; hidden?: boolean; locked?: boolean };
 /** gap — отступы страницы (доля ширины, 0..0.12): заменяют поле и зазор темы. */
-export type Page = { template: Template; cells: Cell[]; copies?: number; bg?: string; texts?: PageText[]; gap?: number };
+/** QR-код на странице: ссылка, центр и размер в долях ширины страницы. */
+export type PageQr = { url: string; x: number; y: number; size: number };
+/** memberId — владелец личной страницы альбома (userId участника); qr — код на видео-поздравление. */
+export type Page = { template: Template; cells: Cell[]; copies?: number; bg?: string; texts?: PageText[]; gap?: number; memberId?: string; qr?: PageQr };
 /** Обложка: фото (null — первая страница книги), название, подзаголовок и текст на корешке (от 40 страниц). */
 export type Cover = { photoId: string | null; title: string; subtitle?: string; spine?: string; color?: string };
 export type Layout = { pages: Page[]; themeId?: string; cover?: Cover; seen?: string[] };
@@ -192,7 +195,13 @@ export type AlbumMemberDTO = {
   childName: string | null;
   role: 'organizer' | 'contributor';
   photosCount: number;
+  /** Пожелание ученика классу и ссылка на видео (https); null — не заполнено. */
+  wish: string | null;
+  videoUrl: string | null;
 };
+
+/** Что участник может обновить о себе в общем альбоме. */
+export type UpdateMyMemberRequest = { childName?: string; wish?: string; videoUrl?: string | null };
 
 export type AlbumProgressDTO = { expected: number | null; members: AlbumMemberDTO[] };
 
