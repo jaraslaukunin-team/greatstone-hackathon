@@ -21,3 +21,6 @@ coverage/
 *.tsbuildinfo
 .idea/
 .cursor/
+
+app/dist-prod/
+app/dist-local/

@@ -1,1 +1,0 @@
-__d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{value:!0}),Object.defineProperty(e,"default",{enumerable:!0,get:function(){return c}});var t=r(d[0]),n=r(d[1]),u=r(d[2]);function c(){return(0,u.jsx)(t.Stack,{screenOptions:{...n.stackOptions,title:'\u0424\u043e\u0442\u043e\u043a\u043d\u0438\u0433\u0430'}})}},820,[822,895,7]);
