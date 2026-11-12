@@ -12,7 +12,8 @@
 	@assets path /_expo/* /assets/* /favicon.ico /canvaskit.wasm
 	handle @assets {
 		root * /srv/web
-		header /canvaskit.wasm Content-Type application/wasm
+		@wasm path /canvaskit.wasm
+		header @wasm Content-Type application/wasm
 		file_server
 	}
 

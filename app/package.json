@@ -9,7 +9,7 @@
     "android": "node scripts/copy-canvaskit.mjs && expo start --android",
     "ios": "node scripts/copy-canvaskit.mjs && expo start --ios",
     "web": "node scripts/copy-canvaskit.mjs && expo start --web",
-    "web:build": "node scripts/copy-canvaskit.mjs && expo export -p web",
+    "web:build": "node scripts/copy-canvaskit.mjs && expo export -p web && node scripts/copy-canvaskit.mjs dist",
     "test": "jest"
   },
   "dependencies": {

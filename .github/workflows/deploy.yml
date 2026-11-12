@@ -38,6 +38,8 @@ jobs:
         run: |
           npm run copy:canvaskit -w app
           npx expo export -p web --clear --output-dir dist-prod
+          # expo export (output:single) не кладёт .wasm из public/ в dist — копируем явно
+          node scripts/copy-canvaskit.mjs dist-prod
         working-directory: app
 
       - name: Архивы
@@ -61,7 +63,8 @@ jobs:
             tar xzf src.tgz --exclude=.env
             cd web && find . -mindepth 1 -delete && tar xzf ../web.tgz && cd ..
             docker compose up -d --build api
-            docker compose up -d caddy'
+            # Caddyfile на bind-mount: без recreate контейнер часто не подхватывает правки (inotify)
+            docker compose up -d --force-recreate caddy'
 
       - name: Проверка
         run: |
