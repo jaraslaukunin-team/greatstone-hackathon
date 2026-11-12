@@ -122,7 +122,7 @@ export default function AlbumScreen() {
       <Text style={styles.title}>{ordered ? 'Альбом готов' : 'Сбор фотографий'}</Text>
       <Text style={styles.sub}>{progressText(progress)}</Text>
 
-      <Button title="Загрузить фото" onPress={() => router.push(`/project/${id}/overview`)} />
+      <Button title="Загрузить фото" onPress={() => router.push(`/project/${id}/photos`)} />
       <Button
         title="Открыть макет"
         variant="secondary"
