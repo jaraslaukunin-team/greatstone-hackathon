@@ -22,6 +22,7 @@ const createdAt = () => ts('created_at').notNull().defaultNow();
 
 export const roleEnum = pgEnum('role', ['customer', 'operator']);
 export const productKindEnum = pgEnum('product_kind', ['photobook', 'prints', 'graduation']);
+export const productLineEnum = pgEnum('product_line', ['photo', 'digital']);
 export const projectStatusEnum = pgEnum('project_status', ['draft', 'ordered']);
 export const photoSourceEnum = pgEnum('photo_source', ['gallery', 'ai']);
 export const memberRoleEnum = pgEnum('member_role', ['organizer', 'contributor']);
@@ -34,6 +35,7 @@ export const orderStatusEnum = pgEnum('order_status', [
   'cancelled',
 ]);
 export const deliveryMethodEnum = pgEnum('delivery_method', ['courier_minsk', 'ems', 'belpost']);
+export const paymentMethodEnum = pgEnum('payment_method', ['card', 'erip', 'courier']);
 export const interactionStatusEnum = pgEnum('interaction_status', ['open', 'answered', 'closed']);
 export const aiJobStatusEnum = pgEnum('ai_job_status', ['pending', 'done', 'failed']);
 export const consentKindEnum = pgEnum('consent_kind', ['ai_processing']);
@@ -66,6 +68,8 @@ export const authCodes = pgTable(
 export const products = pgTable('products', {
   id: id(),
   kind: productKindEnum('kind').notNull(),
+  /** Линейка печати: 'photo' — фотопечать, 'digital' — цифровая, null — не применимо (книги). */
+  line: productLineEnum('line'),
   title: text('title').notNull(),
   description: text('description').notNull().default(''),
   leadTimeDays: integer('lead_time_days').notNull(),
@@ -205,6 +209,8 @@ export const orders = pgTable(
     total: integer('total').notNull(),
     currency: text('currency').notNull().default('BYN'),
     deliveryMethod: deliveryMethodEnum('delivery_method').notNull(),
+    paymentMethod: paymentMethodEnum('payment_method').notNull().default('card'),
+    eripNumber: text('erip_number'),
     recipientName: text('recipient_name'),
     address: text('address'),
     status: orderStatusEnum('status').notNull().default('accepted'),
@@ -258,6 +264,8 @@ export const interactionMessages = pgTable(
       .references(() => interactions.id, { onDelete: 'cascade' }),
     authorId: uuid('author_id').references(() => profiles.id, { onDelete: 'set null' }),
     body: text('body').notNull(),
+    /** Storage key для вложенного изображения; null — без вложения. */
+    attachmentKey: text('attachment_key'),
     createdAt: createdAt(),
   },
   (t) => [index('interaction_messages_interaction_idx').on(t.interactionId)],

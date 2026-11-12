@@ -5,11 +5,13 @@ import { PrintStack } from '../../src/ui/PrintStack';
 import { Wordmark } from '../../src/ui/Wordmark';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { useRoleMode } from '../../src/auth/roleStore';
+import { useT } from '../../src/i18n/useT';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function WelcomeScreen() {
   const { loginAsGuest } = useAuth();
   const setMode = useRoleMode((s) => s.setMode);
+  const t = useT();
 
   return (
     <View style={styles.screen}>
@@ -18,17 +20,21 @@ export default function WelcomeScreen() {
         <PrintStack size={150} />
       </View>
       <View style={styles.copy}>
-        <Text style={styles.title}>Ваши моменты. В{' '}настоящей книге.</Text>
-        <Text style={styles.sub}>Выберите фото — мы разложим их сами.</Text>
+        <Text style={styles.title}>{t.welcome.title}</Text>
+        <Text style={styles.sub}>{t.welcome.sub}</Text>
       </View>
       <View style={styles.actions}>
         <Link href="/(auth)/role" asChild>
-          <Button title="Дальше" />
+          <Button title={t.welcome.next} />
         </Link>
-        <Button title="Продолжить как гость" variant="text" onPress={() => {
+        <Button
+          title={t.welcome.guest}
+          variant="text"
+          onPress={() => {
             setMode('customer');
             void loginAsGuest();
-          }} />
+          }}
+        />
       </View>
     </View>
   );

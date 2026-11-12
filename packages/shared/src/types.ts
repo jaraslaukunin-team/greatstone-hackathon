@@ -1,6 +1,7 @@
 import type { Kopecks } from './money';
 
 export type Role = 'customer' | 'operator';
+export type PaymentMethod = 'card' | 'erip' | 'courier';
 export type OrderStatus =
   | 'accepted'
   | 'moderation'
@@ -47,9 +48,17 @@ export type VariantDTO = {
 export type ProductDTO = {
   id: string;
   kind: 'photobook' | 'prints' | 'graduation';
+  /** Линейка печати: 'photo' — фотопечать, 'digital' — цифровая, null — не применимо (книги). */
+  line: 'photo' | 'digital' | null;
   title: string;
   description: string;
   variants: VariantDTO[];
+};
+
+export type PickupPoint = {
+  id: string;
+  title: string;
+  address: string;
 };
 
 export type DeliveryOptionDTO = {
@@ -59,6 +68,7 @@ export type DeliveryOptionDTO = {
   freeFromKop: Kopecks | null;
   etaDays: [number, number];
   payOnDelivery: boolean;
+  pickupPoints?: PickupPoint[];
 };
 
 export type LimitsDTO = {
@@ -118,8 +128,11 @@ export type OrderAddress = {
   recipient: string;
   phone: string;
   city: string;
-  street: string;
+  /** Required unless pickupPointId is provided (Белпочта ПВЗ). */
+  street?: string;
   postalCode?: string;
+  /** Идентификатор пункта выдачи (только для Белпочты). */
+  pickupPointId?: string;
 };
 
 export type CreateOrderRequest = {
@@ -128,6 +141,8 @@ export type CreateOrderRequest = {
   promoCode?: string;
   expectedTotalKop: Kopecks;
   address?: OrderAddress;
+  /** Способ оплаты, по умолчанию card. */
+  payment?: PaymentMethod;
 };
 
 export type OrderHistoryEntry = { status: OrderStatus; at: string; note?: string };
@@ -140,6 +155,8 @@ export type OrderDTO = {
   totalKop: Kopecks;
   currency: 'BYN';
   delivery: DeliveryMethodId;
+  payment: PaymentMethod;
+  eripNumber: string | null;
   createdAt: string;
   history: OrderHistoryEntry[];
   interactionIds: string[];
@@ -151,6 +168,7 @@ export type InteractionMessageDTO = {
   authorRole: Role | null;
   body: string;
   createdAt: string;
+  attachmentUrl: string | null;
 };
 
 export type InteractionDTO = {

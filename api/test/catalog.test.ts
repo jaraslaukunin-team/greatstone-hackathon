@@ -25,11 +25,11 @@ describe('каталог', () => {
   const get = async (url: string, token?: string) =>
     app.inject({ method: 'GET', url, headers: token ? { authorization: `Bearer ${token}` } : {} });
 
-  it('гость получает 6 продуктов и ответ проходит схему каталога', async () => {
+  it('гость получает 7 продуктов и ответ проходит схему каталога', async () => {
     const res = await get('/catalog', await guestToken());
     expect(res.statusCode).toBe(200);
     const catalog = catalogSchema.parse(res.json());
-    expect(catalog.products).toHaveLength(6);
+    expect(catalog.products).toHaveLength(7);
     expect(catalog.products.every((p) => p.description.length > 0)).toBe(true);
   });
 
@@ -84,5 +84,28 @@ describe('каталог', () => {
     const malformed = await get('/catalog/not-a-uuid', token);
     expect(malformed.statusCode).toBe(404);
     expect(malformed.json().error.code).toBe('NOT_FOUND');
+  });
+
+  it('линейки печати: фотоотпечатки имеют line=photo, цифровая печать — line=digital, книги — line=null', async () => {
+    const catalog = catalogSchema.parse((await get('/catalog', await guestToken())).json());
+    const byTitle = Object.fromEntries(catalog.products.map((p) => [p.title, p]));
+
+    // Фотопечать
+    expect(byTitle['Печать 10×15']!.line).toBe('photo');
+    expect(byTitle['Печать 15×20']!.line).toBe('photo');
+
+    // Цифровая печать
+    const digital = byTitle['Цифровая печать']!;
+    expect(digital.line).toBe('digital');
+    expect(digital.kind).toBe('prints');
+    const digitalByFormat = Object.fromEntries(digital.variants.map((v) => [v.format, v]));
+    expect(digitalByFormat['Открытка 10×15']!).toMatchObject({ basePriceKop: 150, pricePerPageKop: 150, pageWidthCm: 10 });
+    expect(digitalByFormat['Постер 30×40']!).toMatchObject({ basePriceKop: 1200, pricePerPageKop: 1200, pageWidthCm: 30 });
+    expect(digitalByFormat['Постер 40×60']!).toMatchObject({ basePriceKop: 1900, pricePerPageKop: 1900, pageWidthCm: 40 });
+
+    // Фотокниги и альбом не имеют линейки
+    for (const title of ['Фотокнига Lite', 'Фотокнига Classic', 'Фотокнига Premium', 'Выпускной альбом']) {
+      expect(byTitle[title]!.line).toBeNull();
+    }
   });
 });

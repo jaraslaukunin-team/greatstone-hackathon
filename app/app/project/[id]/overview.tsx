@@ -12,7 +12,8 @@ import { useAuth } from '../../../src/auth/AuthProvider';
 import { useEditResult } from '../../../src/photoEditor/editResultStore';
 import { useProjectStore } from '../../../src/project/projectStore';
 import { useDebouncedSync } from '../../../src/project/useDebouncedSync';
-import { useThemeChoice } from '../../../src/project/themeChoiceStore';
+import { blankLayout } from '../../../src/project/blankLayout';
+import { useThemeChoice, useThemeChoiceStore } from '../../../src/project/themeChoiceStore';
 import { ThemePicker } from '../../../src/theme/ThemePicker';
 import { syncProject } from '../../../src/project/syncProject';
 import { Button } from '../../../src/ui/Button';
@@ -101,11 +102,16 @@ export default function OverviewScreen() {
       const previous = stored?.project.id === project.id ? stored.layout : project.layout;
       const keep =
         previous.pages.some((pg) => pg.cells.some((c) => c.photoId)) && unplacedPhotos(previous, photos).length === 0;
-      const laidOut = keep
-        ? previous
-        : autoLayoutLocal(photos, { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 60 });
       // Тема: уже записанная в макете, иначе выбранная до загрузки фото, иначе по умолчанию. Повторная раскладка тему не теряет.
       const chosen = useThemeChoice.getState().get(project.id) ?? DEFAULT_THEME_ID;
+      // В ручном режиме и при пустом макете создаём пустую книгу без автораскладки.
+      const buildMode = useThemeChoiceStore.getState().mode;
+      const isEmpty = !previous.pages.some((pg) => pg.cells.some((c) => c.photoId));
+      const laidOut = keep
+        ? previous
+        : buildMode === 'manual' && isEmpty
+          ? blankLayout(variant?.pagesMin ?? 20, chosen)
+          : autoLayoutLocal(photos, { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 60 });
       const layout = { ...laidOut, themeId: previous.themeId ?? laidOut.themeId ?? chosen };
       if (cancelled) return;
       setDraft({ ...project, layout });

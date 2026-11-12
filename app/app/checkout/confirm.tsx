@@ -1,4 +1,4 @@
-import type { DeliveryMethodId, OrderDTO, QuoteResponse } from '@picpac/shared';
+import type { DeliveryMethodId, OrderDTO, PaymentMethod, QuoteResponse } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -13,7 +13,11 @@ import { lightColors, space, typography } from '../../src/theme/theme';
 import { formatByn } from '@picpac/shared';
 
 export default function ConfirmScreen() {
-  const { delivery, payment } = useLocalSearchParams<{ delivery: DeliveryMethodId; payment: string }>();
+  const { delivery, payment, promoCode } = useLocalSearchParams<{
+    delivery: DeliveryMethodId;
+    payment: PaymentMethod;
+    promoCode?: string;
+  }>();
   const client = useApiClient();
   const { draft, setIdempotencyKey, clear } = useProjectStore();
   const address = useAddressStore((s) => s.address);
@@ -28,10 +32,12 @@ export default function ConfirmScreen() {
       draft,
       setIdempotencyKey,
       delivery: delivery ?? 'belpost',
+      payment: payment ?? 'card',
+      promoCode: promoCode?.trim() || undefined,
       pages: billablePages(draft.layout),
       address: address ?? undefined,
     });
-  }, [client, draft, delivery, address, setIdempotencyKey]);
+  }, [client, draft, delivery, payment, promoCode, address, setIdempotencyKey]);
 
   useEffect(() => {
     if (!controller) return;
@@ -46,12 +52,14 @@ export default function ConfirmScreen() {
       const order = await controller.submit();
       clear();
       useAddressStore.getState().setAddress(null);
-      router.replace({ pathname: '/checkout/result', params: { orderId: order.id, payment } });
+      router.replace({ pathname: '/checkout/result', params: { orderId: order.id, payment: payment ?? 'card' } });
     } catch (e) {
       if (e instanceof ApiRequestError && e.code === 'PRICE_CHANGED') {
         const next = await controller.quote();
         setQuote(next);
         setError('Цена изменилась. Проверьте сумму и нажмите ещё раз.');
+      } else if (e instanceof ApiRequestError && e.code === 'PAYMENT_FAILED') {
+        router.replace({ pathname: '/checkout/payment-error', params: { delivery: delivery ?? 'belpost' } });
       } else if (e instanceof NetworkError) {
         setError('Заказ не отправлен. Проверьте сеть и нажмите «Повторить».');
       } else {
@@ -75,6 +83,9 @@ export default function ConfirmScreen() {
       <Text style={styles.title}>Подтверждение</Text>
       <Text style={styles.sub}>{draft.project.title}</Text>
       <Text style={styles.price}>{quote ? formatByn(quote.totalKop) : '…'}</Text>
+      {quote?.promoApplied ? (
+        <Text style={styles.promo}>Промокод применён · скидка {formatByn(quote.discountKop)}</Text>
+      ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button title={error ? 'Повторить' : 'Оплатить'} disabled={loading} onPress={() => void onPay()} />
     </View>
@@ -86,5 +97,6 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
   price: { ...typography.price, color: lightColors.text },
+  promo: { ...typography.caption, color: lightColors.success },
   error: { ...typography.caption, color: lightColors.danger },
 });

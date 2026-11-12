@@ -9,6 +9,7 @@ type Options = {
   draft: ProjectDraft;
   setIdempotencyKey: (key: string | null) => void;
   delivery: CreateOrderRequest['delivery'];
+  payment?: CreateOrderRequest['payment'];
   promoCode?: string;
   address?: CreateOrderRequest['address'];
   pages: number;
@@ -50,6 +51,7 @@ export function createCheckoutController(opts: Options) {
               promoCode: opts.promoCode,
               expectedTotalKop: quote.totalKop,
               address: opts.address,
+              payment: opts.payment ?? 'card',
             },
             { 'Idempotency-Key': key },
           );
