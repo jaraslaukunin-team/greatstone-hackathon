@@ -101,6 +101,27 @@ describe('applySpreadTemplate', () => {
   });
 });
 
+describe('панорама и кадры', () => {
+  it('после панорамы другой шаблон не дублирует фото', () => {
+    const pano = applySpreadTemplate(base(), 1, 'panorama');
+    const r = applySpreadTemplate(pano, 1, 'diptych');
+    expect(ids(r.pages[1])).toEqual(['a']);
+    expect(ids(r.pages[2])).toEqual([null]);
+  });
+  it('кадр и fit фото сохраняются, если оно осталось в шаблоне', () => {
+    const layout = base();
+    layout.pages[1] = { template: 'one', cells: [{ photoId: 'a', crop: { x: 0.1, y: 0, scale: 2, rotation: 0 }, fit: 'cover' }] };
+    const r = applySpreadTemplate(layout, 1, 'diptych');
+    expect(r.pages[1]?.cells[0]).toMatchObject({ photoId: 'a', fit: 'cover', crop: { x: 0.1, scale: 2 } });
+  });
+  it('кадр панорамы не переходит в обычную ячейку', () => {
+    const pano = applySpreadTemplate(base(), 1, 'panorama');
+    const r = applySpreadTemplate(pano, 1, 'diptych');
+    expect(r.pages[1]?.cells[0]?.crop).toEqual({ x: 0, y: 0, scale: 1, rotation: 0 });
+    expect(r.pages[1]?.cells[0]?.fit).toBeUndefined();
+  });
+});
+
 describe('applySpreadTemplateToAll', () => {
   it('применяет ко всем разворотам, кроме обложки', () => {
     const r = applySpreadTemplateToAll(base(), 'diptych');
