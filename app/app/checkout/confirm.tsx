@@ -83,6 +83,13 @@ export default function ConfirmScreen() {
       <Text style={styles.title}>Подтверждение</Text>
       <Text style={styles.sub}>{draft.project.title}</Text>
       <Text style={styles.price}>{quote ? formatByn(quote.totalKop) : '…'}</Text>
+      {quote ? (
+        <Text style={styles.delivery}>
+          {quote.deliveryKop === 0
+            ? 'Доставка: бесплатно'
+            : `Доставка: ${formatByn(quote.deliveryKop)}`}
+        </Text>
+      ) : null}
       {quote?.promoApplied ? (
         <Text style={styles.promo}>Промокод применён · скидка {formatByn(quote.discountKop)}</Text>
       ) : null}
@@ -97,6 +104,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
   price: { ...typography.price, color: lightColors.text },
+  delivery: { ...typography.caption, color: lightColors.textSecondary },
   promo: { ...typography.caption, color: lightColors.success },
   error: { ...typography.caption, color: lightColors.danger },
 });

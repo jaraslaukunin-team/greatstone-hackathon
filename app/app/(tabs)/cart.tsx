@@ -24,7 +24,12 @@ export default function CartScreen() {
   const [promoError, setPromoError] = useState<string | null>(null);
 
   const delivery = catalog.data?.delivery.find((d) => d.id === 'belpost') ?? null;
-  const hint = quote && delivery?.freeFromKop ? freeDeliveryHint(quote.totalKop, delivery.freeFromKop) : null;
+  // В корзине показываем товар со скидкой без доставки; доставка — только на подтверждении.
+  const goodsKop = quote ? quote.itemsKop - quote.discountKop : null;
+  const hint =
+    goodsKop != null && delivery?.freeFromKop
+      ? freeDeliveryHint(goodsKop, delivery.freeFromKop)
+      : null;
 
   useEffect(() => {
     if (!draft) return;
@@ -72,7 +77,7 @@ export default function CartScreen() {
       <Card>
         <Text style={styles.cardTitle}>{draft.project.title}</Text>
         <Text style={styles.cardSub}>{billablePages(draft.layout)} {draft.layout.pages.some((p) => p.copies) ? 'отпечатков' : 'страниц'}</Text>
-        <Text style={styles.price}>{quote ? formatByn(quote.totalKop) : '…'}</Text>
+        <Text style={styles.price}>{goodsKop != null ? formatByn(goodsKop) : '…'}</Text>
         {quote?.promoApplied ? (
           <Text style={styles.promoApplied}>Промокод применён · скидка {formatByn(quote.discountKop)}</Text>
         ) : null}
