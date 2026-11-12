@@ -1,12 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { and, asc, count, eq, gt } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import type { AlbumProgressDTO, InviteDTO, ProjectDTO, UpdateMyMemberRequest } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import { verifyPassword } from '../../auth/password.js';
 import type { AuthUser } from '../../auth/plugin.js';
 import type { Db } from '../../db/client.js';
-import { auditLog, projectInvites, projectMembers, projectPhotos, projects } from '../../db/schema.js';
+import { auditLog, profiles, projectInvites, projectMembers, projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import { assertProjectAccess, toProjectDTO } from '../projects/service.js';
 
@@ -120,11 +120,25 @@ export async function getProgress(db: Db, user: AuthUser, projectId: string): Pr
       .where(eq(projectPhotos.projectId, projectId))
       .groupBy(projectPhotos.uploadedBy),
   ]);
+  const userIds = [project.ownerId, ...members.map((m) => m.userId)];
+  const nameRows = await db
+    .select({ id: profiles.id, displayName: profiles.displayName })
+    .from(profiles)
+    .where(inArray(profiles.id, userIds));
+  const names = new Map(nameRows.map((r) => [r.id, r.displayName]));
   const photosOf = (userId: string) => counts.find((c) => c.userId === userId)?.photos ?? 0;
   return {
     expected: project.expectedMembers,
     members: [
-      { userId: project.ownerId, childName: null, role: 'organizer', photosCount: photosOf(project.ownerId), wish: null, videoUrl: null },
+      {
+        userId: project.ownerId,
+        childName: null,
+        role: 'organizer',
+        photosCount: photosOf(project.ownerId),
+        wish: null,
+        videoUrl: null,
+        displayName: names.get(project.ownerId) ?? null,
+      },
       ...members.map((m) => ({
         userId: m.userId,
         childName: m.childName,
@@ -132,6 +146,7 @@ export async function getProgress(db: Db, user: AuthUser, projectId: string): Pr
         photosCount: photosOf(m.userId),
         wish: m.wish,
         videoUrl: m.videoUrl,
+        displayName: names.get(m.userId) ?? null,
       })),
     ],
   };
