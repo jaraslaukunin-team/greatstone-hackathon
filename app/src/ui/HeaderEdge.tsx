@@ -4,21 +4,20 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { lightColors } from '../theme/theme';
 
 const EDGE_H = 44;
-/** Сколько px градиент заходит вверх в непрозрачную шапку — без стыка-линии. */
-const OVERLAP = 14;
 
-/** [offset, opacity]. Снаружи: от сплошного bg к прозрачности. */
+/** [offset, opacity]. Outside: мягкий fade поверх контента. Inside: вуаль внизу headerBackground. */
 const STOPS_INSIDE: [string, number][] = [
   ['0', 0],
   ['0.4', 0.25],
-  ['0.75', 0.55],
-  ['1', 0.85],
+  ['0.75', 0.5],
+  ['1', 0.75],
 ];
 const STOPS_OUTSIDE: [string, number][] = [
   ['0', 1],
-  ['0.25', 0.7],
-  ['0.55', 0.35],
-  ['0.8', 0.12],
+  ['0.22', 0.78],
+  ['0.45', 0.48],
+  ['0.7', 0.2],
+  ['0.88', 0.06],
   ['1', 0],
 ];
 
@@ -52,8 +51,8 @@ export function HeaderBackground() {
 
 const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: lightColors.bg },
-  edge: { position: 'absolute', left: 0, right: 0, height: EDGE_H, zIndex: 1 },
-  inside: { bottom: 0 },
-  // Верх градиента внутри бара (OVERLAP), низ выступает ниже шапки.
-  outside: { bottom: -(EDGE_H - OVERLAP) },
+  edge: { height: EDGE_H, width: '100%' },
+  inside: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 1 },
+  // In-flow for height, then pull content up under the fade (не накрывает аватар выше).
+  outside: { marginBottom: -EDGE_H, zIndex: 1 },
 });

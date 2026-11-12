@@ -8,7 +8,7 @@ import { HeaderEdge } from './HeaderEdge';
 import { Wordmark } from './Wordmark';
 
 const LOGO_H = 38;
-const PROFILE_SIZE = 48;
+const PROFILE_SIZE = 44;
 const GLYPH = 22;
 
 /** Симметричная иконка профиля (центр viewBox 12,12). */
@@ -23,26 +23,28 @@ function ProfileGlyph({ color }: { color: string }) {
   );
 }
 
-/** Шапка без красной полосы: лого слева, профиль в кружке справа. */
+/** Шапка: непрозрачный бар с лого/профилем; мягкий градиент только ниже, поверх контента. */
 export function AppHeader() {
   const insets = useSafeAreaInsets();
   const t = useT();
 
   return (
-    <View style={[styles.bar, { paddingTop: Math.max(insets.top, space[2]) }]}>
-      <View style={styles.row}>
-        <Wordmark color={lightColors.accent} height={LOGO_H} />
-        <Pressable
-          onPress={() => router.navigate('/(tabs)/profile')}
-          accessibilityRole="button"
-          accessibilityLabel={t.tabs.profile}
-          hitSlop={8}
-          style={styles.profileHit}
-        >
-          <View style={styles.profileCircle}>
-            <ProfileGlyph color={lightColors.text} />
-          </View>
-        </Pressable>
+    <View style={styles.wrap}>
+      <View style={[styles.bar, { paddingTop: Math.max(insets.top, space[2]) }]}>
+        <View style={styles.row}>
+          <Wordmark color={lightColors.accent} height={LOGO_H} />
+          <Pressable
+            onPress={() => router.navigate('/(tabs)/profile')}
+            accessibilityRole="button"
+            accessibilityLabel={t.tabs.profile}
+            hitSlop={8}
+            style={styles.profileHit}
+          >
+            <View style={styles.profileCircle}>
+              <ProfileGlyph color={lightColors.text} />
+            </View>
+          </Pressable>
+        </View>
       </View>
       <HeaderEdge />
     </View>
@@ -50,11 +52,15 @@ export function AppHeader() {
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    zIndex: 10,
+    // Без фона: иначе сплошной крем под градиентом убивает fade в тёмный баннер.
+  },
   bar: {
     backgroundColor: lightColors.bg,
     paddingHorizontal: space[4],
     paddingBottom: space[2],
-    zIndex: 10,
+    zIndex: 2,
     overflow: 'visible',
   },
   row: {
@@ -62,10 +68,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    overflow: 'visible',
   },
   profileHit: {
     width: PROFILE_SIZE,
     height: PROFILE_SIZE,
+    overflow: 'visible',
   },
   profileCircle: {
     width: PROFILE_SIZE,
