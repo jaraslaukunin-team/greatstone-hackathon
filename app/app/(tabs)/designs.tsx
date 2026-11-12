@@ -233,12 +233,14 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text },
   row: { position: 'relative' },
   cardPress: { flex: 1 },
-  card: { paddingRight: space[4] + 48 },
+  // Место справа: меню (44) + зазор + шеврон Card (~28) + отступ
+  card: { paddingRight: space[4] + 44 + 8 + 28 },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
   menuBtn: {
     position: 'absolute',
-    right: space[2],
+    // Слева от шеврона (он у Card: right space[3], иконка 24)
+    right: space[3] + 28 + 4,
     top: 0,
     bottom: 0,
     width: 44,
