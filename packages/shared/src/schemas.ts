@@ -5,6 +5,7 @@ const iso = z.string().datetime();
 const kop = z.number().int().nonnegative();
 
 export const roleSchema = z.enum(['customer', 'operator']);
+export const paymentMethodSchema = z.enum(['card', 'erip', 'courier']);
 export const orderStatusSchema = z.enum([
   'accepted',
   'moderation',
@@ -58,6 +59,11 @@ export const productSchema = z.object({
   description: z.string(),
   variants: z.array(variantSchema),
 });
+export const pickupPointSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  address: z.string(),
+});
 export const deliveryOptionSchema = z.object({
   id: deliveryMethodIdSchema,
   title: z.string(),
@@ -65,6 +71,7 @@ export const deliveryOptionSchema = z.object({
   freeFromKop: kop.nullable(),
   etaDays: z.tuple([z.number().int(), z.number().int()]),
   payOnDelivery: z.boolean(),
+  pickupPoints: z.array(pickupPointSchema).optional(),
 });
 export const limitsSchema = z.object({
   maxPhotoBytes: z.number().int().positive(),
@@ -116,19 +123,31 @@ export const quoteResponseSchema = z.object({
   promoApplied: z.boolean(),
 });
 
-export const orderAddressSchema = z.object({
-  recipient: z.string().min(1),
-  phone: z.string().min(1),
-  city: z.string().min(1),
-  street: z.string().min(1),
-  postalCode: z.string().optional(),
-});
+export const orderAddressSchema = z
+  .object({
+    recipient: z.string().min(1),
+    phone: z.string().min(1),
+    city: z.string().min(1),
+    street: z.string().optional(),
+    postalCode: z.string().optional(),
+    pickupPointId: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.pickupPointId && (!data.street || data.street.trim() === '')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['street'],
+        message: 'Укажите улицу или пункт выдачи заказа',
+      });
+    }
+  });
 export const createOrderRequestSchema = z.object({
   projectId: z.string().uuid(),
   delivery: deliveryMethodIdSchema,
   promoCode: z.string().optional(),
   expectedTotalKop: kop,
   address: orderAddressSchema.optional(),
+  payment: paymentMethodSchema.optional().default('card'),
 });
 
 export const orderSchema = z.object({
@@ -139,6 +158,8 @@ export const orderSchema = z.object({
   totalKop: kop,
   currency: z.literal('BYN'),
   delivery: deliveryMethodIdSchema,
+  payment: paymentMethodSchema,
+  eripNumber: z.string().nullable(),
   createdAt: iso,
   history: z.array(z.object({ status: orderStatusSchema, at: iso, note: z.string().optional() })),
   interactionIds: z.array(z.string()),
