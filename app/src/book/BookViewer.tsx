@@ -15,6 +15,8 @@ type Props = {
   onOpenPage?: (pageIndex: number, rect: Rect) => void;
   /** Разворот сменился: нужен просмотру результата, чтобы показать «Заказать» на последнем. */
   onIndexChange?: (index: number, total: number) => void;
+  /** Перейти к развороту (например, по тапу на миниатюру); key нужен, чтобы повторный переход к тому же развороту сработал. */
+  jumpTo?: { index: number; key: number };
 };
 
 const FLIP_MS = 450;
@@ -23,7 +25,7 @@ const FLIP_MS = 450;
  * Листание книги: обложка, затем развороты. Переворот страницы поворачивает лист вокруг корешка;
  * при включённом «уменьшении движения» разворот меняется без анимации.
  */
-export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndexChange }: Props) {
+export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndexChange, jumpTo }: Props) {
   const spreads = useMemo(() => spreadsOf(layout.pages.length), [layout.pages.length]);
   // Типы View в RN 0.88 не знают measureInWindow через ref, поэтому описываем нужный кусок сами.
   const bookRef = useRef<{ measureInWindow(cb: (x: number, y: number, w: number, h: number) => void): void } | null>(null);
@@ -40,6 +42,15 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndex
   useEffect(() => {
     onIndexChange?.(index, spreads.length);
   }, [index, spreads.length, onIndexChange]);
+  // Переход по тапу на миниатюру: без переворота, сразу к нужному развороту.
+  useEffect(() => {
+    if (jumpTo) setIndex(Math.min(spreads.length - 1, Math.max(0, jumpTo.index)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jumpTo?.key]);
+  // Если страниц стало меньше (удалили страницу), индекс не должен выйти за книгу.
+  useEffect(() => {
+    setIndex((i) => Math.min(i, spreads.length - 1));
+  }, [spreads.length]);
 
   const pageW = boxWidth / 2;
   const pageH = pageW; // страницы квадратные: форматы книги в каталоге близки к квадрату
@@ -80,7 +91,8 @@ export function BookViewer({ title, layout, sourceOf, theme, onOpenPage, onIndex
   const view = (i: number | null) => (
     <PageView page={page(i)} sourceOf={sourceOf} width={pageW} height={pageH} theme={theme} />
   );
-  const [curL, curR] = spreads[index]!;
+  // Страниц могло стать меньше прямо сейчас (удалили страницу): индекс подтянется эффектом, а этот кадр не должен упасть.
+  const [curL, curR] = spreads[Math.min(index, spreads.length - 1)]!;
 
   // Тап по странице: сообщаем её индекс и положение в окне, чтобы правка «выросла» из этого места.
   function openPage(fromRight = curR !== null) {

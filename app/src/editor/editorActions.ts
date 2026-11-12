@@ -1,4 +1,5 @@
 import type { Cell, Layout, Page, ThemeId } from '@picpac/shared';
+import { spreadsOf } from '../book/flip';
 
 export type CellRef = { pageIndex: number; cellIndex: number };
 
@@ -48,6 +49,23 @@ export function applyTemplate(layout: Layout, pageIndex: number, template: Page[
     photoId: keep[i] ?? null,
     crop: { x: 0, y: 0, scale: 1, rotation: 0 as const },
   }));
+  return next;
+}
+
+/**
+ * Сдвигает разворот целиком (обе его страницы) на соседнее место: dir −1 — назад, 1 — вперёд.
+ * Обложка (разворот 0) не двигается и не уступает место; последний разворот может быть из одной страницы.
+ */
+export function moveSpreadBy(layout: Layout, spreadIndex: number, dir: -1 | 1): Layout {
+  const next = cloneLayout(layout);
+  const spreads = spreadsOf(next.pages.length);
+  const target = spreadIndex + dir;
+  if (spreadIndex < 1 || spreadIndex >= spreads.length || target < 1 || target >= spreads.length) return next;
+  const order = spreads.map((_, i) => i);
+  [order[spreadIndex], order[target]] = [order[target]!, order[spreadIndex]!];
+  const pageOrder = order.flatMap((i) => spreads[i]!.filter((p): p is number => p !== null));
+  const pages = next.pages;
+  next.pages = pageOrder.map((p) => pages[p]!);
   return next;
 }
 
