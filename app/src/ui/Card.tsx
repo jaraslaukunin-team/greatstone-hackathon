@@ -1,6 +1,8 @@
-import { StyleSheet, View, type ViewProps } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, View, type ViewProps } from 'react-native';
 import { lightColors, radius, space } from '../theme/theme';
 import { Icon } from './Icon';
+import { USE_NATIVE_DRIVER } from './motion';
 
 /**
  * plain — белая карточка с рамкой
@@ -19,18 +21,30 @@ const tones: Record<CardTone, { backgroundColor: string; borderColor: string }> 
   green: { backgroundColor: lightColors.action, borderColor: lightColors.action },
 };
 
-type Props = ViewProps & { tone?: CardTone; chevron?: boolean };
+type Props = ViewProps & {
+  tone?: CardTone;
+  chevron?: boolean;
+  /** Задержка появления, мс: для ступенчатого списка карточек. */
+  delay?: number;
+};
 
-export function Card({ tone = 'plain', chevron, style, children, ...rest }: Props) {
+export function Card({ tone = 'plain', chevron, delay = 0, style, children, ...rest }: Props) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const a = Animated.timing(v, { toValue: 1, duration: 360, delay, easing: Easing.out(Easing.cubic), useNativeDriver: USE_NATIVE_DRIVER });
+    a.start();
+    return () => a.stop();
+  }, [v, delay]);
+  const enter = { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] };
   return (
-    <View style={[styles.card, tones[tone], chevron && styles.withChevron, style]} {...rest}>
+    <Animated.View style={[styles.card, tones[tone], chevron && styles.withChevron, style, enter]} {...rest}>
       {children}
       {chevron ? (
         <View style={styles.chevron}>
           <Icon name="chevronRight" size={24} color={tone === 'green' ? '#FFFFFF' : lightColors.textSecondary} />
         </View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 

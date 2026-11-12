@@ -1,9 +1,11 @@
 import { formatByn } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog } from '../../src/catalog/useCatalog';
 import { paperLabel, paperOf } from '../../src/print/paper';
 import { Card } from '../../src/ui/Card';
+import { ListSkeleton } from '../../src/ui/Skeleton';
+import { staggerDelay } from '../../src/ui/motion';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function PrintFormatScreen() {
@@ -14,7 +16,7 @@ export default function PrintFormatScreen() {
     sourceProjectId?: string;
   }>();
   const catalog = useCatalog();
-  if (catalog.isLoading) return <ActivityIndicator style={{ marginTop: 40 }} color={lightColors.accent} />;
+  if (catalog.isLoading) return <ListSkeleton count={2} />;
   const prints = (catalog.data?.products ?? []).filter((p) => p.kind === 'prints');
   const products = productId ? prints.filter((p) => p.id === productId) : prints;
   return (
@@ -23,8 +25,8 @@ export default function PrintFormatScreen() {
       <Text style={styles.sub}>
         Фото печатается целиком, без растяжения. Обрезать под формат можно будет на следующем шаге.
       </Text>
-      {products.map((product) => (
-        <Card key={product.id}>
+      {products.map((product, index) => (
+        <Card key={product.id} delay={staggerDelay(index)}>
           <Text style={styles.product}>{product.title}</Text>
           {product.variants.map((variant) => {
             const paper = paperOf(variant.format);

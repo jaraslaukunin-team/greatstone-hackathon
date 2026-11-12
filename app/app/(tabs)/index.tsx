@@ -4,6 +4,7 @@ import { useCatalog } from '../../src/catalog/useCatalog';
 import { projectKind, projectKindLabel } from '../../src/project/projectKind';
 import { useProjectStore } from '../../src/project/projectStore';
 import { Card } from '../../src/ui/Card';
+import { FadeIn } from '../../src/ui/FadeIn';
 import { PrintStack } from '../../src/ui/PrintStack';
 import { lightColors, space, typography } from '../../src/theme/theme';
 import { Icon } from '../../src/ui/Icon';
@@ -20,7 +21,9 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.slogan}>{t.home.slogan}</Text>
+      <FadeIn>
+        <Text style={styles.slogan}>{t.home.slogan}</Text>
+      </FadeIn>
 
       {draft ? (
         <Pressable
@@ -42,7 +45,7 @@ export default function HomeScreen() {
       <StoriesStrip />
 
       <Link href="/catalog/books" asChild>
-        <Card tone="green" style={styles.hero} accessibilityRole="link">
+        <Card tone="green" style={styles.hero} delay={80} accessibilityRole="link">
           <View style={styles.heroText}>
             <Text style={styles.heroTitle}>{t.home.heroTitle}</Text>
             <Text style={styles.heroSub}>{t.home.heroSub}</Text>
@@ -54,7 +57,7 @@ export default function HomeScreen() {
       </Link>
 
       <Link href="/catalog/prints" asChild>
-        <Card tone="rose" accessibilityRole="link">
+        <Card tone="rose" delay={160} accessibilityRole="link">
           <Icon name="image" size={28} color={lightColors.text} />
           <Text style={styles.cardTitle}>{t.home.printsTitle}</Text>
           <Text style={styles.cardSub}>{t.home.printsSub}</Text>
@@ -62,7 +65,7 @@ export default function HomeScreen() {
       </Link>
 
       <Link href="/album/event-create" asChild>
-        <Card tone="sky" accessibilityRole="link">
+        <Card tone="sky" delay={240} accessibilityRole="link">
           <Icon name="image" size={28} color={lightColors.text} />
           <Text style={styles.cardTitle}>Общий альбом</Text>
           <Text style={styles.cardSub}>Пул фото по ссылке — у каждого своя книга</Text>
@@ -71,14 +74,14 @@ export default function HomeScreen() {
 
       <View style={styles.row}>
         <Link href="/album/create" asChild>
-          <Card tone="mint" style={styles.half} accessibilityRole="link">
+          <Card tone="mint" style={styles.half} delay={320} accessibilityRole="link">
             <Icon name="heart" size={28} color={lightColors.text} />
             <Text style={styles.cardTitle}>{t.home.albumTitle}</Text>
             <Text style={styles.cardSub}>{t.home.albumSub}</Text>
           </Card>
         </Link>
         <Link href="/ai/consent" asChild>
-          <Card tone="lilac" style={styles.half} accessibilityRole="link">
+          <Card tone="lilac" style={styles.half} delay={390} accessibilityRole="link">
             <Icon name="star" size={28} color={lightColors.text} />
             <Text style={styles.cardTitle}>{t.home.aiTitle}</Text>
             <Text style={styles.cardSub}>{t.home.aiSub}</Text>

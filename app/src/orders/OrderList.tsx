@@ -3,12 +3,14 @@ import { statusLabel } from '../orders/statusLabel';
 import { formatByn } from '@picpac/shared';
 import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../api/hooks';
 import { useProjectStore } from '../project/projectStore';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { StateBanner } from '../ui/StateBanner';
+import { CardSkeleton } from '../ui/Skeleton';
+import { staggerDelay } from '../ui/motion';
 import { lightColors, space, typography } from '../theme/theme';
 import { EmptyState } from '../ui/EmptyState';
 
@@ -61,7 +63,7 @@ export function OrderList({ favoritesOnly = false }: { favoritesOnly?: boolean }
   const visibleOrders = favoritesOnly ? orders.filter((order) => order.favorite) : orders;
   return (
     <>
-      {loading ? <ActivityIndicator color={lightColors.accent} /> : null}
+      {loading && orders.length === 0 ? <CardSkeleton /> : null}
       {error ? (
         <StateBanner title={error} actionLabel="Повторить" onAction={() => void load()} tone="danger" />
       ) : null}
@@ -73,8 +75,8 @@ export function OrderList({ favoritesOnly = false }: { favoritesOnly?: boolean }
         />
       ) : null}
       {actionError ? <StateBanner title={actionError} tone="danger" /> : null}
-      {visibleOrders.map((order) => (
-        <Card key={order.id}>
+      {visibleOrders.map((order, index) => (
+        <Card key={order.id} delay={staggerDelay(index)}>
           <Link href={`/orders/${order.id}`} asChild>
             <Pressable accessibilityRole="link" style={styles.orderLink}>
               <Text style={styles.cardTitle}>{order.number}</Text>

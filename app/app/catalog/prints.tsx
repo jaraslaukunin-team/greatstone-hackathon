@@ -1,9 +1,12 @@
 import { formatByn } from '@picpac/shared';
 import { Link } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog } from '../../src/catalog/useCatalog';
 import { paperLabel, paperOf } from '../../src/print/paper';
 import { Card } from '../../src/ui/Card';
+import { ListSkeleton } from '../../src/ui/Skeleton';
+import { FadeIn } from '../../src/ui/FadeIn';
+import { staggerDelay } from '../../src/ui/motion';
 import { StateBanner } from '../../src/ui/StateBanner';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
@@ -14,7 +17,7 @@ const LINE_LABEL: Record<string, string> = {
 
 export default function PrintsScreen() {
   const catalog = useCatalog();
-  if (catalog.isLoading) return <ActivityIndicator style={{ marginTop: 40 }} color={lightColors.accent} />;
+  if (catalog.isLoading) return <ListSkeleton count={3} />;
   if (catalog.isError) {
     return (
       <StateBanner
@@ -28,14 +31,16 @@ export default function PrintsScreen() {
   const prints = catalog.data?.products.filter((p) => p.kind === 'prints') ?? [];
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Печать фото</Text>
-      {prints.map((product) => {
+      <FadeIn>
+        <Text style={styles.title}>Печать фото</Text>
+      </FadeIn>
+      {prints.map((product, index) => {
         const variant = product.variants[0];
         const paper = variant ? paperOf(variant.format) : null;
         const lineName = product.line ? LINE_LABEL[product.line] : null;
         return (
           <Link key={product.id} href={{ pathname: '/print/format', params: { productId: product.id } }} asChild>
-            <Card chevron>
+            <Card chevron delay={staggerDelay(index + 1)}>
               <Text style={styles.cardTitle}>{product.title}</Text>
               <View style={styles.badges}>
                 {lineName ? (

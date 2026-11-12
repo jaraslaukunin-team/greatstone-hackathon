@@ -1,8 +1,11 @@
 import { formatByn } from '@picpac/shared';
 import { Link } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog } from '../../src/catalog/useCatalog';
 import { Card } from '../../src/ui/Card';
+import { ListSkeleton } from '../../src/ui/Skeleton';
+import { FadeIn } from '../../src/ui/FadeIn';
+import { staggerDelay } from '../../src/ui/motion';
 import { StateBanner } from '../../src/ui/StateBanner';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
@@ -10,7 +13,7 @@ export default function BooksScreen() {
   const catalog = useCatalog();
 
   if (catalog.isLoading) {
-    return <ActivityIndicator style={{ marginTop: 40 }} color={lightColors.accent} />;
+    return <ListSkeleton count={3} />;
   }
 
   if (catalog.isError) {
@@ -29,14 +32,16 @@ export default function BooksScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Фотокниги</Text>
-      <Text style={styles.sub}>Выберите, какой будет ваша история</Text>
-      {books.map((product) => {
+      <FadeIn>
+        <Text style={styles.title}>Фотокниги</Text>
+        <Text style={styles.sub}>Выберите, какой будет ваша история</Text>
+      </FadeIn>
+      {books.map((product, index) => {
         const variant = product.variants[0];
         const formats = product.variants.map((v) => v.format);
         return (
           <Link key={product.id} href={`/catalog/${product.id}`} asChild>
-            <Card chevron>
+            <Card chevron delay={staggerDelay(index + 1)}>
               <Text style={styles.cardTitle}>{product.title}</Text>
               <Text style={styles.cardSub}>{product.description}</Text>
               {formats.length > 0 ? (

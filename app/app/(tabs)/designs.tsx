@@ -2,7 +2,6 @@ import type { ProjectDTO } from '@picpac/shared';
 import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Pressable,
@@ -25,6 +24,8 @@ import { ConfirmDialog } from '../../src/ui/ConfirmDialog';
 import { EmptyState } from '../../src/ui/EmptyState';
 import { Input } from '../../src/ui/Input';
 import { StateBanner } from '../../src/ui/StateBanner';
+import { CardSkeleton } from '../../src/ui/Skeleton';
+import { staggerDelay } from '../../src/ui/motion';
 import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
 export default function DesignsScreen() {
@@ -153,7 +154,7 @@ export default function DesignsScreen() {
           {syncState === 'local-only' && draft ? (
             <StateBanner title="Черновик только на телефоне" message={draft.project.title} tone="warning" />
           ) : null}
-          {loading ? <ActivityIndicator color={lightColors.accent} /> : null}
+          {loading && items.length === 0 ? <CardSkeleton /> : null}
           {error ? (
             <StateBanner title={error} actionLabel="Повторить" onAction={() => void load()} tone="danger" />
           ) : null}
@@ -165,7 +166,7 @@ export default function DesignsScreen() {
             </EmptyState>
           ) : null}
 
-          {items.map((project) => {
+          {items.map((project, index) => {
             const kind = projectKindLabel(projectKind(project, catalog.data));
             return (
               <View key={project.id} style={styles.row}>
@@ -175,7 +176,7 @@ export default function DesignsScreen() {
                   accessibilityRole="link"
                   accessibilityLabel={project.title}
                 >
-                  <Card chevron style={styles.card}>
+                  <Card chevron style={styles.card} delay={staggerDelay(index)}>
                     <Text style={styles.cardTitle}>{project.title}</Text>
                     <Text style={styles.cardSub}>
                       {kind} · {project.status === 'draft' ? 'Черновик' : 'В заказе'} · v{project.version}

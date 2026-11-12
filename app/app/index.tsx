@@ -1,10 +1,11 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useAuth } from '../src/auth/AuthProvider';
 import { homeFor } from '../src/auth/roleMode';
 import { useRoleMode } from '../src/auth/roleStore';
 import { useSettingsStore } from '../src/settings/settingsStore';
 import { lightColors } from '../src/theme/theme';
+import { PulseLogo } from '../src/ui/PulseLogo';
 
 export default function Index() {
   const { token, user, ready } = useAuth();
@@ -14,7 +15,7 @@ export default function Index() {
   if (!ready) {
     return (
       <View style={styles.boot}>
-        <ActivityIndicator color={lightColors.accent} size="large" />
+        <PulseLogo />
       </View>
     );
   }

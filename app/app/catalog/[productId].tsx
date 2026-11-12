@@ -1,7 +1,7 @@
 import { DEFAULT_THEME_ID, formatByn, themeById, type ThemeId } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog, useVariantPrice } from '../../src/catalog/useCatalog';
 import { goodsPriceKop } from '../../src/checkout/goodsPrice';
 import { useApiClient } from '../../src/api/hooks';
@@ -9,6 +9,7 @@ import { useThemeChoice, useThemeChoiceStore } from '../../src/project/themeChoi
 import { ThemePicker } from '../../src/theme/ThemePicker';
 import { Button } from '../../src/ui/Button';
 import { Card } from '../../src/ui/Card';
+import { ListSkeleton } from '../../src/ui/Skeleton';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function ProductScreen() {
@@ -29,7 +30,7 @@ export default function ProductScreen() {
   const title = useMemo(() => `Книга ${product?.title ?? ''}`.trim(), [product?.title]);
 
   if (catalog.isLoading || !product || !variant) {
-    return <ActivityIndicator style={{ marginTop: 40 }} color={lightColors.accent} />;
+    return <ListSkeleton count={2} />;
   }
 
   // When variant changes, reset pages to its min
