@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { useAuth } from '../../src/auth/AuthProvider';
+import { tr } from '../../src/i18n/runtimeTranslate';
+import { useSettingsStore } from '../../src/settings/settingsStore';
 import { Button } from '../../src/ui/Button';
 import { Card } from '../../src/ui/Card';
 import { lightColors, space, typography } from '../../src/theme/theme';
@@ -11,6 +13,7 @@ import { lightColors, space, typography } from '../../src/theme/theme';
 export default function ProfileDataScreen() {
   const client = useApiClient();
   const { logout } = useAuth();
+  const lang = useSettingsStore((s) => s.lang);
   const [summary, setSummary] = useState<DataSummaryDTO | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -57,7 +60,11 @@ export default function ProfileDataScreen() {
         <Text style={styles.row}>Заказы: {summary ? summary.orders : '…'}</Text>
         <Text style={styles.row}>
           Согласие на AI:{' '}
-          {summary ? (summary.aiConsentAt ? `дано ${new Date(summary.aiConsentAt).toLocaleDateString('ru-RU')}` : 'не давалось') : '…'}
+          {summary
+            ? summary.aiConsentAt
+              ? `${tr('дано')} ${new Date(summary.aiConsentAt).toLocaleDateString(lang === 'be' ? 'be-BY' : 'ru-RU')}`
+              : tr('не давалось')
+            : '…'}
         </Text>
       </Card>
 
