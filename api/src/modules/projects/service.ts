@@ -1,4 +1,6 @@
-import { and, desc, eq, inArray, or } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
+import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
+import type { FastifyInstance } from 'fastify';
 import type { Layout, ProjectDTO } from '@picpac/shared';
 import { audit } from '../../audit.js';
 import { hashPassword } from '../../auth/password.js';
@@ -7,6 +9,7 @@ import type { Db } from '../../db/client.js';
 import { orders, projectMembers, projectPhotos, projects } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import type { Storage } from '../../storage/storage.js';
+import { storageKey } from '../photos/service.js';
 import { loadVariant } from '../quote/service.js';
 
 export type ProjectRow = typeof projects.$inferSelect;
@@ -177,4 +180,127 @@ export async function setJoinPassword(db: Db, user: AuthUser, projectId: string,
     objectId: projectId,
     result: 'ok',
   });
+}
+
+export async function renameProject(db: Db, user: AuthUser, projectId: string, title: string): Promise<ProjectDTO> {
+  const project = await assertProjectAccess(db, user, projectId, 'organizer');
+  const [updated] = await db
+    .update(projects)
+    .set({ title, updatedAt: new Date() })
+    .where(eq(projects.id, projectId))
+    .returning();
+  await audit(db, { userId: user.id, action: 'project.rename', objectType: 'project', objectId: projectId, result: 'ok' });
+  return toProjectDTO(updated ?? { ...project, title, updatedAt: new Date() });
+}
+
+function remapLayout(layout: Layout, idMap: Map<string, string>): Layout {
+  return {
+    pages: layout.pages.map((page) => ({
+      ...page,
+      cells: page.cells.map((cell) => ({
+        ...cell,
+        photoId: cell.photoId != null && idMap.has(cell.photoId) ? idMap.get(cell.photoId)! : cell.photoId,
+      })),
+    })),
+  };
+}
+
+export async function duplicateProject(app: FastifyInstance, user: AuthUser, projectId: string): Promise<ProjectDTO> {
+  const db = app.db;
+  const storage = app.storage;
+
+  // Только владелец может дублировать проект.
+  const src = await assertProjectAccess(db, user, projectId, 'read');
+  if (src.ownerId !== user.id) {
+    await audit(db, {
+      userId: user.id,
+      action: 'access.denied',
+      objectType: 'project',
+      objectId: projectId,
+      result: 'denied',
+    });
+    throw new AppError(404, 'NOT_FOUND', 'Проект не найден');
+  }
+
+  // Загрузить исходные фото.
+  const srcPhotos = await db
+    .select()
+    .from(projectPhotos)
+    .where(eq(projectPhotos.projectId, projectId))
+    .orderBy(asc(projectPhotos.position), asc(projectPhotos.createdAt));
+
+  // Скопировать файлы в памяти (до создания БД-записей), чтобы можно было откатиться без сирот.
+  const newProjectId = randomUUID();
+  const copies: Array<{ newId: string; key: string; data: Buffer; src: typeof srcPhotos[number] }> = [];
+  try {
+    for (const photo of srcPhotos) {
+      let data: Buffer;
+      try {
+        data = await storage.get(photo.storagePath);
+      } catch {
+        throw new AppError(422, 'PHOTO_FILE_MISSING', `Файл фото ${photo.id} не найден в хранилище`);
+      }
+      const newId = randomUUID();
+      const key = storageKey(newProjectId, newId);
+      await storage.put(key, data);
+      copies.push({ newId, key, data, src: photo });
+    }
+  } catch (e) {
+    // Откат: удалить все уже скопированные файлы.
+    await Promise.allSettled(copies.map((c) => storage.remove(c.key)));
+    throw e;
+  }
+
+  // Карта старый ID → новый ID для ремаппинга макета.
+  const idMap = new Map(copies.map((c) => [c.src.id, c.newId]));
+
+  const sourceLayout = (src.layout as Layout | null) ?? { pages: [] };
+  const newLayout = remapLayout(sourceLayout, idMap);
+  const newTitle = `${src.title} — копия`;
+
+  let newProject: typeof projects.$inferSelect;
+  try {
+    // Вставить новый проект.
+    const [inserted] = await db
+      .insert(projects)
+      .values({
+        id: newProjectId,
+        ownerId: user.id,
+        variantId: src.variantId,
+        title: newTitle,
+        isShared: false,
+        expectedMembers: null,
+        joinPasswordHash: null,
+        status: 'draft',
+        layout: newLayout,
+      })
+      .returning();
+    newProject = inserted!;
+
+    // Вставить копии фото.
+    if (copies.length > 0) {
+      await db.insert(projectPhotos).values(
+        copies.map((c) => ({
+          id: c.newId,
+          projectId: newProjectId,
+          uploadedBy: user.id,
+          storagePath: c.key,
+          position: c.src.position,
+          width: c.src.width,
+          height: c.src.height,
+          takenAt: c.src.takenAt,
+          source: c.src.source,
+        })),
+      );
+    }
+  } catch (e) {
+    // Откат хранилища: новый проект мог не создаться или ошибка при вставке фото.
+    await Promise.allSettled(copies.map((c) => storage.remove(c.key)));
+    // Попытаться удалить проект из БД, если он всё-таки вставился.
+    await db.delete(projects).where(eq(projects.id, newProjectId)).catch(() => undefined);
+    throw e;
+  }
+
+  await audit(db, { userId: user.id, action: 'project.duplicate', objectType: 'project', objectId: newProjectId, result: 'ok' });
+  return toProjectDTO(newProject);
 }
