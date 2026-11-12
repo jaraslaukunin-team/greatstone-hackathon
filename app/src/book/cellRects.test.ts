@@ -45,6 +45,17 @@ describe('cellRects', () => {
     expect(cellRects('four', 200, 200, 2, theme)).toHaveLength(1);
   });
 
+  it('gap заменяет и поле, и зазор темы: 0.1 на странице 200 даёт 20 и 20', () => {
+    const [a, b] = cellRects('two', 200, 200, 2, theme, 0.1);
+    expect(a!.x).toBe(20);
+    expect(b!.x - (a!.x + a!.width)).toBe(20);
+  });
+
+  it('gap не меняет spread-one, а gap = 0 убирает отступы', () => {
+    expect(cellRects('spread-one', 200, 160, 1, theme, 0.1)).toEqual([{ x: 0, y: 0, width: 200, height: 160 }]);
+    expect(cellRects('one', 200, 200, 1, theme, 0)).toEqual([{ x: 0, y: 0, width: 200, height: 200 }]);
+  });
+
   it('minimal на странице 200 даёт прежние 4 px поля и зазора', () => {
     const [a, b] = cellRects('two', 200, 200, 2, themeById('minimal'));
     expect(a!.x).toBe(4);

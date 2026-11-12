@@ -5,11 +5,19 @@ import type { BookTheme, Page, Rect } from '@picpac/shared';
  * Поле страницы и зазор между фото берутся из темы (доли ширины страницы).
  * Если ячеек меньше, чем нужно шаблону, рисуется одна.
  */
-export function cellRects(template: Page['template'], width: number, height: number, count: number, theme: BookTheme): Rect[] {
+export function cellRects(
+  template: Page['template'],
+  width: number,
+  height: number,
+  count: number,
+  theme: BookTheme,
+  /** Отступы страницы (Page.gap): заменяют и поле, и зазор темы. */
+  gap?: number,
+): Rect[] {
   // Фото во всю страницу: без полей и рамки темы, до самого края.
   if (template === 'spread-one') return [{ x: 0, y: 0, width, height }];
-  const m = theme.marginPct * width;
-  const g = theme.gapPct * width;
+  const m = (gap ?? theme.marginPct) * width;
+  const g = (gap ?? theme.gapPct) * width;
   if (template === 'two' && count >= 2) {
     const w = (width - m * 2 - g) / 2;
     return [0, 1].map((i) => ({ x: m + i * (w + g), y: m, width: w, height: height - m * 2 }));

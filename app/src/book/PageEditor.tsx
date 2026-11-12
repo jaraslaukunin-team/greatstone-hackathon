@@ -115,7 +115,7 @@ export function PageEditor(props: Props) {
   }, [pageIndex]);
 
   const rects = useMemo(
-    () => (page ? cellRects(page.template, size, size, page.cells.length, theme) : []),
+    () => (page ? cellRects(page.template, size, size, page.cells.length, theme, page.gap) : []),
     [page, size, theme],
   );
 

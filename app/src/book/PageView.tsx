@@ -54,7 +54,7 @@ function CellView({ cell, rect, sourceOf, theme }: { cell: Cell; rect: Rect; sou
 
 /** Одна страница книги: лист (цвет темы или свой фон) с фото по шаблону и подписями. Без страницы (null) рисуется пустая подложка. */
 export function PageView({ page, sourceOf, width, height, theme }: Props) {
-  const rects = page ? cellRects(page.template, width, height, page.cells.length, theme) : [];
+  const rects = page ? cellRects(page.template, width, height, page.cells.length, theme, page.gap) : [];
   return (
     <View style={[styles.sheet, { width, height, backgroundColor: page?.bg ?? theme.pageBg }]}>
       {page?.cells.map((cell, i) => {
