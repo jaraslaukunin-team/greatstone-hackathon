@@ -98,7 +98,7 @@ export default function AiEditScreen() {
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button title="Обработать" disabled={!photo || busy || prompt.trim().length === 0} onPress={() => void submit()} />
-      <Button title="Открыть ассистента" variant="text" onPress={() => router.push('/(tabs)/assistant')} />
+      <Button title="К редактору" variant="text" onPress={() => router.push('/(tabs)/editor')} />
     </ScrollView>
   );
 }

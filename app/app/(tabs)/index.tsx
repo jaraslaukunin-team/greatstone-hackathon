@@ -5,10 +5,9 @@ import { projectKind, projectKindLabel } from '../../src/project/projectKind';
 import { useProjectStore } from '../../src/project/projectStore';
 import { Card } from '../../src/ui/Card';
 import { PrintStack } from '../../src/ui/PrintStack';
-import { Wordmark } from '../../src/ui/Wordmark';
 import { lightColors, space, typography } from '../../src/theme/theme';
 import { Icon } from '../../src/ui/Icon';
-import { ShowcaseStrip } from '../../src/showcase/ShowcaseStrip';
+import { StoriesStrip } from '../../src/stories/StoriesStrip';
 import { useT } from '../../src/i18n/useT';
 
 export default function HomeScreen() {
@@ -21,10 +20,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Wordmark height={64} />
-        <Text style={styles.slogan}>{t.home.slogan}</Text>
-      </View>
+      <Text style={styles.slogan}>{t.home.slogan}</Text>
 
       {draft ? (
         <Pressable
@@ -43,7 +39,7 @@ export default function HomeScreen() {
         </Pressable>
       ) : null}
 
-      <ShowcaseStrip />
+      <StoriesStrip />
 
       <Link href="/catalog/books" asChild>
         <Card tone="green" style={styles.hero} accessibilityRole="link">
@@ -52,7 +48,7 @@ export default function HomeScreen() {
             <Text style={styles.heroSub}>{t.home.heroSub}</Text>
           </View>
           <View style={styles.heroArt}>
-            <PrintStack size={104} />
+            <PrintStack size={120} />
           </View>
         </Card>
       </Link>
@@ -87,10 +83,17 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg },
-  content: { padding: space[4], gap: space[3], paddingBottom: space[7] },
-  header: { marginTop: space[5], marginBottom: space[2], gap: space[2] },
+  content: {
+    flexGrow: 1,
+    padding: space[4],
+    gap: space[4],
+    paddingTop: space[3],
+    paddingBottom: space[7],
+  },
   slogan: {
     ...typography.body,
+    fontSize: 18,
+    lineHeight: 26,
     color: lightColors.textSecondary,
     letterSpacing: 0.8,
   },
@@ -99,7 +102,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 168,
+    minHeight: 200,
     padding: space[5],
     overflow: 'hidden',
   },
@@ -110,5 +113,5 @@ const styles = StyleSheet.create({
   cardTitle: { ...typography.h3, color: lightColors.text, marginTop: space[2] },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 2 },
   row: { flexDirection: 'row', gap: space[3] },
-  half: { flex: 1, minHeight: 112 },
+  half: { flex: 1, minHeight: 132 },
 });

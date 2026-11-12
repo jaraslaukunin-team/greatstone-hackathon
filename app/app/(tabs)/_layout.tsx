@@ -1,33 +1,91 @@
-import { Tabs, router } from 'expo-router';
-import { useEffect } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Tabs, router, type Href } from 'expo-router';
+import { useEffect, type ComponentProps } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { takePendingInvite } from '../../src/album/pendingInvite';
 import { Icon, type IconName } from '../../src/ui/Icon';
+import { AppHeader } from '../../src/ui/AppHeader';
 import { lightColors, typography } from '../../src/theme/theme';
 import { useT } from '../../src/i18n/useT';
 
-const tabNames = ['index', 'designs', 'assistant', 'cart', 'orders', 'profile'] as const;
-const tabIcons: Record<(typeof tabNames)[number], IconName> = {
+/** Вкладки в нижнем баре (без профиля — он в шапке). */
+const barTabNames = ['index', 'designs', 'editor', 'cart', 'orders'] as const;
+const allTabNames = [...barTabNames, 'profile'] as const;
+
+const tabIcons: Record<(typeof allTabNames)[number], IconName> = {
   index: 'home',
   designs: 'folder',
-  assistant: 'star',
+  editor: 'pencil',
   cart: 'cart',
   orders: 'doc',
   profile: 'user',
 };
 
+const tabHrefs: Record<(typeof allTabNames)[number], Href> = {
+  index: '/(tabs)',
+  designs: '/(tabs)/designs',
+  editor: '/(tabs)/editor',
+  cart: '/(tabs)/cart',
+  orders: '/(tabs)/orders',
+  profile: '/(tabs)/profile',
+};
+
+type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
+
+function TabBar({ state, descriptors }: TabBarProps) {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, Platform.OS === 'web' ? 12 : 8);
+
+  return (
+    <View style={[styles.bar, { paddingBottom: bottomPad }]}>
+      {state.routes.map((route, index) => {
+        if (route.name === 'profile') return null;
+
+        const focused = state.index === index;
+        const { options } = descriptors[route.key];
+        const label =
+          typeof options.tabBarLabel === 'string'
+            ? options.tabBarLabel
+            : typeof options.title === 'string'
+              ? options.title
+              : route.name;
+        const name = route.name as (typeof allTabNames)[number];
+        const icon = tabIcons[name] ?? 'home';
+        const color = focused ? lightColors.accent : lightColors.textSecondary;
+
+        const onPress = () => {
+          if (focused) return;
+          // Не navigation.emit — в кастомном tabBar у Expo Router navigation иногда undefined.
+          router.navigate(tabHrefs[name] ?? `/(tabs)/${route.name}`);
+        };
+
+        return (
+          <Pressable
+            key={route.key}
+            onPress={onPress}
+            accessibilityRole="button"
+            accessibilityState={focused ? { selected: true } : {}}
+            accessibilityLabel={label}
+            style={styles.tab}
+          >
+            <Icon name={icon} size={24} color={color} />
+            <Text style={[styles.label, { color }]} numberOfLines={1}>
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function TabsLayout() {
   const t = useT();
-  const insets = useSafeAreaInsets();
-  // На вебе safe-area часто 0 — запас, чтобы подписи не обрезались краем окна.
-  const bottomPad = Math.max(insets.bottom, Platform.OS === 'web' ? 14 : 8);
-  const tabBarHeight = 56 + bottomPad;
 
-  const tabTitles: Record<(typeof tabNames)[number], string> = {
+  const tabTitles: Record<(typeof allTabNames)[number], string> = {
     index: t.tabs.home,
     designs: t.tabs.designs,
-    assistant: t.tabs.assistant,
+    editor: t.tabs.editor,
     cart: t.tabs.cart,
     orders: t.tabs.orders,
     profile: t.tabs.profile,
@@ -41,45 +99,60 @@ export default function TabsLayout() {
   }, []);
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: lightColors.accent,
-        tabBarInactiveTintColor: lightColors.textSecondary,
-        tabBarStyle: {
-          backgroundColor: lightColors.surface,
-          borderTopColor: lightColors.border,
-          height: tabBarHeight,
-          paddingTop: 8,
-          paddingBottom: bottomPad,
-        },
-        tabBarItemStyle: styles.item,
-        tabBarLabelStyle: styles.label,
-        tabBarHideOnKeyboard: true,
-      }}
-    >
-      {tabNames.map((name) => (
-        <Tabs.Screen
-          key={name}
-          name={name}
-          options={{
-            title: tabTitles[name],
-            tabBarLabel: tabTitles[name],
-            tabBarIcon: ({ focused, color }) => (
-              <Icon name={tabIcons[name]} size={24} color={focused ? lightColors.accent : String(color)} />
-            ),
-          }}
-        />
-      ))}
-    </Tabs>
+    <View style={styles.root}>
+      <AppHeader />
+      <View style={styles.tabs}>
+        <Tabs
+          tabBar={(props) => <TabBar {...props} />}
+          screenOptions={{ headerShown: false }}
+        >
+          {barTabNames.map((name) => (
+            <Tabs.Screen
+              key={name}
+              name={name}
+              options={{
+                title: tabTitles[name],
+                tabBarLabel: tabTitles[name],
+              }}
+            />
+          ))}
+          <Tabs.Screen
+            name="profile"
+            options={{
+              title: tabTitles.profile,
+              tabBarLabel: tabTitles.profile,
+            }}
+          />
+        </Tabs>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  item: { justifyContent: 'center' },
+  root: { flex: 1, backgroundColor: lightColors.bg },
+  tabs: { flex: 1 },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-around',
+    backgroundColor: lightColors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: lightColors.border,
+    paddingTop: 10,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minHeight: 48,
+    paddingHorizontal: 2,
+  },
   label: {
     ...typography.label,
     fontSize: 11,
     lineHeight: 14,
+    textAlign: 'center',
   },
 });
