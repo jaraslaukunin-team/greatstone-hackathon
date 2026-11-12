@@ -24,17 +24,35 @@ export const cropSchema = z.object({
 });
 export const fitModeSchema = z.enum(['contain', 'cover']);
 // fit необязателен: старые макеты без него читаются как contain.
-export const cellSchema = z.object({ photoId: z.string().nullable(), crop: cropSchema, fit: fitModeSchema.optional() });
+export const frameSchema = z.object({
+  x: z.number().min(-0.1).max(1.1),
+  y: z.number().min(-0.1).max(1.1),
+  w: z.number().min(0.05).max(1.2),
+  h: z.number().min(0.05).max(1.2),
+  rot: z.number().min(-180).max(180),
+});
+export const cellSchema = z.object({
+  photoId: z.string().nullable(),
+  crop: cropSchema,
+  fit: fitModeSchema.optional(),
+  frame: frameSchema.optional(),
+  hidden: z.boolean().optional(),
+  locked: z.boolean().optional(),
+  border: z.boolean().optional(),
+});
 export const pageTextSchema = z.object({
   text: z.string().max(200),
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
   style: z.enum(['title', 'caption', 'date', 'quote']),
+  rot: z.number().min(-180).max(180).optional(),
+  hidden: z.boolean().optional(),
+  locked: z.boolean().optional(),
 });
 // bg и texts необязательны: старые макеты без них читаются как раньше.
 export const pageSchema = z.object({
   template: z.enum(['one', 'two', 'three', 'four', 'spread-one']),
-  cells: z.array(cellSchema),
+  cells: z.array(cellSchema).max(60),
   copies: z.number().int().positive().optional(),
   bg: z.string().max(20).optional(),
   texts: z.array(pageTextSchema).max(20).optional(),

@@ -15,10 +15,13 @@ export type DeliveryMethodId = 'courier_minsk' | 'ems' | 'belpost';
 export type Template = 'one' | 'two' | 'three' | 'four' | 'spread-one';
 export type Rotation = 0 | 90 | 180 | 270;
 export type Crop = { x: number; y: number; scale: number; rotation: Rotation };
-export type Cell = { photoId: string | null; crop: Crop; fit?: 'contain' | 'cover' };
+/** Свободное положение слоя на странице: центр и размер в долях страницы, поворот в градусах. */
+export type Frame = { x: number; y: number; w: number; h: number; rot: number };
+/** frame — свободный слой (иначе ячейка по шаблону); hidden — не рисуется; locked — не двигается; border — белая кайма и тень. */
+export type Cell = { photoId: string | null; crop: Crop; fit?: 'contain' | 'cover'; frame?: Frame; hidden?: boolean; locked?: boolean; border?: boolean };
 export type PageTextStyle = 'title' | 'caption' | 'date' | 'quote';
 /** Подпись на странице: x, y — центр текста в долях страницы (0..1). */
-export type PageText = { text: string; x: number; y: number; style: PageTextStyle };
+export type PageText = { text: string; x: number; y: number; style: PageTextStyle; rot?: number; hidden?: boolean; locked?: boolean };
 /** gap — отступы страницы (доля ширины, 0..0.12): заменяют поле и зазор темы. */
 export type Page = { template: Template; cells: Cell[]; copies?: number; bg?: string; texts?: PageText[]; gap?: number };
 /** Обложка: фото (null — первая страница книги), название, подзаголовок и текст на корешке (от 40 страниц). */

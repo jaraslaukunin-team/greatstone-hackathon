@@ -72,3 +72,20 @@ describe('checkQuality', () => {
     expect(checkQuality(layoutWith('a'), { a: photo(99) }, inch)[0]).toMatchObject({ kind: 'very-low-dpi' });
   });
 });
+
+describe('checkQuality: свободные слои', () => {
+  const frame = (w: number) => ({ x: 0.5, y: 0.5, w, h: w, rot: 0 });
+  const framed = (w: number, extra: object = {}): Layout => ({
+    pages: [{ template: 'one', cells: [{ photoId: 'a', crop: { x: 0, y: 0, scale: 1, rotation: 0 }, frame: frame(w), ...extra }] }],
+  });
+  it('ширина слоя 0.5 даёт тот же DPI, что шаблон с долей 0.5', () => {
+    const half: Layout = { pages: [{ template: 'four', cells: [{ photoId: 'a', crop: { x: 0, y: 0, scale: 1, rotation: 0 } }] }] };
+    const [a] = checkQuality(framed(0.5), { a: photo(400) }, variant);
+    const [b] = checkQuality(half, { a: photo(400) }, variant);
+    expect(a!.dpi).toBeCloseTo(b!.dpi!, 5);
+  });
+  it('скрытый слой с мелким фото не даёт предупреждения, но пустой скрытый остаётся блокером', () => {
+    expect(checkQuality(framed(1, { hidden: true }), { a: photo(300) }, variant)).toEqual([]);
+    expect(checkQuality(framed(1, { hidden: true, photoId: null }), {}, variant)).toHaveLength(1);
+  });
+});

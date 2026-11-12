@@ -130,6 +130,16 @@ describe('переименование и дублирование проект�
       expect(dup.layout.pages[0]!.gap).toBe(0.05);
     });
 
+    it('свободные слои (frame, hidden, locked) переходят в копию', async () => {
+      const p = (await create(alice)).json() as { id: string; version: number };
+      const crop = { x: 0, y: 0, scale: 1, rotation: 0 as const };
+      const frame = { x: 0.5, y: 0.4, w: 0.4, h: 0.3, rot: -8 };
+      const layout: Layout = { pages: [{ template: 'one', cells: [{ photoId: null, crop, frame, hidden: true, locked: true }] }] };
+      expect((await call(alice, 'PUT', `/projects/${p.id}`, { layout, version: p.version })).statusCode).toBe(200);
+      const dup = projectSchema.parse((await call(alice, 'POST', `/projects/${p.id}/duplicate`)).json());
+      expect(dup.layout.pages[0]!.cells[0]).toMatchObject({ frame, hidden: true, locked: true });
+    });
+
     it('обложка без фото копируется как есть', async () => {
       const p = (await create(alice)).json() as { id: string; version: number };
       const layout: Layout = { cover: { photoId: null, title: 'Без фото' }, pages: [] };

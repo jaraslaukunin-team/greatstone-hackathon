@@ -39,7 +39,10 @@ export function checkQuality(
         issues.push({ kind: 'missing-photo', severity: 'blocker', pageIndex, cellIndex });
         return;
       }
-      const cellInches = (variant.pageWidthCm / 2.54) * CELL_WIDTH_FRACTION[page.template];
+      // Скрытый слой с фото не печатается, поэтому на резкость не проверяется.
+      if (cell.hidden) return;
+      // Свободный слой: ширина берётся из его рамки, а не из шаблона.
+      const cellInches = (variant.pageWidthCm / 2.54) * (cell.frame ? cell.frame.w : CELL_WIDTH_FRACTION[page.template]);
       const dpi = photo.width / cell.crop.scale / cellInches;
       if (dpi < VERY_LOW_DPI) issues.push({ kind: 'very-low-dpi', severity: 'warning', pageIndex, cellIndex, dpi });
       else if (dpi < LOW_DPI) issues.push({ kind: 'low-dpi', severity: 'warning', pageIndex, cellIndex, dpi });

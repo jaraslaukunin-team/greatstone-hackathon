@@ -86,6 +86,23 @@ describe('layoutSchema', () => {
     const pages = [{ template: 'one', cells: [cell] }];
     expect(layoutSchema.safeParse({ pages, cover: { photoId: null, title: '', color: 'x'.repeat(21) } }).success).toBe(false);
   });
+  it('принимает свободный слой: frame, hidden, locked, border и поворот подписи', () => {
+    const framed = { ...cell, frame: { x: 0.5, y: 0.4, w: 0.4, h: 0.3, rot: -8 }, hidden: true, locked: true, border: true };
+    const r = layoutSchema.parse({
+      pages: [{ template: 'one', cells: [framed], texts: [{ text: 'a', x: 0.5, y: 0.5, style: 'title', rot: 5, hidden: true, locked: false }] }],
+    });
+    expect(r.pages[0]?.cells[0]).toMatchObject({ frame: { rot: -8 }, hidden: true, locked: true, border: true });
+    expect(r.pages[0]?.texts?.[0]).toMatchObject({ rot: 5, hidden: true });
+  });
+  it('отклоняет frame вне границ и больше 60 ячеек', () => {
+    const f = (frame: object) => ({ pages: [{ template: 'one', cells: [{ ...cell, frame }] }] });
+    const ok = { x: 0.5, y: 0.5, w: 0.4, h: 0.3, rot: 0 };
+    expect(layoutSchema.safeParse(f({ ...ok, x: 1.5 })).success).toBe(false);
+    expect(layoutSchema.safeParse(f({ ...ok, w: 0 })).success).toBe(false);
+    expect(layoutSchema.safeParse(f({ ...ok, h: 2 })).success).toBe(false);
+    expect(layoutSchema.safeParse(f({ ...ok, rot: 200 })).success).toBe(false);
+    expect(layoutSchema.safeParse({ pages: [{ template: 'one', cells: Array.from({ length: 61 }, () => cell) }] }).success).toBe(false);
+  });
   it('отклоняет слишком длинное название обложки', () => {
     const pages = [{ template: 'one', cells: [cell] }];
     expect(layoutSchema.safeParse({ pages, cover: { photoId: null, title: 'я'.repeat(101) } }).success).toBe(false);
