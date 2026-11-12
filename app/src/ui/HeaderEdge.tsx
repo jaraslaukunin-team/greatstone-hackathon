@@ -5,8 +5,13 @@ import { lightColors } from '../theme/theme';
 
 const EDGE_H = 28;
 
+/** Точки градиента: [позиция, прозрачность]. Внутри шапки тонкая вуаль снизу, снаружи плавное затухание вниз. */
+const STOPS_INSIDE: [string, number][] = [['0', 0], ['0.45', 0.35], ['1', 0.72]];
+const STOPS_OUTSIDE: [string, number][] = [['0', 0.78], ['0.35', 0.42], ['0.7', 0.14], ['1', 0]];
+
 export function HeaderEdge({ inside = false }: { inside?: boolean }) {
   const gradient = useId();
+  const stops = inside ? STOPS_INSIDE : STOPS_OUTSIDE;
   const blur =
     Platform.OS === 'web' && !inside
       ? ({
@@ -22,20 +27,9 @@ export function HeaderEdge({ inside = false }: { inside?: boolean }) {
       <Svg width="100%" height="100%">
         <Defs>
           <LinearGradient id={gradient} x1="0%" y1="0%" x2="0%" y2="100%">
-            {inside ? (
-              <>
-                <Stop offset="0" stopColor={lightColors.bg} stopOpacity={0} />
-                <Stop offset="0.45" stopColor={lightColors.bg} stopOpacity={0.35} />
-                <Stop offset="1" stopColor={lightColors.bg} stopOpacity={0.72} />
-              </>
-            ) : (
-              <>
-                <Stop offset="0" stopColor={lightColors.bg} stopOpacity={0.78} />
-                <Stop offset="0.35" stopColor={lightColors.bg} stopOpacity={0.42} />
-                <Stop offset="0.7" stopColor={lightColors.bg} stopOpacity={0.14} />
-                <Stop offset="1" stopColor={lightColors.bg} stopOpacity={0} />
-              </>
-            )}
+            {stops.map(([offset, opacity]) => (
+              <Stop key={offset} offset={offset} stopColor={lightColors.bg} stopOpacity={opacity} />
+            ))}
           </LinearGradient>
         </Defs>
         <Rect width="100%" height="100%" fill={`url(#${gradient})`} />

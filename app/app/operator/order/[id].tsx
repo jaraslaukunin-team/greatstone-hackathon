@@ -1,10 +1,12 @@
 import type { OrderDTO, OrderStatus } from '@picpac/shared';
 import { statusLabel } from '../../../src/orders/statusLabel';
+import { orderStatusTone } from '../../../src/orders/statusTone';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import { Button } from '../../../src/ui/Button';
+import { Card } from '../../../src/ui/Card';
 import { lightColors, space, typography } from '../../../src/theme/theme';
 
 const NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -42,12 +44,22 @@ export default function OperatorOrderScreen() {
     }
   }
 
+  const tone = orderStatusTone(order?.status);
+  const next = order ? NEXT[order.status] : undefined;
+
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>{order?.number ?? 'Заказ'}</Text>
-      <Text style={styles.sub}>Статус: {statusLabel(order?.status)}</Text>
+      <Card style={{ backgroundColor: tone.backgroundColor, borderColor: tone.borderColor }}>
+        <Text style={styles.sub}>Статус</Text>
+        <Text style={[styles.status, { color: tone.statusColor }]}>{statusLabel(order?.status)}</Text>
+      </Card>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Следующий статус" onPress={() => void advance()} />
+      {next ? (
+        <Button title={`Следующий статус: ${statusLabel(next)}`} onPress={() => void advance()} />
+      ) : order ? (
+        <Text style={styles.sub}>Это конечный статус, дальше менять нельзя.</Text>
+      ) : null}
     </View>
   );
 }
@@ -56,5 +68,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: lightColors.bg, padding: space[4], gap: space[3] },
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
+  status: { ...typography.h2, marginTop: 2 },
   error: { ...typography.caption, color: lightColors.danger },
 });
