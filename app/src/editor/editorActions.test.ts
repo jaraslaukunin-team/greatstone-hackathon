@@ -3,6 +3,7 @@ import {
   clearPhoto,
   insertPage,
   moveSpread,
+  moveSpreadBy,
   removePage,
   replacePhoto,
   setCrop,
@@ -22,6 +23,44 @@ function layoutWith(photos: Array<string | null>): Layout {
     })),
   };
 }
+
+describe('moveSpreadBy', () => {
+  const ids = (l: Layout) => l.pages.map((p) => p.cells[0]?.photoId);
+  // 7 страниц → развороты: [—,0] [1,2] [3,4] [5,6]
+  const seven = () => layoutWith(['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6']);
+
+  it('разворот уезжает вперёд вместе с обеими страницами', () => {
+    expect(ids(moveSpreadBy(seven(), 1, 1))).toEqual(['p0', 'p3', 'p4', 'p1', 'p2', 'p5', 'p6']);
+  });
+
+  it('разворот уезжает назад', () => {
+    expect(ids(moveSpreadBy(seven(), 3, -1))).toEqual(['p0', 'p1', 'p2', 'p5', 'p6', 'p3', 'p4']);
+  });
+
+  it('последний разворот из одной страницы меняется с соседним без потерь', () => {
+    // 6 страниц → [—,0] [1,2] [3,4] [5]
+    const six = layoutWith(['p0', 'p1', 'p2', 'p3', 'p4', 'p5']);
+    expect(ids(moveSpreadBy(six, 2, 1))).toEqual(['p0', 'p1', 'p2', 'p5', 'p3', 'p4']);
+    expect(ids(moveSpreadBy(six, 3, -1))).toEqual(['p0', 'p1', 'p2', 'p5', 'p3', 'p4']);
+  });
+
+  it('обложка не двигается и ничто не встаёт на её место', () => {
+    expect(ids(moveSpreadBy(seven(), 0, 1))).toEqual(ids(seven()));
+    expect(ids(moveSpreadBy(seven(), 1, -1))).toEqual(ids(seven()));
+  });
+
+  it('за краем книги и несуществующий разворот ничего не меняют', () => {
+    expect(ids(moveSpreadBy(seven(), 3, 1))).toEqual(ids(seven()));
+    expect(ids(moveSpreadBy(seven(), 9, -1))).toEqual(ids(seven()));
+  });
+
+  it('не меняет исходный макет и сохраняет тему', () => {
+    const input = { ...seven(), themeId: 'film' };
+    const next = moveSpreadBy(input, 1, 1);
+    expect(ids(input)).toEqual(['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6']);
+    expect(next.themeId).toBe('film');
+  });
+});
 
 describe('setFit / clearPhoto', () => {
   const ref = { pageIndex: 0, cellIndex: 0 };

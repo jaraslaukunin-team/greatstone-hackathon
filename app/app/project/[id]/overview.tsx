@@ -1,10 +1,13 @@
-import { DEFAULT_THEME_ID, themeById, type CatalogDTO, type PhotoDTO, type ProjectDTO, type Rect } from '@picpac/shared';
+import { DEFAULT_THEME_ID, formatByn, themeById, type CatalogDTO, type PhotoDTO, type ProjectDTO, type Rect } from '@picpac/shared';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
 import { autoLayoutLocal, unplacedPhotos } from '../../../src/editor/autoLayoutLocal';
-import { replacePhoto, setTheme, type CellRef } from '../../../src/editor/editorActions';
+import { moveSpreadBy, replacePhoto, setTheme, type CellRef } from '../../../src/editor/editorActions';
+import { useVariantPrice } from '../../../src/catalog/useCatalog';
+import { spreadIssues } from '../../../src/book/spreadIssues';
+import { SpreadStrip } from '../../../src/book/SpreadStrip';
 import { useAuth } from '../../../src/auth/AuthProvider';
 import { useEditResult } from '../../../src/photoEditor/editResultStore';
 import { useProjectStore } from '../../../src/project/projectStore';
@@ -28,7 +31,9 @@ export default function OverviewScreen() {
   const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
   const [showThemes, setShowThemes] = useState(false);
   const [editing, setEditing] = useState<{ pageIndex: number; rect: Rect } | null>(null);
-  const [limits, setLimits] = useState({ min: 20, max: 60 });
+  const [limits, setLimits] = useState({ min: 20, max: 60, widthCm: 20 });
+  const [viewIndex, setViewIndex] = useState(0);
+  const [jump, setJump] = useState<{ index: number; key: number } | undefined>(undefined);
   const [paramHandled, setParamHandled] = useState(false);
   const { user } = useAuth();
   // Фоторедактор открывается отдельным экраном: помним, какую ячейку правили, и вернём правку страницы по возвращении.
@@ -37,6 +42,14 @@ export default function OverviewScreen() {
   const editResults = useEditResult((s) => s.results);
   const sourceOf = useMemo(() => projectSource(photoMap, client.resolveUrl), [photoMap, client.resolveUrl]);
   const photoList = useMemo(() => Array.from(photoMap.values()), [photoMap]);
+  const issues = useMemo(
+    () => (draft?.layout ? spreadIssues(draft.layout, Object.fromEntries(photoMap), { pageWidthCm: limits.widthCm }) : []),
+    [draft?.layout, photoMap, limits.widthCm],
+  );
+  const pageCount = draft?.layout?.pages.length ?? 0;
+  const quote = useVariantPrice(draft?.project.variantId ?? null, Math.max(1, pageCount));
+  // Колбэк стабилен: BookViewer зовёт его из эффекта.
+  const onIndexChange = useCallback((index: number) => setViewIndex(index), []);
   // Правки уходят на сервер через секунду после последнего изменения, без кнопки «Сохранить».
   useDebouncedSync(client, id, !busy);
 
@@ -80,7 +93,7 @@ export default function OverviewScreen() {
       if (!cancelled) setPhotoMap(new Map(photos.map((p) => [p.id, p])));
       const catalog = await client.get<CatalogDTO>('/catalog').catch(() => null);
       const variant = catalog?.products.flatMap((p) => p.variants).find((v) => v.id === project.variantId);
-      if (!cancelled && variant) setLimits({ min: variant.pagesMin, max: variant.pagesMax });
+      if (!cancelled && variant) setLimits({ min: variant.pagesMin, max: variant.pagesMax, widthCm: variant.pageWidthCm });
       // Правки пользователя не затираем: прежний макет (локальный или с сервера) остаётся, пока в нём разложены все фото.
       const stored = useProjectStore.getState().draft;
       const previous = stored?.project.id === project.id ? stored.layout : project.layout;
@@ -133,6 +146,23 @@ export default function OverviewScreen() {
           sourceOf={sourceOf}
           theme={themeById(draft.layout.themeId)}
           onOpenPage={(pageIndex, rect) => setEditing({ pageIndex, rect })}
+          onIndexChange={onIndexChange}
+          jumpTo={jump}
+        />
+      ) : null}
+      {draft?.layout?.pages?.length ? (
+        <SpreadStrip
+          layout={draft.layout}
+          sourceOf={sourceOf}
+          theme={themeById(draft.layout.themeId)}
+          issues={issues}
+          currentIndex={viewIndex}
+          onSelect={(index) => setJump({ index, key: Date.now() })}
+          onMove={(index, dir) => {
+            setLayout(moveSpreadBy(draft.layout, index, dir));
+            // Книга показывает тот же разворот на новом месте.
+            setJump({ index: index + dir, key: Date.now() });
+          }}
         />
       ) : null}
       <Text style={styles.hint}>Листайте свайпом или стрелками. Нажмите на страницу, чтобы править её.</Text>
@@ -146,6 +176,12 @@ export default function OverviewScreen() {
             />
           ) : null}
         </>
+      ) : null}
+      {pageCount > 0 ? (
+        <Text style={styles.price}>
+          {pageCount} стр.{quote.data ? ` · ${formatByn(quote.data.totalKop)}` : ''}
+          {quote.stale ? ' · цена обновляется' : ''}
+        </Text>
       ) : null}
       <Button
         title="Смотреть результат"
@@ -188,6 +224,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: lightColors.text },
   sub: { ...typography.body, color: lightColors.textSecondary },
   hint: { ...typography.caption, color: lightColors.textSecondary },
+  price: { ...typography.price, color: lightColors.text },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginVertical: space[2] },
 });
