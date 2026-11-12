@@ -68,25 +68,25 @@ export default function InviteScreen() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>Приглашение в альбом</Text>
+      <Text style={styles.title}>Приглашение в фотокнигу</Text>
       {state === 'accepting' ? <Text style={styles.sub}>Принимаем приглашение…</Text> : null}
       {state === 'join' ? (
         <>
           <Text style={styles.sub}>
             {needsPassword
-              ? 'Этот альбом защищён паролем. Укажите имя ученика и пароль от организатора.'
+              ? 'Эта фотокнига защищена паролем. Укажите имя ученика и пароль от организатора.'
               : 'Укажите имя ученика, чтобы организатор видел, кто добавил фото.'}
           </Text>
           <Text style={styles.label}>Имя ученика</Text>
           <Input
             value={childName}
             onChangeText={setChildName}
-            placeholder="Как в альбоме"
+            placeholder="Как в фотокниге"
             autoCapitalize="words"
           />
           {needsPassword ? (
             <>
-              <Text style={styles.label}>Пароль альбома</Text>
+              <Text style={styles.label}>Пароль фотокниги</Text>
               <Input
                 value={password}
                 onChangeText={setPassword}

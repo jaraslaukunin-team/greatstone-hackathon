@@ -60,7 +60,7 @@ export default function PhotosScreen() {
   }, [client, id]);
 
   useEffect(() => {
-    navigation.setOptions({ title: graduation ? 'Выпускной альбом' : 'Фотокнига' });
+    navigation.setOptions({ title: graduation ? 'Выпускная фотокнига' : 'Фотокнига' });
   }, [navigation, graduation]);
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function PhotosScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{graduation ? 'Выпускной альбом' : 'Выберите фото'}</Text>
+      <Text style={styles.title}>{graduation ? 'Выпускная фотокнига' : 'Выберите фото'}</Text>
       <Text style={styles.sub}>
         {graduation ? 'Загрузите минимум 2 фото. Все загруженные фото будут доступны в редакторе.' : 'Лучше всего получаются книги из 30–60 фото'}
       </Text>

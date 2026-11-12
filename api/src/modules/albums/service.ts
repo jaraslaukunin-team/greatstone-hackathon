@@ -22,8 +22,8 @@ export async function createInvite(
   baseUrl: string,
 ): Promise<InviteDTO> {
   const project = await assertProjectAccess(app.db, user, projectId, 'organizer');
-  if (!project.isShared) throw new AppError(409, 'PROJECT_NOT_SHARED', 'Приглашать можно только в совместный альбом');
-  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Альбом уже заказан');
+  if (!project.isShared) throw new AppError(409, 'PROJECT_NOT_SHARED', 'Приглашать можно только в совместную фотокнигу');
+  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Фотокнига уже заказана');
   const token = randomBytes(24).toString('base64url');
   const expiresAt = new Date(app.clock.now().getTime() + INVITE_TTL_MS);
   await app.db.insert(projectInvites).values({ projectId, token: hashToken(token), expiresAt });
@@ -64,7 +64,7 @@ async function checkJoinPassword(
     throw new AppError(429, 'TOO_MANY_ATTEMPTS', 'Слишком много неверных паролей. Попробуйте через 10 минут');
   }
   if (password === undefined) {
-    throw new AppError(401, 'PASSWORD_REQUIRED', 'Для вступления в этот альбом нужен пароль от организатора');
+    throw new AppError(401, 'PASSWORD_REQUIRED', 'Для вступления в эту фотокнигу нужен пароль от организатора');
   }
   if (!(await verifyPassword(password, project.joinPasswordHash))) {
     await audit(app.db, {
@@ -94,7 +94,7 @@ export async function acceptInvite(
   }
   const [project] = await app.db.select().from(projects).where(eq(projects.id, invite.projectId));
   if (!project) throw new AppError(404, 'INVITE_UNKNOWN', 'Приглашение не найдено. Попросите организатора прислать новое');
-  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Альбом уже заказан');
+  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Фотокнига уже заказана');
   if (project.ownerId !== user.id) {
     await checkJoinPassword(app, user, invite.id, project, password);
     const [joined] = await app.db
@@ -169,7 +169,7 @@ export async function updateMyMember(
     .from(projectMembers)
     .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, user.id)));
   if (!member) throw new AppError(404, 'NOT_FOUND', 'Проект не найден');
-  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Альбом уже заказан');
+  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Фотокнига уже заказана');
   const set: Partial<typeof projectMembers.$inferInsert> = {};
   if (patch.childName !== undefined) set.childName = patch.childName;
   if (patch.wish !== undefined) set.wish = patch.wish === '' ? null : patch.wish;

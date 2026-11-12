@@ -25,7 +25,7 @@ export default function RoleScreen() {
       <Text style={styles.sub}>У клиента и сотрудника разные экраны и разные права.</Text>
       <Card tone="rose">
         <Text style={styles.cardTitle}>Я клиент</Text>
-        <Text style={styles.cardSub}>Фотокниги, печать, выпускной альбом, AI-редактор, мои заказы.</Text>
+        <Text style={styles.cardSub}>Фотокниги, печать, выпускная фотокнига, AI-редактор, мои заказы.</Text>
         <Button title="Войти как клиент" onPress={() => choose('customer')} />
       </Card>
       <Card tone="sky">

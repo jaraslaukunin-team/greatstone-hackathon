@@ -5,7 +5,7 @@ export type ProjectKind = ProductDTO['kind'];
 const KIND_LABEL: Record<ProjectKind, string> = {
   photobook: 'Фотокнига',
   prints: 'Печать',
-  graduation: 'Выпускной альбом',
+  graduation: 'Выпускная фотокнига',
 };
 
 /** Тип продукта проекта по variantId из каталога. */

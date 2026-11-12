@@ -163,7 +163,7 @@ export default function AlbumScreen() {
       const copy = await client.post<ProjectDTO>(`/projects/${id}/duplicate`, isOrganizer ? {} : { personal: true });
       router.push(`/project/${copy.id}/overview`);
     } catch (e) {
-      setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать копию альбома');
+      setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать копию фотокниги');
     } finally {
       setBusyCopy(false);
     }
@@ -182,7 +182,7 @@ export default function AlbumScreen() {
       const albumPhotos = await client.get<PhotoDTO[]>(`/projects/${id}/photos`);
       const variant = catalog.data.products.flatMap((p) => p.variants).find((v) => v.id === fresh.variantId);
       if (!variant) {
-        setError('Не удалось определить формат альбома. Обновите экран и повторите.');
+        setError('Не удалось определить формат фотокниги. Обновите экран и повторите.');
         return;
       }
       const limits = { pagesMin: variant.pagesMin, pagesMax: variant.pagesMax };
@@ -207,7 +207,7 @@ export default function AlbumScreen() {
       setSkipped(names);
       if (names.length === 0) router.push(`/project/${id}/overview`);
     } catch (e) {
-      setError(e instanceof ApiRequestError ? e.message : 'Не удалось собрать альбом');
+      setError(e instanceof ApiRequestError ? e.message : 'Не удалось собрать фотокнигу');
     } finally {
       setBusyBuild(false);
     }
@@ -334,7 +334,7 @@ export default function AlbumScreen() {
   if (isPool) {
     return (
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{project?.title ?? 'Общий альбом'}</Text>
+        <Text style={styles.title}>{project?.title ?? 'Общая фотокнига'}</Text>
         <Text style={styles.sub}>Общий пул фото. У каждого участника — своя книга.</Text>
 
         {!ordered && id ? (
@@ -463,7 +463,7 @@ export default function AlbumScreen() {
             <Text style={styles.sub}>
               {hasPassword
                 ? 'Вступить можно только по ссылке и паролю. Передайте участникам и то и другое.'
-                : 'У этого альбома пароля нет. Задайте его, иначе вступить сможет любой по ссылке.'}
+                : 'У этой фотокниги пароля нет. Задайте его, иначе вступить сможет любой по ссылке.'}
             </Text>
             {editing ? (
               <>
@@ -499,7 +499,7 @@ export default function AlbumScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{ordered ? 'Альбом готов' : 'Сбор фотографий'}</Text>
+      <Text style={styles.title}>{ordered ? 'Фотокнига готова' : 'Сбор фотографий'}</Text>
       <Text style={styles.sub}>{progressText(progress)}</Text>
 
       <Button title="Загрузить фото" onPress={() => router.push(`/project/${id}/photos`)} />
@@ -513,7 +513,7 @@ export default function AlbumScreen() {
             </Text>
           ) : null}
           <Button
-            title={confirmRebuild ? 'Заменить макет' : 'Собрать альбом'}
+            title={confirmRebuild ? 'Заменить макет' : 'Собрать фотокнигу'}
             disabled={busyBuild || !progress || !project || !catalog.data}
             onPress={() => void buildAlbum()}
           />
@@ -521,7 +521,7 @@ export default function AlbumScreen() {
       ) : null}
       {skipped.length > 0 ? (
         <>
-          <Text style={styles.error}>Не вошли в альбом (не хватило страниц): {skipped.join(', ')}</Text>
+          <Text style={styles.error}>Не вошли в фотокнигу (не хватило страниц): {skipped.join(', ')}</Text>
           <Button title="Открыть макет" variant="secondary" onPress={() => router.push(`/project/${id}/overview`)} />
         </>
       ) : null}
@@ -529,7 +529,7 @@ export default function AlbumScreen() {
       {ordered ? (
         <>
           <Text style={styles.hint}>
-            Организатор уже заказал альбом. Каждый участник может заказать свою печатную копию и оплатить её отдельно.
+            Организатор уже заказал фотокнигу. Каждый участник может заказать свою печатную копию и оплатить её отдельно.
           </Text>
           <Button
             title={isOrganizer ? 'Заказать свою копию' : 'Заказать мою именную копию'}
@@ -553,7 +553,7 @@ export default function AlbumScreen() {
             </>
           ) : null}
           <Text style={styles.hint}>
-            Ссылку и пароль передайте разными каналами: если утечёт только ссылка, без пароля в альбом не войдут.
+            Ссылку и пароль передайте разными каналами: если утечёт только ссылка, без пароля в фотокнигу не войдут.
           </Text>
         </>
       )}
@@ -587,7 +587,7 @@ export default function AlbumScreen() {
               ? '…'
               : hasPassword
                 ? 'Вступить можно только по ссылке и паролю. Передайте участникам и то и другое.'
-                : 'У этого альбома пароля нет. Задайте его, иначе вступить сможет любой, у кого есть ссылка.'}
+                : 'У этой фотокниги пароля нет. Задайте его, иначе вступить сможет любой, у кого есть ссылка.'}
           </Text>
           {editing ? (
             <>

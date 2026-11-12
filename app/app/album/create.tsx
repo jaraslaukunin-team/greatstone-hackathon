@@ -56,7 +56,7 @@ export default function CreateAlbumScreen() {
         shared
           ? {
               variantId,
-              title: title.trim() || 'Выпускной альбом',
+              title: title.trim() || 'Выпускная фотокнига',
               isShared: true,
               expectedMembers: SHARED_EXPECTED_MEMBERS,
               joinPassword: password,
@@ -71,7 +71,7 @@ export default function CreateAlbumScreen() {
       if (shared) router.push(`/album/${project.id}`);
       else router.push(`/project/${project.id}/photos`);
     } catch (e) {
-      setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать альбом');
+      setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать фотокнигу');
     } finally {
       setBusy(false);
     }
@@ -82,7 +82,7 @@ export default function CreateAlbumScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Создать альбом</Text>
+      <Text style={styles.title}>Создать фотокнигу</Text>
 
       <Text style={styles.label}>Название</Text>
       <Input
@@ -131,7 +131,7 @@ export default function CreateAlbumScreen() {
           {shared ? <Text style={styles.checkMark}>✓</Text> : null}
         </View>
         <View style={styles.checkCopy}>
-          <Text style={styles.label}>Общий альбом</Text>
+          <Text style={styles.label}>Общая фотокнига</Text>
           <Text style={styles.hint}>
             Другие смогут присоединиться по ссылке и паролю. Без галочки — личная фотокнига только для вас.
           </Text>
@@ -150,7 +150,7 @@ export default function CreateAlbumScreen() {
             autoComplete="off"
           />
           <Text style={styles.hint}>
-            В альбом вступят только те, кому вы передали и ссылку, и пароль. Пароль можно сменить позже, убрать его
+            В фотокнигу вступят только те, кому вы передали и ссылку, и пароль. Пароль можно сменить позже, убрать его
             нельзя.
           </Text>
         </View>

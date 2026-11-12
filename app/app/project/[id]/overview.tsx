@@ -214,7 +214,7 @@ export default function OverviewScreen() {
             width={Math.min(winW - space[4] * 2, 280)}
             height={Math.min(winW - space[4] * 2, 280)}
           />
-          <Text style={styles.cardTitle}>Обложка альбома</Text>
+          <Text style={styles.cardTitle}>Обложка фотокниги</Text>
           {!ordered ? (
             <>
               <CoverColors

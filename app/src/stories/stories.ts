@@ -38,10 +38,10 @@ export const STORIES: CompanyStory[] = [
       },
       {
         title: 'Выпускной сезон',
-        body: 'Общий альбом класса — выгоднее, чем печатать по одной. Соберите фото вместе и закажите копии.',
+        body: 'Общая фотокнига класса — выгоднее, чем печатать по одной. Соберите фото вместе и закажите копии.',
         bg: '#C44545',
         textColor: lightColors.textOnAccent,
-        cta: { label: 'Создать альбом', href: '/album/create' },
+        cta: { label: 'Создать фотокнигу', href: '/album/create' },
       },
     ],
   },
@@ -115,7 +115,7 @@ export const STORIES: CompanyStory[] = [
     slides: [
       {
         title: '1. Выберите формат',
-        body: 'Фотокнига, печать или общий выпускной альбом — старт из каталога или раздела «Альбом».',
+        body: 'Фотокнига, печать или общая выпускная фотокнига — старт из каталога или раздела «Фотокнига».',
         bg: lightColors.fillLilac,
         textColor: lightColors.text,
       },
@@ -162,7 +162,7 @@ export const STORIES: CompanyStory[] = [
     slides: [
       {
         title: '«Собрали выпускной за вечер»',
-        body: 'Родители класса загрузили фото по ссылке — получился общий альбом и копии для каждого.',
+        body: 'Родители класса загрузили фото по ссылке — получилась общая фотокнига и копии для каждого.',
         bg: lightColors.fillRose,
         textColor: lightColors.text,
       },

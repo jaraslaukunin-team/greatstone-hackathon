@@ -107,19 +107,19 @@ export async function createProject(
 
   if (isPool) {
     if (!isShared) {
-      throw new AppError(400, 'POOL_REQUIRES_SHARED', 'Общий альбом должен быть совместным (isShared)');
+      throw new AppError(400, 'POOL_REQUIRES_SHARED', 'Общая фотокнига должна быть совместной (isShared)');
     }
     const [product] = await db.select().from(products).where(eq(products.id, variant.productId));
     if (!product || product.kind !== 'photobook') {
-      throw new AppError(400, 'POOL_FORMAT', 'Общий альбом создаётся только для фотокниги');
+      throw new AppError(400, 'POOL_FORMAT', 'Общая фотокнига создаётся только для формата фотокниги');
     }
   }
   // Пароль обязателен для любого совместного альбома (выпускной и общий пул).
   if (isShared && input.joinPassword === undefined) {
-    throw new AppError(400, 'PASSWORD_REQUIRED', 'Для общего альбома нужен пароль: по ссылке без него вступить нельзя');
+    throw new AppError(400, 'PASSWORD_REQUIRED', 'Для общей фотокниги нужен пароль: по ссылке без него вступить нельзя');
   }
   if (input.joinPassword !== undefined && !isShared) {
-    throw new AppError(400, 'PASSWORD_NOT_ALLOWED', 'Пароль можно задать только общему выпускному альбому');
+    throw new AppError(400, 'PASSWORD_NOT_ALLOWED', 'Пароль можно задать только общей выпускной фотокниге');
   }
   const [row] = await db
     .insert(projects)
@@ -197,8 +197,8 @@ export async function deleteProject(db: Db, storage: Storage, user: AuthUser, pr
 // Пароль входа в общий альбом обязателен: его меняет только организатор, снять его нельзя.
 export async function setJoinPassword(db: Db, user: AuthUser, projectId: string, password: string): Promise<void> {
   const project = await assertProjectAccess(db, user, projectId, 'organizer');
-  if (!project.isShared) throw new AppError(409, 'PROJECT_NOT_SHARED', 'Пароль есть только у общего выпускного альбома');
-  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Альбом уже заказан');
+  if (!project.isShared) throw new AppError(409, 'PROJECT_NOT_SHARED', 'Пароль есть только у общей выпускной фотокниги');
+  if (project.status === 'ordered') throw new AppError(409, 'PROJECT_ORDERED', 'Фотокнига уже заказана');
   await db
     .update(projects)
     .set({ joinPasswordHash: await hashPassword(password), updatedAt: new Date() })
@@ -360,7 +360,7 @@ export async function forkPoolProject(app: FastifyInstance, user: AuthUser, pool
   const storage = app.storage;
   const pool = await assertProjectAccess(db, user, poolId, 'read');
   if (!pool.isPool) {
-    throw new AppError(409, 'NOT_A_POOL', 'Свою книгу можно собрать только из общего альбома');
+    throw new AppError(409, 'NOT_A_POOL', 'Свою книгу можно собрать только из общей фотокниги');
   }
 
   const [existing] = await db
@@ -453,10 +453,10 @@ export async function createMemberSpread(
   const storage = app.storage;
   const album = await assertProjectAccess(db, user, albumId, 'read');
   if (!album.isShared || album.isPool) {
-    throw new AppError(409, 'NOT_GRADUATION', 'Личный разворот доступен только в выпускном альбоме');
+    throw new AppError(409, 'NOT_GRADUATION', 'Личный разворот доступен только в выпускной фотокниге');
   }
   if (album.ownerId === user.id) {
-    throw new AppError(409, 'OWNER_HAS_ALBUM', 'Организатор собирает общий альбом, а не личный разворот');
+    throw new AppError(409, 'OWNER_HAS_ALBUM', 'Организатор собирает общую фотокнигу, а не личный разворот');
   }
 
   const written: string[] = [];
@@ -563,14 +563,14 @@ export async function syncPoolProject(
   const storage = app.storage;
   const book = await assertProjectAccess(db, user, bookId, 'organizer');
   if (!book.sourceProjectId) {
-    throw new AppError(409, 'NOT_A_FORK', 'Подтянуть фото можно только в книгу из общего альбома');
+    throw new AppError(409, 'NOT_A_FORK', 'Подтянуть фото можно только в книгу из общей фотокниги');
   }
   if (book.status === 'ordered') {
     throw new AppError(409, 'PROJECT_ORDERED', 'Проект уже заказан и больше не меняется');
   }
   const pool = await assertProjectAccess(db, user, book.sourceProjectId, 'read');
   if (!pool.isPool) {
-    throw new AppError(409, 'NOT_A_POOL', 'Источник книги больше не является общим альбомом');
+    throw new AppError(409, 'NOT_A_POOL', 'Источник книги больше не является общей фотокнигой');
   }
 
   const existing = await db

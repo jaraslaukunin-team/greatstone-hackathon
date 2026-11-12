@@ -45,7 +45,7 @@ export default function PlaceScreen() {
   useDebouncedSync(client, id, !!draft && draft.project.id === id);
 
   useEffect(() => {
-    navigation.setOptions({ title: graduationAlbumId ? 'Выпускной альбом' : 'Фотокнига' });
+    navigation.setOptions({ title: graduationAlbumId ? 'Выпускная фотокнига' : 'Фотокнига' });
   }, [navigation, graduationAlbumId]);
 
   const layout = draft && draft.project.id === id ? draft.layout : null;

@@ -38,7 +38,7 @@ export default function CreateEventAlbumScreen() {
     try {
       const project = await client.post<ProjectDTO>('/projects', {
         variantId,
-        title: title.trim() || 'Общий альбом',
+        title: title.trim() || 'Общая фотокнига',
         isShared: true,
         isPool: true,
         joinPassword: password,
@@ -46,7 +46,7 @@ export default function CreateEventAlbumScreen() {
       useThemeChoice.getState().set(project.id, themeId);
       router.push(`/album/${project.id}`);
     } catch (e) {
-      setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать альбом');
+      setError(e instanceof ApiRequestError ? e.message : 'Не удалось создать фотокнигу');
     } finally {
       setBusy(false);
     }
@@ -54,7 +54,7 @@ export default function CreateEventAlbumScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Общий альбом</Text>
+      <Text style={styles.title}>Общая фотокнига</Text>
       <Text style={styles.hint}>
         Все заливают фото в общий пул, а каждый собирает свою книгу и заказывает её отдельно.
       </Text>
@@ -96,7 +96,7 @@ export default function CreateEventAlbumScreen() {
         autoComplete="off"
       />
       <Text style={styles.hint}>
-        Передайте участникам и ссылку, и пароль — без пароля в альбом не войдут, даже если ссылка утечёт.
+        Передайте участникам и ссылку, и пароль — без пароля в фотокнигу не войдут, даже если ссылка утечёт.
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button title="Создать" onPress={() => void create()} disabled={busy || !variantId || password.length === 0} />

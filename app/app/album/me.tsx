@@ -16,7 +16,7 @@ import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
 const WISH_MAX = 120;
 
-/** «Мой разворот»: превью фото, пожелание и ссылка на видео → QR на странице альбома. */
+/** «Мой разворот»: превью фото, пожелание и ссылка на видео → QR на странице фотокниги. */
 export default function MyWishScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const client = useApiClient();
@@ -79,7 +79,7 @@ export default function MyWishScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Мой разворот</Text>
       <Text style={styles.sub}>
-        Пожелание попадёт на ваш разворот в выпускном альбоме, а ссылка на видео станет QR-кодом на странице.
+        Пожелание попадёт на ваш разворот в выпускной фотокниге, а ссылка на видео станет QR-кодом на странице.
       </Text>
 
       {photos.length > 0 ? (
