@@ -8,6 +8,8 @@ import { seed, testApp } from './helpers.js';
 
 type Session = { token: string; id: string };
 
+const POOL_PW = 'pool-pass';
+
 describe('общий альбом (пул): fork и sync', () => {
   let app: FastifyInstance;
   let db: Awaited<ReturnType<typeof testApp>>['db'];
@@ -69,18 +71,30 @@ describe('общий альбом (пул): fork и sync', () => {
     )[0]!.id;
   });
 
-  it('создание пула без пароля для фотокниги проходит; выпускной isPool — 400; без isShared — 400', async () => {
+  it('создание пула с паролем проходит; без пароля — 400; выпускной isPool — 400; без isShared — 400', async () => {
+    expect(
+      (
+        await call(alice, 'POST', '/projects', {
+          variantId: bookVariantId,
+          title: 'Отпуск',
+          isShared: true,
+          isPool: true,
+        })
+      ).statusCode,
+    ).toBe(400);
+
     const ok = await call(alice, 'POST', '/projects', {
       variantId: bookVariantId,
       title: 'Отпуск',
       isShared: true,
       isPool: true,
+      joinPassword: POOL_PW,
     });
     expect(ok.statusCode).toBe(201);
     const pool = projectSchema.parse(ok.json());
     expect(pool.isPool).toBe(true);
     expect(pool.isShared).toBe(true);
-    expect(pool.hasPassword).toBe(false);
+    expect(pool.hasPassword).toBe(true);
 
     expect(
       (
@@ -100,6 +114,7 @@ describe('общий альбом (пул): fork и sync', () => {
           variantId: bookVariantId,
           title: 'X',
           isPool: true,
+          joinPassword: 'x',
         })
       ).statusCode,
     ).toBe(400);
@@ -112,10 +127,11 @@ describe('общий альбом (пул): fork и sync', () => {
         title: 'Пул',
         isShared: true,
         isPool: true,
+        joinPassword: POOL_PW,
       })).json() as { id: string }
     ).id;
     const inv = inviteSchema.parse((await call(alice, 'POST', `/projects/${poolId}/invites`)).json());
-    expect((await call(bob, 'POST', '/invites/accept', { token: inv.token })).statusCode).toBe(200);
+    expect((await call(bob, 'POST', '/invites/accept', { token: inv.token, password: POOL_PW })).statusCode).toBe(200);
 
     const alicePhoto = await putPhoto(poolId, 'a');
     const bobPhoto = randomUUID();
@@ -168,10 +184,11 @@ describe('общий альбом (пул): fork и sync', () => {
         title: 'Пул',
         isShared: true,
         isPool: true,
+        joinPassword: POOL_PW,
       })).json() as { id: string }
     ).id;
     const inv = inviteSchema.parse((await call(alice, 'POST', `/projects/${poolId}/invites`)).json());
-    await call(bob, 'POST', '/invites/accept', { token: inv.token });
+    await call(bob, 'POST', '/invites/accept', { token: inv.token, password: POOL_PW });
     const srcId = await putPhoto(poolId);
 
     const first = await call(bob, 'POST', `/projects/${poolId}/fork`);
@@ -206,10 +223,11 @@ describe('общий альбом (пул): fork и sync', () => {
         title: 'Пул',
         isShared: true,
         isPool: true,
+        joinPassword: POOL_PW,
       })).json() as { id: string }
     ).id;
     const inv = inviteSchema.parse((await call(alice, 'POST', `/projects/${poolId}/invites`)).json());
-    await call(bob, 'POST', '/invites/accept', { token: inv.token });
+    await call(bob, 'POST', '/invites/accept', { token: inv.token, password: POOL_PW });
     await putPhoto(poolId, 'one');
     const book = projectSchema.parse((await call(bob, 'POST', `/projects/${poolId}/fork`)).json());
 
@@ -247,6 +265,7 @@ describe('общий альбом (пул): fork и sync', () => {
         title: 'Пул',
         isShared: true,
         isPool: true,
+        joinPassword: POOL_PW,
       })).json() as { id: string }
     ).id;
     const order = await app.inject({

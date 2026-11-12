@@ -30,24 +30,21 @@ export default function CreateEventAlbumScreen() {
 
   async function create() {
     if (!variantId) return;
-    if (password.length > 0) {
-      const problem = passwordProblem(password);
-      if (problem) {
-        setError(problem);
-        return;
-      }
+    const problem = passwordProblem(password);
+    if (problem) {
+      setError(problem);
+      return;
     }
     setError(null);
     setBusy(true);
     try {
-      const body: Record<string, unknown> = {
+      const project = await client.post<ProjectDTO>('/projects', {
         variantId,
         title: title.trim() || 'Общий альбом',
         isShared: true,
         isPool: true,
-      };
-      if (password.length > 0) body.joinPassword = password;
-      const project = await client.post<ProjectDTO>('/projects', body);
+        joinPassword: password,
+      });
       useThemeChoice.getState().set(project.id, themeId);
       router.push(`/album/${project.id}`);
     } catch (e) {
@@ -91,18 +88,20 @@ export default function CreateEventAlbumScreen() {
         </View>
       ) : null}
 
-      <Text style={styles.label}>Пароль для входа (необязательно)</Text>
+      <Text style={styles.label}>Пароль для входа</Text>
       <Input
         value={password}
         onChangeText={setPassword}
-        placeholder="Можно оставить пустым"
+        placeholder="Обязательно"
         secureTextEntry
         autoCapitalize="none"
         autoComplete="off"
       />
-      <Text style={styles.hint}>Если зададите пароль, передайте его участникам вместе со ссылкой.</Text>
+      <Text style={styles.hint}>
+        Передайте участникам и ссылку, и пароль — без пароля в альбом не войдут, даже если ссылка утечёт.
+      </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Создать" onPress={() => void create()} disabled={busy || !variantId} />
+      <Button title="Создать" onPress={() => void create()} disabled={busy || !variantId || password.length === 0} />
     </ScrollView>
   );
 }
