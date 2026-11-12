@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
+import { useAuth } from '../../src/auth/AuthProvider';
 import { useCatalog } from '../../src/catalog/useCatalog';
 import { ProjectMenu, type ProjectMenuAction } from '../../src/designs/ProjectMenu';
 import { projectKind, projectKindLabel } from '../../src/project/projectKind';
@@ -27,6 +28,7 @@ import { lightColors, radius, space, typography } from '../../src/theme/theme';
 
 export default function DesignsScreen() {
   const client = useApiClient();
+  const { ready, token } = useAuth();
   const catalog = useCatalog();
   const { draft, syncState, setDraft } = useProjectStore();
   const [items, setItems] = useState<ProjectDTO[]>([]);
@@ -52,8 +54,9 @@ export default function DesignsScreen() {
   }
 
   useEffect(() => {
+    if (!ready || !token) return;
     void load();
-  }, [client]);
+  }, [client, ready, token]);
 
   function openProject(project: ProjectDTO) {
     setDraft(project);

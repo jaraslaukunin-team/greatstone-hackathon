@@ -85,13 +85,22 @@ export default function EditorScreen() {
     };
   }, [client, projectId, photoId]);
 
+  /** Берёт доступный проект или создаёт новый. Старый черновик другого гостя даёт 404 — его сбрасываем. */
   async function ensureProject(): Promise<string> {
-    if (projectId) return projectId;
-    const draftId = useProjectStore.getState().draft?.project.id;
-    if (draftId) {
-      setProjectId(draftId);
-      return draftId;
+    const candidates = [projectId, useProjectStore.getState().draft?.project.id].filter(
+      (id): id is string => typeof id === 'string' && id.length > 0,
+    );
+    for (const id of candidates) {
+      try {
+        await client.get<ProjectDTO>(`/projects/${id}`);
+        setProjectId(id);
+        return id;
+      } catch (e) {
+        if (e instanceof ApiRequestError && e.code === 'NOT_FOUND') continue;
+        throw e;
+      }
     }
+    useProjectStore.getState().clear();
     const catalog = await client.get<CatalogDTO>('/catalog');
     const variantId =
       catalog.products.find((p) => p.kind === 'photobook')?.variants[0]?.id ??

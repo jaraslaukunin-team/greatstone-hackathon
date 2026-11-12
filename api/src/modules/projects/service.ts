@@ -114,9 +114,9 @@ export async function createProject(
       throw new AppError(400, 'POOL_FORMAT', 'Общий альбом создаётся только для фотокниги');
     }
   }
-  // Пароль обязателен только для выпускного (shared без пула).
-  if (isShared && !isPool && input.joinPassword === undefined) {
-    throw new AppError(400, 'PASSWORD_REQUIRED', 'Для выпускного альбома нужен пароль: по ссылке без него вступить нельзя');
+  // Пароль обязателен для любого совместного альбома (выпускной и общий пул).
+  if (isShared && input.joinPassword === undefined) {
+    throw new AppError(400, 'PASSWORD_REQUIRED', 'Для общего альбома нужен пароль: по ссылке без него вступить нельзя');
   }
   if (input.joinPassword !== undefined && !isShared) {
     throw new AppError(400, 'PASSWORD_NOT_ALLOWED', 'Пароль можно задать только общему выпускному альбому');
