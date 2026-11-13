@@ -8,10 +8,7 @@
     "scheme": "picpac",
     "userInterfaceStyle": "automatic",
     "extra": {
-      "apiUrl": "https://picpac.jaraslau.dev",
-      "eas": {
-        "projectId": "3bab2969-094e-478a-a913-9f376104de9a"
-      }
+      "apiUrl": "https://picpac.jaraslau.dev"
     },
     "ios": {
       "supportsTablet": true,
@@ -65,6 +62,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "owner": "mioryyy"
+    "owner": "jaraslaukunin-team"
   }
 }
