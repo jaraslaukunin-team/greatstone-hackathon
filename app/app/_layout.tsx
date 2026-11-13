@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { useFonts } from 'expo-font';
 import { ErrorBoundary as RouterErrorBoundary, Stack, router, type ErrorBoundaryProps } from 'expo-router';
-import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View } from 'react-native';
@@ -102,11 +101,6 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Head>
-        <title>PicPac</title>
-        <link rel="icon" type="image/png" href="/favicon.png?v=picpac" />
-        <link rel="apple-touch-icon" href="/favicon.png?v=picpac" />
-      </Head>
       <AuthProvider>
         <ApiBridge>
           <DeepLinkBridge>
