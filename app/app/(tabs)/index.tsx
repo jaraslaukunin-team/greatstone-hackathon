@@ -45,47 +45,57 @@ export default function HomeScreen() {
       <StoriesStrip />
 
       <Link href="/catalog/books" asChild>
-        <Card tone="green" style={styles.hero} delay={80} accessibilityRole="link">
-          <View style={styles.heroText}>
-            <Text style={styles.heroTitle}>{t.home.heroTitle}</Text>
-            <Text style={styles.heroSub}>{t.home.heroSub}</Text>
-          </View>
-          <View style={styles.heroArt}>
-            <PrintStack size={120} />
-          </View>
-        </Card>
+        <Pressable accessibilityRole="link">
+          <Card tone="green" style={styles.hero} delay={80}>
+            <View style={styles.heroText}>
+              <Text style={styles.heroTitle}>{t.home.heroTitle}</Text>
+              <Text style={styles.heroSub}>{t.home.heroSub}</Text>
+            </View>
+            <View style={styles.heroArt}>
+              <PrintStack size={120} />
+            </View>
+          </Card>
+        </Pressable>
       </Link>
 
       <Link href="/catalog/prints" asChild>
-        <Card tone="rose" delay={160} accessibilityRole="link">
-          <Icon name="image" size={28} color={lightColors.text} />
-          <Text style={styles.cardTitle}>{t.home.printsTitle}</Text>
-          <Text style={styles.cardSub}>{t.home.printsSub}</Text>
-        </Card>
+        <Pressable accessibilityRole="link">
+          <Card tone="rose" delay={160}>
+            <Icon name="image" size={28} color={lightColors.text} />
+            <Text style={styles.cardTitle}>{t.home.printsTitle}</Text>
+            <Text style={styles.cardSub}>{t.home.printsSub}</Text>
+          </Card>
+        </Pressable>
       </Link>
 
       <Link href="/album/event-create" asChild>
-        <Card tone="sky" delay={240} accessibilityRole="link">
-          <Icon name="image" size={28} color={lightColors.text} />
-          <Text style={styles.cardTitle}>Общая фотокнига</Text>
-          <Text style={styles.cardSub}>Пул фото по ссылке — у каждого своя книга</Text>
-        </Card>
+        <Pressable accessibilityRole="link">
+          <Card tone="sky" delay={240}>
+            <Icon name="image" size={28} color={lightColors.text} />
+            <Text style={styles.cardTitle}>Общая фотокнига</Text>
+            <Text style={styles.cardSub}>Пул фото по ссылке — у каждого своя книга</Text>
+          </Card>
+        </Pressable>
       </Link>
 
       <View style={styles.row}>
         <Link href="/album/create" asChild>
-          <Card tone="mint" style={styles.half} delay={320} accessibilityRole="link">
-            <Icon name="heart" size={28} color={lightColors.text} />
-            <Text style={styles.cardTitle}>{t.home.albumTitle}</Text>
-            <Text style={styles.cardSub}>{t.home.albumSub}</Text>
-          </Card>
+          <Pressable accessibilityRole="link" style={styles.half}>
+            <Card tone="mint" delay={320}>
+              <Icon name="heart" size={28} color={lightColors.text} />
+              <Text style={styles.cardTitle}>{t.home.albumTitle}</Text>
+              <Text style={styles.cardSub}>{t.home.albumSub}</Text>
+            </Card>
+          </Pressable>
         </Link>
         <Link href="/ai/consent" asChild>
-          <Card tone="lilac" style={styles.half} delay={390} accessibilityRole="link">
-            <Icon name="star" size={28} color={lightColors.text} />
-            <Text style={styles.cardTitle}>{t.home.aiTitle}</Text>
-            <Text style={styles.cardSub}>{t.home.aiSub}</Text>
-          </Card>
+          <Pressable accessibilityRole="link" style={styles.half}>
+            <Card tone="lilac" delay={390}>
+              <Icon name="star" size={28} color={lightColors.text} />
+              <Text style={styles.cardTitle}>{t.home.aiTitle}</Text>
+              <Text style={styles.cardSub}>{t.home.aiSub}</Text>
+            </Card>
+          </Pressable>
         </Link>
       </View>
     </ScrollView>

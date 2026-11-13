@@ -1,6 +1,6 @@
 import { formatByn } from '@picpac/shared';
 import { Link } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog } from '../../src/catalog/useCatalog';
 import { BudgetPicker } from '../../src/catalog/BudgetPicker';
 import { Card } from '../../src/ui/Card';
@@ -43,27 +43,29 @@ export default function BooksScreen() {
         const formats = product.variants.map((v) => v.format);
         return (
           <Link key={product.id} href={`/catalog/${product.id}`} asChild>
-            <Card chevron delay={staggerDelay(index + 1)}>
-              <Text style={styles.cardTitle}>{product.title}</Text>
-              <Text style={styles.cardSub}>{product.description}</Text>
-              {formats.length > 0 ? (
-                <View style={styles.chips}>
-                  {formats.map((f) => (
-                    <View key={f} style={styles.chip}>
-                      <Text style={styles.chipText}>{f}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-              {variant ? (
-                <View style={styles.row}>
-                  <Text style={styles.price}>от {formatByn(variant.basePriceKop)}</Text>
-                  {variant.leadTimeDays > 0 ? (
-                    <Text style={styles.lead}>{variant.leadTimeDays} дн.</Text>
-                  ) : null}
-                </View>
-              ) : null}
-            </Card>
+            <Pressable accessibilityRole="link">
+              <Card chevron delay={staggerDelay(index + 1)}>
+                <Text style={styles.cardTitle}>{product.title}</Text>
+                <Text style={styles.cardSub}>{product.description}</Text>
+                {formats.length > 0 ? (
+                  <View style={styles.chips}>
+                    {formats.map((f) => (
+                      <View key={f} style={styles.chip}>
+                        <Text style={styles.chipText}>{f}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                {variant ? (
+                  <View style={styles.row}>
+                    <Text style={styles.price}>от {formatByn(variant.basePriceKop)}</Text>
+                    {variant.leadTimeDays > 0 ? (
+                      <Text style={styles.lead}>{variant.leadTimeDays} дн.</Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </Card>
+            </Pressable>
           </Link>
         );
       })}

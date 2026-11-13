@@ -1,6 +1,6 @@
 import { formatByn } from '@picpac/shared';
 import { Link } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog } from '../../src/catalog/useCatalog';
 import { paperLabel, paperOf } from '../../src/print/paper';
 import { Card } from '../../src/ui/Card';
@@ -40,22 +40,24 @@ export default function PrintsScreen() {
         const lineName = product.line ? LINE_LABEL[product.line] : null;
         return (
           <Link key={product.id} href={{ pathname: '/print/format', params: { productId: product.id } }} asChild>
-            <Card chevron delay={staggerDelay(index + 1)}>
-              <Text style={styles.cardTitle}>{product.title}</Text>
-              <View style={styles.badges}>
-                {lineName ? (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{lineName}</Text>
-                  </View>
-                ) : null}
-                {paper ? (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{paperLabel[paper]}</Text>
-                  </View>
-                ) : null}
-              </View>
-              {variant ? <Text style={styles.price}>от {formatByn(variant.basePriceKop)}</Text> : null}
-            </Card>
+            <Pressable accessibilityRole="link">
+              <Card chevron delay={staggerDelay(index + 1)}>
+                <Text style={styles.cardTitle}>{product.title}</Text>
+                <View style={styles.badges}>
+                  {lineName ? (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{lineName}</Text>
+                    </View>
+                  ) : null}
+                  {paper ? (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{paperLabel[paper]}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                {variant ? <Text style={styles.price}>от {formatByn(variant.basePriceKop)}</Text> : null}
+              </Card>
+            </Pressable>
           </Link>
         );
       })}
