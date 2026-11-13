@@ -1,24 +1,16 @@
 import { Redirect } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
 import { useAuth } from '../src/auth/AuthProvider';
 import { homeFor } from '../src/auth/roleMode';
 import { useRoleMode } from '../src/auth/roleStore';
 import { useSettingsStore } from '../src/settings/settingsStore';
-import { lightColors } from '../src/theme/theme';
-import { PulseLogo } from '../src/ui/PulseLogo';
+import { ListSkeleton } from '../src/ui/Skeleton';
 
 export default function Index() {
   const { token, user, ready } = useAuth();
   const mode = useRoleMode((s) => s.mode);
   const onboardingSeen = useSettingsStore((s) => s.onboardingSeen);
 
-  if (!ready) {
-    return (
-      <View style={styles.boot}>
-        <PulseLogo />
-      </View>
-    );
-  }
+  if (!ready) return <ListSkeleton count={2} />;
 
   if (token) {
     return <Redirect href={homeFor(mode, user ?? { role: 'customer' })} />;
@@ -30,12 +22,3 @@ export default function Index() {
 
   return <Redirect href="/(auth)/welcome" />;
 }
-
-const styles = StyleSheet.create({
-  boot: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: lightColors.bg,
-  },
-});

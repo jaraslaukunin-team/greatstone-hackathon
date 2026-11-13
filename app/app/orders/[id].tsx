@@ -11,6 +11,7 @@ import { statusSteps } from '../../src/orders/statusSteps';
 import { useOrderPolling } from '../../src/orders/useOrderPolling';
 import { useProjectStore } from '../../src/project/projectStore';
 import { DownloadBookPdf } from '../../src/project/DownloadBookPdf';
+import { ListSkeleton } from '../../src/ui/Skeleton';
 import { Button } from '../../src/ui/Button';
 import { Card } from '../../src/ui/Card';
 import { ToastHost } from '../../src/ui/Toast';
@@ -54,6 +55,8 @@ export default function OrderDetailsScreen() {
       setBusy(false);
     }
   }
+
+  if (!order && !error) return <ListSkeleton count={2} />;
 
   return (
     <View style={styles.root}>

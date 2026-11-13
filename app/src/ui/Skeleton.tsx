@@ -11,7 +11,7 @@ export function Skeleton({
   style,
 }: {
   width?: DimensionValue;
-  height?: number;
+  height?: DimensionValue;
   round?: number;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -69,8 +69,24 @@ export function ListSkeleton({ count = 3, withTitle = true }: { count?: number; 
   );
 }
 
+export function BookSkeleton() {
+  return (
+    <View style={styles.screen} accessibilityRole="progressbar" accessibilityLabel="Загрузка">
+      <Skeleton width="35%" height={32} />
+      <Skeleton width="60%" height={16} />
+      <Skeleton width="100%" height={44} />
+      <View style={styles.spread}>
+        <Skeleton width="49%" height="100%" />
+        <Skeleton width="49%" height="100%" />
+      </View>
+      <Skeleton width="100%" height={48} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, padding: space[4], gap: space[3], backgroundColor: lightColors.bg },
+  spread: { flexDirection: 'row', justifyContent: 'space-between', aspectRatio: 2, width: '100%' },
   card: {
     borderRadius: radius.card,
     borderWidth: 1,

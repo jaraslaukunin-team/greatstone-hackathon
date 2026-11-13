@@ -24,6 +24,7 @@ import { useThemeChoice, useThemeChoiceStore } from '../../../src/project/themeC
 import { ThemePicker } from '../../../src/theme/ThemePicker';
 import { syncProject } from '../../../src/project/syncProject';
 import { tr } from '../../../src/i18n/runtimeTranslate';
+import { BookSkeleton } from '../../../src/ui/Skeleton';
 import { Button } from '../../../src/ui/Button';
 import { BookViewer } from '../../../src/book/BookViewer';
 import { projectSource } from '../../../src/book/imageSource';
@@ -203,6 +204,8 @@ export default function OverviewScreen() {
       cancelled = true;
     };
   }, [client, id, ready, setDraft, setLayout, setSyncState]);
+
+  if (busy) return <BookSkeleton />;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>

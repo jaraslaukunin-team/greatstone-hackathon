@@ -1,4 +1,5 @@
 import { installRuntimeTranslate, tr } from '../src/i18n/runtimeTranslate';
+import { LaunchLogo } from '../src/ui/LaunchLogo';
 import { RouteTransition } from '../src/ui/RouteTransition';
 import { useSettingsStore } from '../src/settings/settingsStore';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -7,7 +8,7 @@ import { useFonts } from 'expo-font';
 import { ErrorBoundary as RouterErrorBoundary, Stack, router, type ErrorBoundaryProps } from 'expo-router';
 import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { futuraFonts } from '../src/theme/fonts';
 import { ApiClientContext } from '../src/api/hooks';
@@ -85,6 +86,8 @@ export default function RootLayout() {
   const lang = useSettingsStore((s) => s.lang);
   const failNetwork = useSettingsStore((s) => s.failNetwork);
   const [fontsLoaded, fontError] = useFonts(futuraFonts);
+  const [showLaunch, setShowLaunch] = useState(true);
+  const finishLaunch = useCallback(() => setShowLaunch(false), []);
 
   // Демо-переключатель «Имитация сбоя сети»: сетевая ошибка на каждом запросе к API.
   useEffect(() => {
@@ -136,6 +139,7 @@ export default function RootLayout() {
           </DeepLinkBridge>
         </ApiBridge>
       </AuthProvider>
+      {showLaunch ? <LaunchLogo onFinish={finishLaunch} /> : null}
     </QueryClientProvider>
   );
 }
