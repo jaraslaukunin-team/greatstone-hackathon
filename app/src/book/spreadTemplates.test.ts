@@ -12,22 +12,25 @@ const ids = (p: Page | undefined) => p?.cells.map((c) => c.photoId);
 const base = (): Layout => ({ pages: [page('x'), page('a'), page('b', 'c'), page('d'), page('e')] });
 
 describe('SPREAD_TEMPLATES', () => {
-  it('шесть шаблонов с нужным числом фото', () => {
+  it('девять шаблонов с нужным числом фото', () => {
     expect(SPREAD_TEMPLATES.map((t) => [t.id, t.photos])).toEqual([
       ['accent', 1],
       ['diptych', 2],
       ['story', 3],
       ['rhythm', 4],
       ['mosaic', 6],
+      ['filmstrip', 3],
+      ['postcard', 4],
+      ['gallery', 5],
       ['panorama', 1],
     ]);
   });
   it('spreadTemplatesByPhotos фильтрует по числу фото', () => {
     const f = (k: Parameters<typeof spreadTemplatesByPhotos>[0]) => spreadTemplatesByPhotos(k).map((t) => t.id);
-    expect(f('all')).toHaveLength(6);
+    expect(f('all')).toHaveLength(9);
     expect(f('1')).toEqual(['accent', 'panorama']);
-    expect(f('2-3')).toEqual(['diptych', 'story']);
-    expect(f('4-6')).toEqual(['rhythm', 'mosaic']);
+    expect(f('2-3')).toEqual(['diptych', 'story', 'filmstrip']);
+    expect(f('4-6')).toEqual(['rhythm', 'mosaic', 'postcard', 'gallery']);
   });
 });
 

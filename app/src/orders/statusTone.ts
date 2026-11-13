@@ -8,24 +8,24 @@ export type OrderStatusTone = {
 
 const TONES: Record<OrderStatus, OrderStatusTone> = {
   accepted: {
+    backgroundColor: '#F0EEEC',
+    borderColor: '#CCC7BF',
+    statusColor: '#5C5F5E',
+  },
+  moderation: {
+    backgroundColor: '#EEE8FA',
+    borderColor: '#BAA8DD',
+    statusColor: '#5B3C8C',
+  },
+  production: {
+    backgroundColor: '#FFF4CC',
+    borderColor: '#E6C84A',
+    statusColor: '#765900',
+  },
+  ready_for_delivery: {
     backgroundColor: '#E3F0FB',
     borderColor: '#7EB6E0',
     statusColor: '#1E5A8A',
-  },
-  moderation: {
-    backgroundColor: '#FFF4CC',
-    borderColor: '#E6C84A',
-    statusColor: '#8A6D00',
-  },
-  production: {
-    backgroundColor: '#FFE8D6',
-    borderColor: '#E8996C',
-    statusColor: '#9A4A1A',
-  },
-  ready_for_delivery: {
-    backgroundColor: '#D9F0EA',
-    borderColor: '#6BB8A8',
-    statusColor: '#1F6B5C',
   },
   completed: {
     backgroundColor: '#E2F0D9',

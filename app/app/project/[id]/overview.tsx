@@ -1,5 +1,5 @@
 import { AddProjectPhotos } from '../../../src/photos/AddProjectPhotos';
-import { DEFAULT_THEME_ID, formatByn, themeById, type CatalogDTO, type PhotoDTO, type ProjectDTO, type Rect } from '@picpac/shared';
+import { buildTimeMachineLayout, DEFAULT_THEME_ID, formatByn, themeById, type CatalogDTO, type PhotoDTO, type ProjectDTO, type Rect } from '@picpac/shared';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -7,7 +7,6 @@ import { BookTabs, type BookTab } from '../../../src/book/BookTabs';
 import { CoverColors } from '../../../src/book/CoverColors';
 import { CoverView } from '../../../src/book/CoverView';
 import { coverPage, coverTitle } from '../../../src/book/cover';
-import { spreadsOf } from '../../../src/book/flip';
 import { PagesGrid } from '../../../src/book/PagesGrid';
 import { spreadPhotoCount, spreadRange } from '../../../src/book/spreadInfo';
 import { useApiClient } from '../../../src/api/hooks';
@@ -24,6 +23,7 @@ import { blankLayout } from '../../../src/project/blankLayout';
 import { useThemeChoice, useThemeChoiceStore } from '../../../src/project/themeChoiceStore';
 import { ThemePicker } from '../../../src/theme/ThemePicker';
 import { syncProject } from '../../../src/project/syncProject';
+import { tr } from '../../../src/i18n/runtimeTranslate';
 import { Button } from '../../../src/ui/Button';
 import { BookViewer } from '../../../src/book/BookViewer';
 import { projectSource } from '../../../src/book/imageSource';
@@ -42,6 +42,7 @@ export default function OverviewScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   // Вкладка книги: «Разворот» открыта по умолчанию, как раньше открывалась листалка.
   const [tab, setTab] = useState<BookTab>('spread');
+  const [confirmTimeline, setConfirmTimeline] = useState(false);
   const [showThemes, setShowThemes] = useState(false);
   const [editingCover, setEditingCover] = useState(false);
   const [editing, setEditing] = useState<{ pageIndex: number; rect: Rect } | null>(null);
@@ -57,7 +58,7 @@ export default function OverviewScreen() {
     },
     [viewIndex],
   );
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   // Фоторедактор открывается отдельным экраном: помним, какую ячейку правили, и вернём правку страницы по возвращении.
   const pendingEdit = useRef<{ requestId: string; ref: CellRef } | null>(null);
   const resume = useRef<{ pageIndex: number; rect: Rect } | null>(null);
@@ -130,8 +131,9 @@ export default function OverviewScreen() {
   }, [busy, pageParam, draft, ordered, winW, winH]));
 
   useEffect(() => {
+    if (!ready || !id) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const project = await client.get<ProjectDTO>(`/projects/${id}`);
       const photos = await client.get<PhotoDTO[]>(`/projects/${id}/photos`);
       if (!cancelled) setPhotoMap(new Map(photos.map((p) => [p.id, p])));
@@ -192,11 +194,15 @@ export default function OverviewScreen() {
           );
         },
       });
-    })();
+    })().catch((error: unknown) => {
+      if (cancelled) return;
+      setMessage(error instanceof Error ? error.message : 'Не удалось открыть книгу');
+      setBusy(false);
+    });
     return () => {
       cancelled = true;
     };
-  }, [client, id, setDraft, setLayout, setSyncState]);
+  }, [client, id, ready, setDraft, setLayout, setSyncState]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -314,6 +320,27 @@ export default function OverviewScreen() {
             />
           ) : null}
         </View>
+      ) : null}
+      {draft?.project.id === id && photoList.length > 0 ? (
+        <Button title="PicPac Time Machine" variant="secondary"
+          onPress={() => router.push({ pathname: '/project/[id]/preview', params: { id: String(id), mode: 'time-machine' } })} />
+      ) : null}
+      {draft && draft.project.id === id && !ordered && photoList.length > 0 ? (
+        confirmTimeline ? (
+          <>
+            <Text style={styles.hint}>{tr('Пересборка заменит текущий макет. Фотографии останутся в проекте.')}</Text>
+            <Button title={tr('Пересобрать книгу по датам')} onPress={() => {
+              const { layout } = buildTimeMachineLayout(photoList.map((photo) => ({ ...photo, authorName: null })), {
+                title: draft.project.title, limits: { pagesMin: limits.min, pagesMax: limits.max },
+              });
+              setLayout(markSeen({ ...layout, themeId: draft.layout.themeId }, photoList.map((photo) => photo.id)));
+              setConfirmTimeline(false);
+              setJump({ index: 0, key: Date.now() });
+              setTab('spread');
+            }} />
+            <Button title="Отмена" variant="secondary" onPress={() => setConfirmTimeline(false)} />
+          </>
+        ) : <Button title={tr('Разложить по датам')} variant="text" onPress={() => setConfirmTimeline(true)} />
       ) : null}
       <Button
         title="Смотреть результат"

@@ -48,7 +48,6 @@ export default function AlbumScreen() {
   const [busySync, setBusySync] = useState(false);
   const [omitted, setOmitted] = useState(0);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
-  const [hoveredPhotoId, setHoveredPhotoId] = useState<string | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
   const isPool = !!project?.isPool;
@@ -232,7 +231,6 @@ export default function AlbumScreen() {
       await client.delete(`/photos/${photoId}`);
       setPhotos((list) => list.filter((p) => p.id !== photoId));
       setSelectedPhotoId(null);
-      setHoveredPhotoId((cur) => (cur === photoId ? null : cur));
     } catch (e) {
       setError(e instanceof ApiRequestError ? e.message : 'Не удалось удалить фото');
     } finally {
@@ -335,9 +333,8 @@ export default function AlbumScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbs}>
               {photos.map((p) => {
                 const selected = selectedPhotoId === p.id;
-                const hovered = hoveredPhotoId === p.id;
                 const canRemove = canRemovePoolPhoto(p);
-                const showRemove = canRemove && (selected || hovered || deletingPhotoId === p.id);
+                const showRemove = canRemove && (selected || deletingPhotoId === p.id);
                 const deleting = deletingPhotoId === p.id;
                 return (
                   <View key={p.id} style={styles.thumb}>
@@ -347,35 +344,28 @@ export default function AlbumScreen() {
                         showRemove ? 'Фото выбрано, можно удалить' : 'Выбрать фото'
                       }
                       onPress={() => setSelectedPhotoId((cur) => (cur === p.id ? null : p.id))}
-                      onHoverIn={() => setHoveredPhotoId(p.id)}
-                      onHoverOut={() =>
-                        setHoveredPhotoId((cur) => (cur === p.id && deletingPhotoId !== p.id ? null : cur))
-                      }
                       style={styles.thumbHit}
                     >
                       <Image source={{ uri: client.resolveUrl(p.url) }} style={styles.thumbImg} />
-                      {showRemove ? (
-                        <View style={styles.thumbOverlay} pointerEvents="box-none">
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Удалить фото из пула"
-                            hitSlop={8}
-                            disabled={deleting}
-                            onPress={(e) => {
-                              e.stopPropagation?.();
-                              void removePoolPhoto(p.id);
-                            }}
-                            style={styles.thumbRemove}
-                          >
-                            {deleting ? (
-                              <ActivityIndicator size="small" color={lightColors.textOnAccent} />
-                            ) : (
-                              <Icon name="close" size={16} color={lightColors.textOnAccent} />
-                            )}
-                          </Pressable>
-                        </View>
-                      ) : null}
                     </Pressable>
+                    {showRemove ? (
+                      <View style={styles.thumbOverlay} pointerEvents="box-none">
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Удалить фото из пула"
+                          hitSlop={8}
+                          disabled={deleting}
+                          onPress={() => void removePoolPhoto(p.id)}
+                          style={styles.thumbRemove}
+                        >
+                          {deleting ? (
+                            <ActivityIndicator size="small" color={lightColors.textOnAccent} />
+                          ) : (
+                            <Icon name="close" size={16} color={lightColors.textOnAccent} />
+                          )}
+                        </Pressable>
+                      </View>
+                    ) : null}
                     <Text style={styles.thumbAuthor} numberOfLines={1}>
                       {authorLabel(p.uploadedBy)}
                     </Text>
@@ -639,16 +629,16 @@ const styles = StyleSheet.create({
   thumbHit: { position: 'relative', width: 88, height: 88 },
   thumbImg: { width: 88, height: 88, borderRadius: 8, backgroundColor: lightColors.surface },
   thumbOverlay: {
-    ...StyleSheet.absoluteFill,
+    position: 'absolute', top: 0, left: 0, width: 88, height: 88,
     borderRadius: 8,
     backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   thumbRemove: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: lightColors.danger,
     alignItems: 'center',
     justifyContent: 'center',

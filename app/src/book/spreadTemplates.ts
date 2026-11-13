@@ -1,7 +1,7 @@
 import { fitRect, type Cell, type Layout, type Page, type Template } from '@picpac/shared';
 import { spreadsOf } from './flip';
 
-export type SpreadTemplateId = 'accent' | 'diptych' | 'story' | 'rhythm' | 'mosaic' | 'panorama';
+export type SpreadTemplateId = 'accent' | 'diptych' | 'story' | 'rhythm' | 'mosaic' | 'panorama' | 'filmstrip' | 'postcard' | 'gallery';
 export type SpreadTemplate = {
   id: SpreadTemplateId;
   title: string;
@@ -19,6 +19,9 @@ export const SPREAD_TEMPLATES: readonly SpreadTemplate[] = [
   { id: 'story', title: 'История', photos: 3, left: 'one', right: 'two' },
   { id: 'rhythm', title: 'Ритм', photos: 4, left: 'two', right: 'two' },
   { id: 'mosaic', title: 'Мозаика', photos: 6, left: 'four', right: 'two' },
+  { id: 'filmstrip', title: 'Кинолента', photos: 3, left: 'three', right: null },
+  { id: 'postcard', title: 'Открытка', photos: 4, left: 'three', right: 'one' },
+  { id: 'gallery', title: 'Галерея', photos: 5, left: 'two', right: 'three' },
   { id: 'panorama', title: 'Панорама', photos: 1, left: 'spread-one', right: 'spread-one' },
 ];
 

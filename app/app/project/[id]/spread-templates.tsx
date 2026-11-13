@@ -2,6 +2,7 @@ import { themeById } from '@picpac/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { tr } from '../../../src/i18n/runtimeTranslate';
 import { useApiClient } from '../../../src/api/hooks';
 import { spreadsOf } from '../../../src/book/flip';
 import { PageView } from '../../../src/book/PageView';
@@ -101,7 +102,7 @@ export default function SpreadTemplatesScreen() {
             <Pressable
               key={t.id}
               accessibilityRole="button"
-              accessibilityLabel={`Шаблон ${t.title}, ${t.photos} фото`}
+              accessibilityLabel={`${tr('Шаблон')} ${tr(t.title)}, ${t.photos} ${tr('фото')}`}
               accessibilityState={{ selected: on }}
               onPress={() => setSelected(t.id)}
               style={[styles.card, on && styles.cardOn]}
@@ -111,8 +112,8 @@ export default function SpreadTemplatesScreen() {
                 <PageView page={r === null ? null : (preview.pages[r] ?? null)} sourceOf={sourceOf} width={PREVIEW} height={PREVIEW} theme={theme} />
               </View>
               <View style={styles.cardRow}>
-                <Text style={styles.cardTitle}>{t.title}</Text>
-                <Text style={styles.cardSub}>{t.photos} фото</Text>
+                <Text style={styles.cardTitle}>{tr(t.title)}</Text>
+                <Text style={styles.cardSub}>{t.photos} {tr('фото')}</Text>
               </View>
             </Pressable>
           );
@@ -132,7 +133,7 @@ export default function SpreadTemplatesScreen() {
         {scope === 'one' ? 'Остальные страницы не изменятся.' : 'Фото каждого разворота остаются на своём месте, обложка не меняется.'}
       </Text>
 
-      <Button title={chosen ? `Применить «${chosen.title}»` : 'Применить'} disabled={!chosen || ordered || loading} onPress={apply} />
+      <Button title={chosen ? `${tr('Применить')} «${tr(chosen.title)}»` : 'Применить'} disabled={!chosen || ordered || loading} onPress={apply} />
     </ScrollView>
   );
 }

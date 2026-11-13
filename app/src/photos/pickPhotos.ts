@@ -23,7 +23,8 @@ export async function pickPhotos(): Promise<PickedPhoto[]> {
 
   const photos: PickedPhoto[] = [];
   for (const [index, asset] of result.assets.entries()) {
-    const uri = await convertToJpeg(asset.uri);
+    const originalType = asset.file?.type || asset.mimeType;
+    const uri = await convertToJpeg(asset.uri, originalType);
     photos.push({
       localId: asset.assetId ?? `${Date.now()}-${index}`,
       uri,

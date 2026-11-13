@@ -3,6 +3,8 @@ import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
+import { tr } from '../../src/i18n/runtimeTranslate';
+import { useSettingsStore } from '../../src/settings/settingsStore';
 import { statusLabel } from '../../src/orders/statusLabel';
 import { orderStatusTone } from '../../src/orders/statusTone';
 import { statusSteps } from '../../src/orders/statusSteps';
@@ -15,6 +17,7 @@ import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const lang = useSettingsStore((state) => state.lang);
   const client = useApiClient();
   const setDraft = useProjectStore((s) => s.setDraft);
   const { order, error } = useOrderPolling({ client, orderId: id ?? null, intervalMs: 5000 });
@@ -60,7 +63,7 @@ export default function OrderDetailsScreen() {
 
         <Card style={{ backgroundColor: tone.backgroundColor, borderColor: tone.borderColor }}>
           <Text style={[styles.cardTitle, { color: tone.statusColor }]}>
-            Статус: {statusLabel(order?.status)}
+            {tr('Статус:')} {tr(statusLabel(order?.status))}
           </Text>
           <Text style={styles.cardSub}>{order ? formatByn(order.totalKop) : ''}</Text>
           {order?.status === 'cancelled' ? (
@@ -105,7 +108,7 @@ export default function OrderDetailsScreen() {
                         !step.reached && styles.stepLabelMuted,
                       ]}
                     >
-                      {step.label}
+                      {tr(step.label)}
                     </Text>
                   </View>
                 );
@@ -115,8 +118,8 @@ export default function OrderDetailsScreen() {
         ) : null}
 
         {(order?.history ?? []).map((item, index) => (
-          <Text key={`${item.status}-${index}`} style={styles.history}>
-            {statusLabel(item.status)} · {new Date(item.at).toLocaleString('ru-RU')}
+          <Text key={`${item.status}-${index}`} style={[styles.history, { color: orderStatusTone(item.status).statusColor }]}>
+            {tr(statusLabel(item.status))} · {new Date(item.at).toLocaleString(lang)}
           </Text>
         ))}
 

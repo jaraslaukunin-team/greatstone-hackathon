@@ -2,7 +2,7 @@ import { formatByn } from '@picpac/shared';
 import { Link } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCatalog } from '../../src/catalog/useCatalog';
-import { Button } from '../../src/ui/Button';
+import { BudgetPicker } from '../../src/catalog/BudgetPicker';
 import { Card } from '../../src/ui/Card';
 import { ListSkeleton } from '../../src/ui/Skeleton';
 import { FadeIn } from '../../src/ui/FadeIn';
@@ -37,9 +37,7 @@ export default function BooksScreen() {
         <Text style={styles.title}>Фотокниги</Text>
         <Text style={styles.sub}>Выберите, какой будет ваша история</Text>
       </FadeIn>
-      <Link href="/catalog/budget" asChild>
-        <Button title="Подбери под бюджет" variant="secondary" />
-      </Link>
+      <BudgetPicker products={books} />
       {books.map((product, index) => {
         const variant = product.variants[0];
         const formats = product.variants.map((v) => v.format);

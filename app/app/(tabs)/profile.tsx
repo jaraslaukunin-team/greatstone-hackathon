@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useApiClient } from '../../src/api/hooks';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { useT } from '../../src/i18n/useT';
@@ -71,29 +71,12 @@ export default function ProfileScreen() {
       <View style={styles.row}>
         <Text style={styles.rowLabel}>{t.profile.language}</Text>
         <View style={styles.langRow}>
-          <Text
-            style={[styles.langOption, lang === 'ru' && styles.langActive]}
-            onPress={() => setLang('ru')}
-            accessibilityRole="button"
-          >
-            {t.profile.langRu}
-          </Text>
-          <Text style={styles.langSep}>/</Text>
-          <Text
-            style={[styles.langOption, lang === 'be' && styles.langActive]}
-            onPress={() => setLang('be')}
-            accessibilityRole="button"
-          >
-            {t.profile.langBe}
-          </Text>
-          <Text style={styles.langSep}>/</Text>
-          <Text
-            style={[styles.langOption, lang === 'en' && styles.langActive]}
-            onPress={() => setLang('en')}
-            accessibilityRole="button"
-          >
-            {t.profile.langEn}
-          </Text>
+          {([['ru', 'Русский'], ['be', 'Беларуская'], ['en', 'English']] as const).map(([code, label]) => (
+            <Pressable key={code} accessibilityRole="button" accessibilityState={{ selected: lang === code }}
+              style={[styles.langOption, lang === code && styles.langActive]} onPress={() => setLang(code)}>
+              <Text style={styles.langLabel}>{label}</Text>
+            </Pressable>
+          ))}
         </View>
       </View>
 
@@ -160,8 +143,8 @@ const styles = StyleSheet.create({
   },
   rowLabel: { ...typography.body, color: lightColors.text },
   langRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 1, gap: space[2] },
-  langOption: { ...typography.body, color: lightColors.textSecondary, minHeight: 44, textAlignVertical: 'center', paddingVertical: 10 },
-  langActive: { ...typography.bodyStrong, color: lightColors.accent },
-  langSep: { ...typography.body, color: lightColors.textMuted },
+  langOption: { minHeight: 44, minWidth: 44, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: lightColors.border },
+  langLabel: { ...typography.label, color: lightColors.text },
+  langActive: { backgroundColor: lightColors.canvas, borderColor: lightColors.action },
   error: { ...typography.caption, color: lightColors.danger },
 });
