@@ -5,7 +5,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
-const outDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../fixtures');
+const timeMachine = process.argv.includes('--time-machine');
+const fixtureDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../fixtures');
+const outDir = timeMachine ? path.join(fixtureDir, 'time-machine') : fixtureDir;
 mkdirSync(outDir, { recursive: true });
 
 function scene(width: number, height: number, hue: number): Buffer {
@@ -28,15 +30,29 @@ async function jpeg(name: string, width: number, height: number, hue: number, ap
   await img.toFile(path.join(outDir, name));
 }
 
-// Основное фото с датой съёмки в EXIF.
-await jpeg('photo-ok.jpg', 2400, 1600, 200, (s) =>
-  s.withExif({ IFD2: { DateTimeOriginal: '2024:06:15 12:30:00' } }),
-);
-// Низкое разрешение.
-await jpeg('photo-small.jpg', 700, 500, 20);
-// Пиксели 2400×1600, ориентация 6: на экране 1600×2400.
-await jpeg('photo-exif-rotated.jpg', 2400, 1600, 120, (s) => s.withMetadata({ orientation: 6 }));
-// Результат AI-редактора.
-await jpeg('ai-result.jpg', 1024, 1024, 300);
+if (timeMachine) {
+  const dates = ['2015:09:01', '2020:02:16', '2025:06:10'];
+  for (const [chapter, date] of dates.entries()) {
+    for (let frame = 0; frame < 10; frame++) {
+      const minute = String(frame).padStart(2, '0');
+      const width = frame % 3 === 0 ? 1800 : 2600;
+      const height = frame % 3 === 0 ? 2600 : 1800;
+      await jpeg(`${chapter + 1}-${minute}.jpg`, width, height, (chapter * 108 + frame * 4) % 360, (img) =>
+        img.withExif({ IFD2: { DateTimeOriginal: `${date} 12:${minute}:00` } }),
+      );
+    }
+  }
+} else {
+  // Основное фото с датой съёмки в EXIF.
+  await jpeg('photo-ok.jpg', 2400, 1600, 200, (s) =>
+    s.withExif({ IFD2: { DateTimeOriginal: '2024:06:15 12:30:00' } }),
+  );
+  // Низкое разрешение.
+  await jpeg('photo-small.jpg', 700, 500, 20);
+  // Пиксели 2400×1600, ориентация 6: на экране 1600×2400.
+  await jpeg('photo-exif-rotated.jpg', 2400, 1600, 120, (s) => s.withMetadata({ orientation: 6 }));
+  // Результат AI-редактора.
+  await jpeg('ai-result.jpg', 1024, 1024, 300);
+}
 
 console.log('Фикстуры созданы в', outDir);

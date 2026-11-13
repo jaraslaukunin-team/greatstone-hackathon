@@ -13,6 +13,7 @@ dist/
 .env
 uploads/
 uploads-test/
+api/fixtures/time-machine/
 .expo/
 coverage/
 *.log

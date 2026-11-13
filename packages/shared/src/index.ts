@@ -11,3 +11,4 @@ export * from './duplicates';
 export * from './aspect';
 export * from './album';
 export * from './event';
+export * from './timeMachine';

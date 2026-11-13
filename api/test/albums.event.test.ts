@@ -2,7 +2,15 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
-import { albumProgressSchema, inviteSchema, projectSchema, type PhotoDTO } from '@picpac/shared';
+import {
+  albumProgressSchema,
+  buildTimeMachineLayout,
+  inviteSchema,
+  orderSchema,
+  projectSchema,
+  quoteResponseSchema,
+  type PhotoDTO,
+} from '@picpac/shared';
 import { productVariants, projectPhotos, projects } from '../src/db/schema.js';
 import { seed, testApp } from './helpers.js';
 
@@ -43,7 +51,7 @@ describe('общий альбом (пул): fork и sync', () => {
       headers: s ? { authorization: `Bearer ${s.token}` } : {},
     });
 
-  async function putPhoto(projectId: string, bytes = 'jpeg-bytes'): Promise<string> {
+  async function putPhoto(projectId: string, bytes = 'jpeg-bytes', takenAt?: Date): Promise<string> {
     const photoId = randomUUID();
     await db.insert(projectPhotos).values({
       id: photoId,
@@ -53,6 +61,7 @@ describe('общий альбом (пул): fork и sync', () => {
       position: 0,
       width: 2400,
       height: 1600,
+      takenAt,
     });
     await app.storage.put(`projects/${projectId}/${photoId}`, Buffer.from(bytes));
     return photoId;
@@ -214,6 +223,52 @@ describe('общий альбом (пул): fork и sync', () => {
     ).id;
     expect((await call(alice, 'POST', `/projects/${plain}/fork`)).statusCode).toBe(409);
     expect((await call(outsider, 'POST', `/projects/${poolId}/fork`)).statusCode).toBe(404);
+  });
+
+  it('Time Machine сохраняет историю из фото пула и оформляет её в печать', async () => {
+    const pool = projectSchema.parse((await call(alice, 'POST', '/projects', {
+      variantId: bookVariantId,
+      title: 'Наша история',
+      isShared: true,
+      isPool: true,
+      joinPassword: POOL_PW,
+    })).json());
+    await putPhoto(pool.id, 'early-frame', new Date('2015-09-01T12:00:00Z'));
+    await putPhoto(pool.id, 'later-frame', new Date('2025-06-10T12:00:00Z'));
+
+    const book = projectSchema.parse((await call(alice, 'POST', `/projects/${pool.id}/fork`)).json());
+    const photos: PhotoDTO[] = (await call(alice, 'GET', `/projects/${book.id}/photos`)).json();
+    const variant = (await db.select().from(productVariants).where(eq(productVariants.id, book.variantId)))[0]!;
+    const { layout } = buildTimeMachineLayout(
+      photos.map((photo) => ({ ...photo, authorName: null })),
+      { title: book.title, limits: variant },
+    );
+
+    const update = await call(alice, 'PUT', `/projects/${book.id}`, { version: book.version, layout });
+    expect(update.statusCode).toBe(200);
+    const saved = projectSchema.parse((await call(alice, 'GET', `/projects/${book.id}`)).json());
+    expect(saved.layout).toEqual(layout);
+    expect(saved.layout.pages.filter((page) => page.texts?.some((text) => text.style === 'quote'))).toHaveLength(2);
+
+    const quote = quoteResponseSchema.parse((await call(alice, 'POST', '/price-quote', {
+      variantId: book.variantId,
+      pages: saved.layout.pages.length,
+      quantity: 1,
+      delivery: 'belpost',
+    })).json());
+    const ordered = await app.inject({
+      method: 'POST',
+      url: '/orders',
+      headers: { authorization: `Bearer ${alice.token}`, 'idempotency-key': randomUUID() },
+      payload: {
+        projectId: book.id,
+        delivery: 'belpost',
+        expectedTotalKop: quote.totalKop,
+        address: { recipient: 'Тест Тестов', phone: '+375291234567', city: 'Минск', street: 'Тестовая, 1' },
+      },
+    });
+    expect(ordered.statusCode).toBe(201);
+    expect(orderSchema.parse(ordered.json())).toMatchObject({ projectId: book.id, totalKop: quote.totalKop });
   });
 
   it('sync добавляет только новые; повтор пустой; чужая книга 404; заказанная 409', async () => {

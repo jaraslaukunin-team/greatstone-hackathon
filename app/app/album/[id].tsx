@@ -1,7 +1,6 @@
 import { AddProjectPhotos } from '../../src/photos/AddProjectPhotos';
 import {
   buildAlbumLayout,
-  buildEventLayout,
   type PhotoDTO,
   type ProjectDTO,
 } from '@picpac/shared';
@@ -20,6 +19,7 @@ import { progressText } from '../../src/album/progressText';
 import { useAlbumProgress } from '../../src/album/useAlbumProgress';
 import { memberRows } from '../../src/album/memberRows';
 import { myFork } from '../../src/album/myFork';
+import { preparePoolBook } from '../../src/album/preparePoolBook';
 import { Button } from '../../src/ui/Button';
 import { Input } from '../../src/ui/Input';
 import { Icon } from '../../src/ui/Icon';
@@ -240,54 +240,38 @@ export default function AlbumScreen() {
     }
   }
 
-  async function openMyBook() {
-    if (!id || !catalog.data) return;
+  async function openMyBook(mode: 'book' | 'time-machine' = 'book') {
+    if (!id || !catalog.data || busyFork) return;
     setBusyFork(true);
     setError(null);
     setOmitted(0);
     try {
-      const book = await client.post<ProjectDTO>(`/projects/${id}/fork`);
-      const variant = catalog.data.products.flatMap((p) => p.variants).find((v) => v.id === book.variantId);
-      if (!variant) {
-        setError('Не удалось определить формат книги');
-        return;
-      }
-      const bookPhotos = await client.get<PhotoDTO[]>(`/projects/${book.id}/photos`);
-      if (!hasContent(book.layout)) {
-        const nameByUser = new Map(
-          (progress?.members ?? []).map((m) => [
-            m.userId,
-            m.childName?.trim() || m.displayName?.trim() || null,
-          ]),
-        );
-        const inputs = bookPhotos.map((p) => ({
-          ...p,
-          authorName: p.uploadedBy ? nameByUser.get(p.uploadedBy) ?? null : null,
-        }));
-        const themeId = useThemeChoice.getState().get(id) ?? useThemeChoice.getState().get(book.id);
-        const { layout, omitted: omit } = buildEventLayout(inputs, {
-          title: book.title,
-          limits: { pagesMin: variant.pagesMin, pagesMax: variant.pagesMax },
-        });
-        if (themeId) layout.themeId = themeId;
-        const saved = await client.put<{ version: number }>(`/projects/${book.id}`, {
-          layout,
-          version: book.version,
-        });
-        const next = { ...book, layout, version: saved.version };
-        useProjectStore.getState().setDraft(next);
-        setOmitted(omit);
-        setForkId(book.id);
-        setForkPhotoCount(bookPhotos.length);
-        router.push(`/project/${book.id}/overview`);
+      const names = new Map(
+        (progress?.members ?? []).map((member) => [
+          member.userId,
+          member.childName?.trim() || member.displayName?.trim() || null,
+        ]),
+      );
+      const themeChoice = useThemeChoice.getState();
+      const { book, photoCount, omitted: omittedPhotos } = await preparePoolBook(
+        client,
+        id,
+        catalog.data.products.flatMap((product) => product.variants),
+        names,
+        mode,
+        (bookId) => themeChoice.get(id) ?? themeChoice.get(bookId),
+      );
+      useProjectStore.getState().setDraft(book);
+      setOmitted(omittedPhotos);
+      setForkId(book.id);
+      setForkPhotoCount(photoCount);
+      if (mode === 'time-machine') {
+        router.push({ pathname: '/project/[id]/preview', params: { id: book.id, mode, omitted: String(omittedPhotos) } });
       } else {
-        useProjectStore.getState().setDraft(book);
-        setForkId(book.id);
-        setForkPhotoCount(bookPhotos.length);
         router.push(`/project/${book.id}/overview`);
       }
     } catch (e) {
-      setError(e instanceof ApiRequestError ? e.message : 'Не удалось открыть книгу');
+      setError(e instanceof Error ? e.message : 'Не удалось открыть книгу');
     } finally {
       setBusyFork(false);
     }
@@ -404,7 +388,13 @@ export default function AlbumScreen() {
           <Text style={styles.hint}>Пока нет фото — загрузите первые или поделитесь ссылкой.</Text>
         )}
 
-        <Button title="Моя книга" disabled={busyFork || !catalog.data} onPress={() => void openMyBook()} />
+        <Button
+          title="PicPac Time Machine"
+          disabled={busyFork || !catalog.data || (photos.length === 0 && !forkId)}
+          onPress={() => void openMyBook('time-machine')}
+        />
+        <Text style={styles.hint}>Главы по датам съёмки, редактируемые подписи и трейлер фотокниги.</Text>
+        <Button title="Моя книга" variant="secondary" disabled={busyFork || !catalog.data} onPress={() => void openMyBook()} />
         {forkId ? (
           <>
             <Text style={styles.hint}>
