@@ -54,6 +54,8 @@ export type ApiClient = {
   upload<T>(path: string, file: { uri: string; name?: string; type?: string }): Promise<T>;
   /** Делает из относительной ссылки API (например, /files/...) полный адрес. */
   resolveUrl(path: string): string;
+  downloadPdf?(path: string): Promise<Blob>;
+  fileHeaders?(): Record<string, string>;
 };
 
 type ErrorBody = {
@@ -340,8 +342,20 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     return data as T;
   }
 
+  function fileHeaders(): Record<string, string> {
+    const token = opts.getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  async function downloadPdf(path: string): Promise<Blob> {
+    if (opts.shouldFailNetwork?.()) throw new NetworkError();
+    const response = await fetchImpl(`${opts.baseUrl}${path}`, { headers: fileHeaders() });
+    if (!response.ok) throwIfError(response.status, await response.json().catch(() => null));
+    return response.blob();
+  }
+
   return {
-    upload,
+    upload, downloadPdf, fileHeaders,
     resolveUrl: (path: string) => (/^https?:/i.test(path) ? path : `${opts.baseUrl}${path}`),
     get: <T>(path: string) => request<T>('GET', path),
     post: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>

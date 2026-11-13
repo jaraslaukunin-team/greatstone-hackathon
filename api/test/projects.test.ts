@@ -73,6 +73,23 @@ describe('проекты и сохранение макета', () => {
     variantId = (await db.select().from(productVariants).where(eq(productVariants.format, 'Classic 20×20')))[0]!.id;
   });
 
+  it('PDF сохраняет размер формата и доступен только владельцу и сотруднику заказа', async () => {
+    const variant = (await db.select().from(productVariants).where(eq(productVariants.format, 'Classic 20×30')))[0]!;
+    const project = projectSchema.parse((await create(alice, { variantId: variant.id })).json());
+    const path = `/projects/${project.id}/pdf`;
+    expect((await call(alice, 'GET', path)).statusCode).toBe(422);
+    const layout = { pages: [{ template: 'one', cells: [], timeline: 'left' }] };
+    expect((await call(alice, 'PUT', `/projects/${project.id}`, { version: project.version, layout })).statusCode).toBe(200);
+    expect((await call(bob, 'GET', path)).statusCode).toBe(404);
+    expect((await call(operator, 'GET', path)).statusCode).toBe(404);
+    const owner = await call(alice, 'GET', path);
+    expect(owner.statusCode).toBe(200);
+    expect(owner.headers['content-type']).toBe('application/pdf');
+    expect(owner.rawPayload.toString('latin1')).toMatch(/\/MediaBox \[0 0 566\.929\d* 850\.393\d*\]/);
+    await addOrder(alice.id, project.id);
+    expect((await call(operator, 'GET', path)).statusCode).toBe(200);
+  });
+
   it('созданный проект: черновик, версия 1, пустой макет, владелец видит его в списке', async () => {
     const res = await create(alice, { isShared: true, expectedMembers: 25, joinPassword: 'album-pass' });
     expect(res.statusCode).toBe(201);

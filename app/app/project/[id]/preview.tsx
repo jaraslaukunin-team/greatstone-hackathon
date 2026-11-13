@@ -1,4 +1,4 @@
-import { themeById, type PhotoDTO } from '@picpac/shared';
+import { buildTimelineSpread, themeById, type CatalogDTO, type PhotoDTO } from '@picpac/shared';
 import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -11,6 +11,7 @@ import { useApiClient } from '../../../src/api/hooks';
 import { BookViewer } from '../../../src/book/BookViewer';
 import { projectSource } from '../../../src/book/imageSource';
 import { useProjectStore } from '../../../src/project/projectStore';
+import { DownloadBookPdf } from '../../../src/project/DownloadBookPdf';
 import { Button } from '../../../src/ui/Button';
 import { darkColors, space, typography } from '../../../src/theme/theme';
 
@@ -24,6 +25,9 @@ export default function PreviewScreen() {
   const insets = useSafeAreaInsets();
   const client = useApiClient();
   const draft = useProjectStore((s) => s.draft);
+  const setDraft = useProjectStore((s) => s.setDraft);
+  const [savingSpread, setSavingSpread] = useState(false);
+  const [spreadError, setSpreadError] = useState<string | null>(null);
   const [photoMap, setPhotoMap] = useState<Map<string, PhotoDTO>>(new Map());
   const [position, setPosition] = useState({ index: 0, total: 0 });
   const [jump, setJump] = useState<{ index: number; key: number }>();
@@ -54,6 +58,40 @@ export default function PreviewScreen() {
   // Книга ещё не собрана на этом устройстве — сначала обзор, он её соберёт.
   if (!draft || draft.project.id !== id || !draft.layout.pages.length) {
     return <Redirect href={{ pathname: '/project/[id]/overview', params: { id: String(id) } }} />;
+  }
+
+  const current = draft;
+  async function addTimelineSpread() {
+    if (savingSpread) return;
+    setSavingSpread(true);
+    setSpreadError(null);
+    try {
+      const project = await client.get<typeof current.project>(`/projects/${id}`);
+      const catalog = await client.get<CatalogDTO>('/catalog');
+      const variant = catalog.products.flatMap((product) => product.variants).find((item) => item.id === project.variantId);
+      const layout = current.layout;
+      const existing = layout.pages.findIndex((page) => page.timeline === 'left');
+      const pages = [...layout.pages];
+      const timeline = buildTimelineSpread([...photoMap.values()], lang);
+      if (existing >= 0 && pages[existing + 1]?.timeline === 'right') {
+        pages.splice(existing, 2, ...timeline);
+      } else {
+        if (pages.length % 2 === 0) pages.push({ template: 'one', cells: [] });
+        pages.push(...timeline);
+      }
+      if (!variant || pages.length > variant.pagesMax) {
+        setSpreadError(tr('В книге нет места для нового разворота.'));
+        return;
+      }
+      const next = { ...layout, pages };
+      const { version } = await client.put<{ version: number }>(`/projects/${id}`, { layout: next, version: project.version });
+      setDraft({ ...project, layout: next, version });
+      jumpTo(Math.ceil(pages.findIndex((page) => page.timeline === 'left') / 2));
+    } catch (error) {
+      setSpreadError(error instanceof Error ? error.message : tr('Не удалось добавить разворот.'));
+    } finally {
+      setSavingSpread(false);
+    }
   }
 
   return (
@@ -125,6 +163,11 @@ export default function PreviewScreen() {
           ) : null}
           {draft.project.status === 'draft' ? (
             <>
+              {[...photoMap.values()].some((photo) => photo.takenAt) ? (
+                <Button title={tr('Добавить разворот с датами')} variant="secondary" disabled={savingSpread}
+                  onPress={() => void addTimelineSpread()} />
+              ) : null}
+              {spreadError ? <Text style={styles.hint}>{spreadError}</Text> : null}
               <Button title="Заказать печать" onPress={() => router.replace({ pathname: '/project/[id]/review', params: { id: String(id) } })} />
               <Button title="Редактировать книгу" variant="secondary" onPress={() => router.push({ pathname: '/project/[id]/overview', params: { id: String(id) } })} />
             </>
@@ -139,6 +182,7 @@ export default function PreviewScreen() {
           )}
         </View>
       )}
+      <DownloadBookPdf projectId={id} />
     </ScrollView>
   );
 }

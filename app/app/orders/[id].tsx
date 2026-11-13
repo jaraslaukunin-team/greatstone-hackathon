@@ -10,6 +10,7 @@ import { orderStatusTone } from '../../src/orders/statusTone';
 import { statusSteps } from '../../src/orders/statusSteps';
 import { useOrderPolling } from '../../src/orders/useOrderPolling';
 import { useProjectStore } from '../../src/project/projectStore';
+import { DownloadBookPdf } from '../../src/project/DownloadBookPdf';
 import { Button } from '../../src/ui/Button';
 import { Card } from '../../src/ui/Card';
 import { ToastHost } from '../../src/ui/Toast';
@@ -66,7 +67,8 @@ export default function OrderDetailsScreen() {
             {tr('Статус:')} {tr(statusLabel(order?.status))}
           </Text>
           <Text style={styles.cardSub}>{order ? formatByn(order.totalKop) : ''}</Text>
-          {order?.status === 'cancelled' ? (
+          {order?.projectId ? <DownloadBookPdf projectId={order.projectId} /> : null}
+        {order?.status === 'cancelled' ? (
             <Text style={styles.cancelNote}>Заказ отменён</Text>
           ) : null}
         </Card>

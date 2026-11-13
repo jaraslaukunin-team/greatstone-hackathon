@@ -1,4 +1,10 @@
 export const EN: Record<string, string> = {
+  "Не удалось добавить разворот.": "Could not add the spread.",
+  "В книге нет места для нового разворота.": "This book has no room for another spread.",
+  "Добавить разворот с датами": "Add a timeline spread",
+  "Не удалось скачать PDF": "Could not download PDF",
+  "Готовим PDF…": "Preparing PDF…",
+  "Скачать PDF": "Download PDF",
   "фото": "photos",
   "Фото за лимитом страниц остались в лотке:": "Photos over the page limit remain in the tray:",
   "Редактировать книгу": "Edit book",

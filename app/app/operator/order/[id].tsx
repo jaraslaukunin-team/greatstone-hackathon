@@ -5,6 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApiClient } from '../../../src/api/hooks';
+import { DownloadBookPdf } from '../../../src/project/DownloadBookPdf';
 import { Button } from '../../../src/ui/Button';
 import { Card } from '../../../src/ui/Card';
 import { lightColors, space, typography } from '../../../src/theme/theme';
@@ -54,6 +55,7 @@ export default function OperatorOrderScreen() {
         <Text style={styles.sub}>Статус</Text>
         <Text style={[styles.status, { color: tone.statusColor }]}>{statusLabel(order?.status)}</Text>
       </Card>
+      {order?.projectId ? <DownloadBookPdf projectId={order.projectId} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {next ? (
         <Button title={`Следующий статус: ${statusLabel(next)}`} onPress={() => void advance()} />

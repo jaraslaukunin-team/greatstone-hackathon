@@ -71,8 +71,8 @@ export default function ProfileScreen() {
       <View style={styles.row}>
         <Text style={styles.rowLabel}>{t.profile.language}</Text>
         <View style={styles.langRow}>
-          {([['ru', 'Русский'], ['be', 'Беларуская'], ['en', 'English']] as const).map(([code, label]) => (
-            <Pressable key={code} accessibilityRole="button" accessibilityState={{ selected: lang === code }}
+          {([['ru', 'RU', 'Русский'], ['be', 'BE', 'Беларуская'], ['en', 'EN', 'English']] as const).map(([code, label, name]) => (
+            <Pressable key={code} accessibilityLabel={name} accessibilityRole="button" accessibilityState={{ selected: lang === code }}
               style={[styles.langOption, lang === code && styles.langActive]} onPress={() => setLang(code)}>
               <Text style={styles.langLabel}>{label}</Text>
             </Pressable>
@@ -143,8 +143,8 @@ const styles = StyleSheet.create({
   },
   rowLabel: { ...typography.body, color: lightColors.text },
   langRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 1, gap: space[2] },
-  langOption: { minHeight: 44, minWidth: 44, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: lightColors.border },
+  langOption: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 22 },
   langLabel: { ...typography.label, color: lightColors.text },
-  langActive: { backgroundColor: lightColors.canvas, borderColor: lightColors.action },
+  langActive: { backgroundColor: lightColors.canvas },
   error: { ...typography.caption, color: lightColors.danger },
 });

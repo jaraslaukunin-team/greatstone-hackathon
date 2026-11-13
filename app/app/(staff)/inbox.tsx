@@ -58,13 +58,15 @@ export default function StaffInboxScreen() {
               <Text style={styles.msgText}>{m.body}</Text>
             </View>
           ))}
-          <Input
-            value={replies[item.id] ?? ''}
-            onChangeText={(t) => setReplies((r) => ({ ...r, [item.id]: t }))}
-            placeholder="Ответ клиенту"
-            multiline
-          />
-          <Button title="Ответить" onPress={() => void reply(item.id)} disabled={!(replies[item.id] ?? '').trim()} />
+          <View style={styles.reply}>
+            <Input
+              value={replies[item.id] ?? ''}
+              onChangeText={(t) => setReplies((r) => ({ ...r, [item.id]: t }))}
+              placeholder="Ответ клиенту"
+              multiline
+            />
+            <Button title="Ответить" onPress={() => void reply(item.id)} disabled={!(replies[item.id] ?? '').trim()} />
+          </View>
         </Card>
       ))}
     </ScrollView>
@@ -76,6 +78,7 @@ const styles = StyleSheet.create({
   content: { padding: space[4], gap: space[3] },
   title: { ...typography.bodyStrong, color: lightColors.text },
   status: { ...typography.caption, color: lightColors.textSecondary, marginBottom: space[2] },
+  reply: { gap: space[2], marginTop: space[2] },
   msg: { paddingVertical: space[1] },
   msgText: { ...typography.body, color: lightColors.text },
   error: { ...typography.caption, color: lightColors.danger },

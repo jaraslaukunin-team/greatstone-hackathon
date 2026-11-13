@@ -73,6 +73,7 @@ export const pageSchema = z.object({
   gap: z.number().min(0).max(0.12).optional(),
   memberId: z.string().max(64).optional(),
   qr: pageQrSchema.optional(),
+  timeline: z.enum(['left', 'right']).optional(),
 });
 export const coverSchema = z.object({
   photoId: z.string().nullable(),

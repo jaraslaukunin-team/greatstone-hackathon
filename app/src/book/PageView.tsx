@@ -7,6 +7,7 @@ import { QrCode } from './QrCode';
 import type { SourceOf } from './imageSource';
 import { fonts } from '../theme/theme';
 import { TEXT_STYLES } from './textStyles';
+import { TimelineCurve } from './TimelineCurve';
 import { ThemeDecor } from './ThemeDecor';
 
 type Props = {
@@ -72,6 +73,7 @@ export function PageView({ page, sourceOf, width, height, theme }: Props) {
   return (
     <View style={[styles.sheet, { width, height, backgroundColor: page?.bg ?? theme.pageBg }]}>
       <ThemeDecor decor={theme.decor} color={theme.decorColor} width={width} height={height} />
+      {page?.timeline ? <TimelineCurve side={page.timeline} width={width} height={height} color={theme.textColor} stops={page.texts?.filter((text) => text.style === 'date').length ?? 0} /> : null}
       {page?.cells.map((cell, i) => {
         if (cell.hidden) return null;
         // Свободный слой рисуется в своей рамке, остальные ячейки — по шаблону.
@@ -103,7 +105,7 @@ export function PageView({ page, sourceOf, width, height, theme }: Props) {
         const style = TEXT_STYLES[t.style];
         if (!style || t.hidden) return null;
         const size = style.size * width;
-        const boxW = width * 0.8;
+        const boxW = width * (page.timeline ? 0.46 : 0.8);
         // x, y — центр подписи: блок шире текста, поэтому центрируем его и сам текст.
         return (
           <Text

@@ -12,3 +12,6 @@ export * from './aspect';
 export * from './album';
 export * from './event';
 export * from './timeMachine';
+
+export * from './cellRects';
+export * from './timelineSpread';

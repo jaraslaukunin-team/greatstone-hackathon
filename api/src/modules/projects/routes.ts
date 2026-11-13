@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { layoutSchema } from '@picpac/shared';
 import { requireAuth } from '../../auth/plugin.js';
 import { AppError } from '../../errors.js';
+import { exportProjectPdf } from './pdf.js';
 import { parse } from '../../validation.js';
 import {
   assertProjectAccess,
@@ -47,6 +48,13 @@ export function registerProjectRoutes(app: FastifyInstance): void {
   app.get('/projects/:id', auth, async (req) => {
     const { id } = req.params as { id: string };
     return toProjectDTO(await assertProjectAccess(req.server.db, req.user!, id, 'read'));
+  });
+
+  app.get('/projects/:id/pdf', auth, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const pdf = await exportProjectPdf(req.server, req.user!, id);
+    return reply.type('application/pdf').header('Cache-Control', 'private, no-store')
+      .header('Content-Disposition', 'attachment; filename="picpac-book.pdf"').send(pdf);
   });
 
   app.put('/projects/:id', auth, async (req) => {

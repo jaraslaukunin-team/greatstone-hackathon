@@ -87,9 +87,10 @@ export function OrderList({ favoritesOnly = false }: { favoritesOnly?: boolean }
             <Link href={`/orders/${order.id}`} asChild>
               <Pressable accessibilityRole="link" style={styles.orderLink}>
                 <Text style={styles.cardTitle}>{order.number}</Text>
-                <Text style={[styles.cardSub, { color: tone.statusColor, fontWeight: '600' }]}>
-                  {statusLabel(order.status)} · {formatByn(order.totalKop)}
-                </Text>
+                <View style={[styles.statusBadge, { backgroundColor: tone.statusColor }]}>
+                  <Text style={styles.statusText}>{statusLabel(order.status)}</Text>
+                </View>
+                <Text style={styles.cardSub}>{formatByn(order.totalKop)}</Text>
               </Pressable>
             </Link>
             <View style={styles.actions}>
@@ -126,5 +127,7 @@ const styles = StyleSheet.create({
   orderLink: { minHeight: 44, justifyContent: 'center' },
   actions: { gap: space[2], marginTop: space[2] },
   cardTitle: { ...typography.bodyStrong, color: lightColors.text },
+  statusBadge: { alignSelf: 'flex-start', borderRadius: 12, paddingHorizontal: space[2], paddingVertical: 3, marginTop: space[1] },
+  statusText: { ...typography.caption, color: '#FFFFFF', fontWeight: '600' },
   cardSub: { ...typography.caption, color: lightColors.textSecondary, marginTop: 4 },
 });

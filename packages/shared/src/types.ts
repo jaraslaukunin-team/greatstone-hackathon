@@ -26,7 +26,7 @@ export type PageText = { text: string; x: number; y: number; style: PageTextStyl
 /** QR-код на странице: ссылка, центр и размер в долях ширины страницы. */
 export type PageQr = { url: string; x: number; y: number; size: number };
 /** memberId — владелец личной страницы альбома (userId участника); qr — код на видео-поздравление. */
-export type Page = { template: Template; cells: Cell[]; copies?: number; bg?: string; texts?: PageText[]; gap?: number; memberId?: string; qr?: PageQr };
+export type Page = { template: Template; cells: Cell[]; copies?: number; bg?: string; texts?: PageText[]; gap?: number; memberId?: string; qr?: PageQr; timeline?: 'left' | 'right' };
 /** Обложка: фото (null — первая страница книги), название, подзаголовок и текст на корешке (от 40 страниц). */
 export type Cover = { photoId: string | null; title: string; subtitle?: string; spine?: string; color?: string };
 export type Layout = { pages: Page[]; themeId?: string; cover?: Cover; seen?: string[] };
