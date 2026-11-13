@@ -68,6 +68,14 @@ export default function ProfileSupportScreen() {
         </ScrollView>
 
         {chat.error ? <Text style={styles.error}>{chat.error}</Text> : null}
+        {chat.needsConsent ? (
+          <View style={styles.consentBox}>
+            <Text style={styles.consentText}>
+              Для чата нужно согласие на передачу сообщений во внешний сервис aiai.by. Отозвать можно в «Мои данные».
+            </Text>
+            <Button title="Согласен и продолжить" onPress={() => void chat.grantConsent()} disabled={chat.sending} />
+          </View>
+        ) : null}
 
         <View style={styles.chatInputRow}>
           <TextInput
@@ -76,6 +84,7 @@ export default function ProfileSupportScreen() {
             onChangeText={setChatInput}
             placeholder="Спросите про заказ или каталог"
             placeholderTextColor={lightColors.textMuted}
+            editable={!chat.needsConsent}
           />
           <Button
             title="↵"
@@ -84,7 +93,7 @@ export default function ProfileSupportScreen() {
               setChatInput('');
               void chat.send(t);
             }}
-            disabled={chat.sending}
+            disabled={chat.sending || chat.needsConsent}
           />
         </View>
       </View>
@@ -147,5 +156,7 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.surface,
   },
   error: { ...typography.caption, color: lightColors.danger },
+  consentBox: { gap: space[2], padding: space[3], backgroundColor: lightColors.surfaceMuted, borderRadius: radius.card },
+  consentText: { ...typography.caption, color: lightColors.textSecondary },
   contactsTitle: { ...typography.h3, color: lightColors.text, marginTop: space[2] },
 });

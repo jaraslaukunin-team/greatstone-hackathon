@@ -10,9 +10,9 @@ import { Input } from '../../src/ui/Input';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 const FALLBACK: { id: DeliveryMethodId; title: string; hint: string; pickupPoints?: PickupPoint[] }[] = [
-  { id: 'courier_minsk', title: 'Курьер по Минску', hint: 'Оплата при получении' },
-  { id: 'ems', title: 'EMS', hint: 'Бесплатно от 300 BYN' },
-  { id: 'belpost', title: 'Белпочта', hint: 'Бесплатно от 150 BYN' },
+  { id: 'courier_minsk', title: 'Курьер по Минску', hint: 'Тариф загрузится из каталога' },
+  { id: 'ems', title: 'EMS', hint: 'Тариф загрузится из каталога' },
+  { id: 'belpost', title: 'Белпочта', hint: 'Тариф загрузится из каталога' },
 ];
 
 export default function DeliveryScreen() {

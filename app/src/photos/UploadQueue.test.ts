@@ -92,6 +92,24 @@ describe('UploadQueue', () => {
     expect(upload).toHaveBeenCalledTimes(1);
   });
 
+  it('не блокирует очередь на задаче, исчерпавшей попытки', async () => {
+    const upload = jest.fn(async (task: UploadTask) => {
+      if (task.localId === 'bad') throw new Error('fail');
+      return { id: 'p1' };
+    });
+    const queue = new UploadQueue({
+      upload,
+      storage: memoryStore(),
+      isOnline: () => true,
+      maxAttempts: 1,
+      delay: async () => undefined,
+    });
+    queue.enqueue({ localId: 'bad', projectId: 'proj', uri: 'file://bad.jpg' });
+    queue.enqueue({ localId: 'good', projectId: 'proj', uri: 'file://good.jpg' });
+    await queue.resume();
+    expect(upload.mock.calls.map((c) => c[0].localId)).toEqual(['bad', 'good']);
+  });
+
   it('после перезапуска отбрасывает записи с blob:-адресами: страница их больше не откроет', async () => {
     const storage = memoryStore();
     const upload = jest.fn(async () => ({ id: 'p1' }));

@@ -106,9 +106,11 @@ export class UploadQueue {
   private async runPump() {
     while (true) {
       if (!this.deps.isOnline()) break;
-      const next = this.items.find((item) => item.status === 'queued' || item.status === 'error');
+      const next = this.items.find(
+        (item) =>
+          (item.status === 'queued' || item.status === 'error') && item.attempts < this.maxAttempts,
+      );
       if (!next) break;
-      if (next.attempts >= this.maxAttempts) break;
 
       next.status = 'uploading';
       next.progress = 0.1;

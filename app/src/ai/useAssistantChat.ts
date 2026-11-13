@@ -12,7 +12,14 @@ export function useAssistantChat(client: ApiClient) {
   ]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsConsent, setNeedsConsent] = useState(false);
   const [orderId, setOrderId] = useState<string | undefined>();
+
+  const grantConsent = useCallback(async () => {
+    await client.post('/ai/consent', { consent: true });
+    setNeedsConsent(false);
+    setError(null);
+  }, [client]);
 
   const send = useCallback(
     async (text: string) => {
@@ -23,14 +30,20 @@ export function useAssistantChat(client: ApiClient) {
       const nextMessages: AiChatMessage[] = [...messages, { role: 'user', content }];
       setMessages(nextMessages);
       try {
-        await client.post('/ai/consent', { consent: true });
         const res = await client.post<AiChatResponse>('/ai/chat', {
           messages: nextMessages.filter((m) => m.role === 'user' || m.role === 'assistant'),
           orderId,
         });
+        setNeedsConsent(false);
         setMessages(res.messages);
       } catch (e) {
-        setError(e instanceof ApiRequestError ? e.message : 'Не удалось получить ответ');
+        if (e instanceof ApiRequestError && e.code === 'AI_CONSENT_REQUIRED') {
+          setNeedsConsent(true);
+          setError(e.message);
+          setMessages(messages);
+        } else {
+          setError(e instanceof ApiRequestError ? e.message : 'Не удалось получить ответ');
+        }
       } finally {
         setSending(false);
       }
@@ -38,5 +51,5 @@ export function useAssistantChat(client: ApiClient) {
     [client, messages, orderId, sending],
   );
 
-  return { messages, sending, error, orderId, setOrderId, send };
+  return { messages, sending, error, needsConsent, grantConsent, orderId, setOrderId, send };
 }

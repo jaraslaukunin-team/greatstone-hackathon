@@ -103,8 +103,15 @@ describe('каталог', () => {
     expect(digitalByFormat['Постер 30×40']!).toMatchObject({ basePriceKop: 1200, pricePerPageKop: 1200, pageWidthCm: 30 });
     expect(digitalByFormat['Постер 40×60']!).toMatchObject({ basePriceKop: 1900, pricePerPageKop: 1900, pageWidthCm: 40 });
 
-    // Фотокниги и альбом не имеют линейки
-    for (const title of ['Фотокнига Lite', 'Фотокнига Classic', 'Фотокнига Premium', 'Выпускной альбом']) {
+    // Фотокниги и выпускные книги не имеют линейки
+    for (const title of [
+      'Фотокнига Lite',
+      'Фотокнига Classic',
+      'Фотокнига Premium',
+      'Выпускная фотокнига',
+      'Выпускная фотокнига Lite',
+      'Выпускная фотокнига Premium',
+    ]) {
       expect(byTitle[title]!.line).toBeNull();
     }
   });
