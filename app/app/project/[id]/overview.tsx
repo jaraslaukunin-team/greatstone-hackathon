@@ -147,11 +147,17 @@ export default function OverviewScreen() {
       const buildMode = useThemeChoiceStore.getState().mode;
       const isEmpty = !hasContent(previous);
       const pageLimits = { pagesMin: variant?.pagesMin ?? 20, pagesMax: variant?.pagesMax ?? 60 };
+      const selectedPages = useThemeChoice.getState().initialPages[project.id];
+      const initialLimits =
+        isEmpty && selectedPages !== undefined &&
+        selectedPages >= pageLimits.pagesMin && selectedPages <= pageLimits.pagesMax
+          ? { pagesMin: selectedPages, pagesMax: selectedPages }
+          : pageLimits;
       // Правки не затираются: прежний макет сохраняется, добавляются только новые фото.
       const laidOut =
         buildMode === 'manual' && isEmpty
-          ? markSeen(blankLayout(pageLimits.pagesMin, chosen), photos.map((p) => p.id))
-          : reconcileLayout(previous, photos, pageLimits);
+          ? markSeen(blankLayout(initialLimits.pagesMin, chosen), photos.map((p) => p.id))
+          : reconcileLayout(previous, photos, initialLimits);
       const layout = { ...laidOut, themeId: previous.themeId ?? laidOut.themeId ?? chosen };
       if (cancelled) return;
       setDraft({ ...project, layout });

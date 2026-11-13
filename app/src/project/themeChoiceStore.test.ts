@@ -32,6 +32,26 @@ describe('themeChoiceStore', () => {
     expect(createThemeChoiceStore(storage).getState().get('p1')).toBe('travel');
   });
 
+  it('восстанавливает выбранное число страниц отдельно для каждого проекта', () => {
+    const storage = memoryStorage();
+    const store = createThemeChoiceStore(storage);
+    store.getState().set('p1', 'travel', 32);
+    store.getState().set('p2', 'film');
+
+    const restored = createThemeChoiceStore(storage);
+    expect(restored.getState().initialPages).toEqual({ p1: 32 });
+  });
+
+  it('отбрасывает испорченные значения числа страниц', () => {
+    const storage = memoryStorage({
+      'picpac.theme-choice': JSON.stringify({
+        state: { initialPages: { p1: 32, p2: '32', p3: -2, p4: 3.5 } },
+        version: 0,
+      }),
+    });
+    expect(createThemeChoiceStore(storage).getState().initialPages).toEqual({ p1: 32 });
+  });
+
   it('испорченное сохранённое значение отбрасывается, остальные остаются', () => {
     const storage = memoryStorage({
       'picpac.theme-choice': JSON.stringify({ state: { choices: { p1: 'film', p2: 'zzz', p3: 5 } }, version: 0 }),

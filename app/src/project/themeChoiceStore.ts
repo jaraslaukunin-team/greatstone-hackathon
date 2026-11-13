@@ -6,8 +6,9 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 
 type State = {
   choices: Record<string, ThemeId>;
-  /** Запомнить тему, выбранную до первой раскладки книги. */
-  set(projectId: string, themeId: ThemeId): void;
+  initialPages: Record<string, number>;
+  /** Запомнить параметры, выбранные до первой раскладки книги. */
+  set(projectId: string, themeId: ThemeId, pages?: number): void;
   get(projectId: string): ThemeId | undefined;
 };
 
@@ -35,17 +36,27 @@ export function createThemeChoiceStore(storage: StateStorage = lazyStorage) {
     persist(
       (set, get) => ({
         choices: {},
-        set: (projectId, themeId) => set((s) => ({ choices: { ...s.choices, [projectId]: themeId } })),
+        initialPages: {},
+        set: (projectId, themeId, pages) =>
+          set((s) => ({
+            choices: { ...s.choices, [projectId]: themeId },
+            initialPages: pages === undefined ? s.initialPages : { ...s.initialPages, [projectId]: pages },
+          })),
         get: (projectId) => get().choices[projectId],
       }),
       {
         name: 'picpac.theme-choice',
         storage: createJSONStorage(() => storage),
-        partialize: (s) => ({ choices: s.choices }),
-        merge: (persisted, current) => ({
-          ...current,
-          choices: cleanChoices((persisted as { choices?: unknown } | null)?.choices),
-        }),
+        partialize: (s) => ({ choices: s.choices, initialPages: s.initialPages }),
+        merge: (persisted, current) => {
+          const saved = persisted as { choices?: unknown; initialPages?: unknown } | null;
+          const entries = Object.entries(saved?.initialPages ?? {});
+          return {
+            ...current,
+            choices: cleanChoices(saved?.choices),
+            initialPages: Object.fromEntries(entries.filter(([, pages]) => typeof pages === 'number' && Number.isSafeInteger(pages) && pages > 0)),
+          };
+        },
       },
     ),
   );

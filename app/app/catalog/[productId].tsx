@@ -2,6 +2,7 @@ import { DEFAULT_THEME_ID, formatByn, themeById, type ThemeId } from '@picpac/sh
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { selectedBookPages } from '../../src/catalog/budget';
 import { useCatalog, useVariantPrice } from '../../src/catalog/useCatalog';
 import { goodsPriceKop } from '../../src/checkout/goodsPrice';
 import { useApiClient } from '../../src/api/hooks';
@@ -13,7 +14,8 @@ import { ListSkeleton } from '../../src/ui/Skeleton';
 import { lightColors, space, typography } from '../../src/theme/theme';
 
 export default function ProductScreen() {
-  const { productId, theme: themeParam } = useLocalSearchParams<{ productId: string; theme?: string }>();
+  const { productId, theme: themeParam, variantId: variantParam, pages: pagesParam } =
+    useLocalSearchParams<{ productId: string; theme?: string; variantId?: string; pages?: string }>();
   // Тема может прийти из примера на главной («Сделать такую»); неизвестная заменяется темой по умолчанию.
   const [themeId, setThemeId] = useState<ThemeId>(themeById(themeParam ?? DEFAULT_THEME_ID).id);
   const catalog = useCatalog();
@@ -21,11 +23,11 @@ export default function ProductScreen() {
   const { mode, setMode } = useThemeChoiceStore();
   const product = catalog.data?.products.find((p) => p.id === productId);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
-  const variant = selectedVariantId
-    ? (product?.variants.find((v) => v.id === selectedVariantId) ?? product?.variants[0])
-    : product?.variants[0];
+  const budgetVariant = product?.variants.find((v) => v.id === variantParam);
+  const variant = product?.variants.find((v) => v.id === selectedVariantId) ?? budgetVariant ?? product?.variants[0];
   const [pages, setPages] = useState<number | null>(null);
-  const effectivePages = pages ?? variant?.pagesMin ?? 20;
+  const budgetPages = budgetVariant && selectedBookPages(pagesParam, budgetVariant);
+  const effectivePages = pages ?? budgetPages ?? variant?.pagesMin ?? 20;
   const quote = useVariantPrice(variant?.id ?? null, effectivePages);
   const title = useMemo(() => `Книга ${product?.title ?? ''}`.trim(), [product?.title]);
 
@@ -45,7 +47,7 @@ export default function ProductScreen() {
       variantId: variant!.id,
       title,
     });
-    useThemeChoice.getState().set(project.id, themeId);
+    useThemeChoice.getState().set(project.id, themeId, budgetPages !== undefined ? effectivePages : undefined);
     router.push(`/project/${project.id}/photos`);
   }
 
@@ -64,7 +66,7 @@ export default function ProductScreen() {
           <Text style={styles.sectionLabel}>Формат</Text>
           <View style={styles.chips}>
             {product.variants.map((v) => {
-              const active = v.id === (selectedVariantId ?? product.variants[0]!.id);
+              const active = v.id === variant.id;
               return (
                 <Pressable
                   key={v.id}

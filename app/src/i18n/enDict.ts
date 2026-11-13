@@ -1,4 +1,13 @@
 export const EN: Record<string, string> = {
+  "Подбери под бюджет": "Find options by budget",
+  "Укажите бюджет на одну фотокнигу без доставки.": "Enter a budget for one photo book, excluding delivery.",
+  "Бюджет в BYN": "Budget in BYN",
+  "Например, 100": "For example, 100",
+  "Проверяем цены…": "Checking prices…",
+  "Подобрать фотокнигу": "Find a photo book",
+  "Не удалось проверить цены": "Could not check prices",
+  "Фотокниг в этом бюджете нет": "No photo books within this budget",
+  "Попробуйте увеличить сумму.": "Try increasing your budget.",
   ", есть пустые места": ", has empty spots",
   ", пустая": ", empty",
   ", с фото": ", with photos",
