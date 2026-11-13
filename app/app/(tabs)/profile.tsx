@@ -49,6 +49,7 @@ export default function ProfileScreen() {
       <View style={styles.row}>
         <Text style={styles.rowLabel}>{t.profile.notifications}</Text>
         <Switch
+          style={styles.switch}
           value={notifications}
           onValueChange={(v) => setNotifications(v)}
           trackColor={{ true: lightColors.accent, false: lightColors.disabledBg }}
@@ -60,6 +61,7 @@ export default function ProfileScreen() {
       <View style={styles.row}>
         <Text style={styles.rowLabel}>{t.profile.failNetwork}</Text>
         <Switch
+          style={styles.switch}
           value={failNetwork}
           onValueChange={(v) => setFailNetwork(v)}
           trackColor={{ true: lightColors.accent, false: lightColors.disabledBg }}
@@ -141,6 +143,7 @@ const styles = StyleSheet.create({
     borderColor: lightColors.borderStrong,
     paddingHorizontal: 20,
   },
+  switch: { alignSelf: 'center' },
   rowLabel: { ...typography.body, color: lightColors.text },
   langRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 1, gap: space[2] },
   langOption: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center', borderRadius: 22 },
